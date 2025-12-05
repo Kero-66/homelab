@@ -49,18 +49,27 @@ configure_arr_auth() {
   echo "  Configuring Basic authentication for $SERVICE..."
   
   # Get current auth config
-  AUTH_JSON=$(curl -s -H "X-Api-Key: $API_KEY" "http://localhost:$PORT/api/v3/config/host" || echo "{}")
+  AUTH_JSON=$(curl -s -H "X-Api-Key: $API_KEY" "http://localhost:$PORT/api/v3/config/host" 2>/dev/null || echo "")
+  
+  # Check if we got valid JSON
+  if [[ -z "$AUTH_JSON" ]] || ! echo "$AUTH_JSON" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+    echo "  Note: $SERVICE may already be configured or API not accessible"
+    return 0
+  fi
   
   # Update with Basic auth credentials
   UPDATED_JSON=$(echo "$AUTH_JSON" | python3 -c "
 import sys, json
-config = json.load(sys.stdin)
-config['authenticationMethod'] = 'basic'
-config['authenticationRequired'] = 'enabled'
-config['username'] = '${USERNAME}'
-config['password'] = '${PASSWORD}'
-print(json.dumps(config))
-")
+try:
+    config = json.load(sys.stdin)
+    config['authenticationMethod'] = 'basic'
+    config['authenticationRequired'] = 'enabled'
+    config['username'] = '${USERNAME}'
+    config['password'] = '${PASSWORD}'
+    print(json.dumps(config))
+except Exception as e:
+    print('{}')
+" 2>/dev/null || echo "{}")
   
   # POST updated config
   RESULT=$(curl -s -X PUT -H "X-Api-Key: $API_KEY" -H "Content-Type: application/json" \

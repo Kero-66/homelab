@@ -44,14 +44,19 @@ Services include: automations, media, monitoring, surveillance, proxy, cloud, et
   - qBittorrent (port 8080, torrent port 6881)
   - NZBget (port 6789)
 - **Arr Apps** (on servarrnetwork 172.39.0.0/24):
-  - Prowlarr (port 9696) - Indexer manager
+  - Prowlarr (port 9696, IP 172.39.0.8) - Indexer manager
   - Sonarr (port 8989, IP 172.39.0.3) - TV shows
   - Radarr (port 7878, IP 172.39.0.4) - Movies
   - Lidarr (port 8686, IP 172.39.0.5) - Music
   - Bazarr (port 6767, IP 172.39.0.6) - Subtitles
-- **Media Servers** (separate):
-  - Jellyfin (managed separately)
-  - Plex (managed separately)
+  - NZBget (port 6789, IP 172.39.0.7) - Usenet client
+  - qBittorrent (port 8080, IP 172.39.0.12) - Torrent client
+  - FlareSolverr (port 8191, IP 172.39.0.9) - Cloudflare bypass
+- **Jellyfin Stack** (on servarrnetwork):
+  - Jellyfin (port 8096, IP 172.39.0.10) - Media server
+  - Jellyseerr (port 5055, IP 172.39.0.11) - Request management
+  - Jellystat (port 3000, IP 172.39.0.14) - Statistics
+  - Jellystat-db (IP 172.39.0.13) - PostgreSQL database
 
 ## Required Configuration
 1. **Data Directory**: `/data` with structure:
@@ -527,6 +532,30 @@ curl -s -X POST "http://localhost:8096/Library/Refresh" -H "X-Emby-Token: $JELLY
 #### Issue: JSON decode error in Python heredoc
 **Cause**: Shell variable interpolation issues with large JSON data
 **Solution**: Fetch data inside Python using urllib.request (see patterns above)
+
+#### Issue: JSONDecodeError when piping command output to Python
+**Cause**: Command returned empty output (error suppressed by `2>/dev/null`)
+**Solution**: Always handle empty/error cases:
+```bash
+# DON'T: Pipe directly and suppress errors
+some_command 2>/dev/null | python3 -c "import json; json.load(sys.stdin)..."
+
+# DO: Check output exists first, or handle in Python
+OUTPUT=$(some_command 2>&1)
+if [[ -n "$OUTPUT" && ! "$OUTPUT" =~ "error" ]]; then
+    echo "$OUTPUT" | python3 -c "..."
+fi
+
+# OR: Handle empty input in Python
+some_command 2>&1 | python3 -c "
+import sys, json
+data = sys.stdin.read()
+if data.strip():
+    d = json.loads(data)
+else:
+    print('No output')
+"
+```
 
 #### Issue: API key extraction fails
 **Cause**: Whitespace/newlines in extracted value

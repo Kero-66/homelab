@@ -9,9 +9,7 @@ services:
       - TZ=Australia/Brisbane
     volumes:
       - ./config:/config
-      - /data:/data
-      # Mount index.html as writable for Jellyfin Enhanced plugin
-      - ./config/web-index.html:/usr/share/jellyfin/web/index.html:rw
+      - ${DATA_DIR:-/data}:/data
     # Hardware acceleration - uncomment for Intel QuickSync on bare metal
     # devices:
     #   - /dev/dri:/dev/dri
@@ -19,6 +17,9 @@ services:
       - 8096:8096
       - 7359:7359/udp
       - 1900:1900/udp
+    networks:
+      servarrnetwork:
+        ipv4_address: 172.39.0.10
     restart: unless-stopped
 # Remove the Jellyfin service if installed directly on system.
 
@@ -35,8 +36,8 @@ services:
     ports:
       - 5055:5055
     networks:
-      - default
-      - servarrnetwork
+      servarrnetwork:
+        ipv4_address: 172.39.0.11
     restart: unless-stopped
 
   jellystat-db:
@@ -49,6 +50,9 @@ services:
       POSTGRES_PASSWORD: mypassword
     volumes:
       - ./jellystat/postgres:/var/lib/postgresql/data
+    networks:
+      servarrnetwork:
+        ipv4_address: 172.39.0.13
 
   jellystat:
     image: cyfershepard/jellystat:latest
@@ -66,6 +70,9 @@ services:
       - ./jellystat/backup-data:/app/backend/backup-data
     ports:
       - "3000:3000"
+    networks:
+      servarrnetwork:
+        ipv4_address: 172.39.0.14
     depends_on:
       - jellystat-db
 

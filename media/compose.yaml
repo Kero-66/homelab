@@ -74,7 +74,7 @@ services:
     #  - TORRENTING_PORT=${FIREWALL_VPN_INPUT_PORTS} # airvpn forwarded port, pulled from .env
     volumes:
       - ${CONFIG_DIR:-.}/qbittorrent:/config
-      - ${DATA_DIR:-/data}:${DATA_DIR:-/data}
+      - ${DATA_DIR:-/data}:/data
     # depends_on:
     #   gluetun:
     #     condition: service_healthy
@@ -86,7 +86,7 @@ services:
       - ${QBIT_TORRENT_PORT_UDP:-6881}:6881/udp
     networks:
       servarrnetwork:
-        ipv4_address: ${IP_QBITTORRENT:-172.39.0.2}
+        ipv4_address: ${IP_QBITTORRENT:-172.39.0.12}
     healthcheck:
       test: curl -sf http://localhost:8080 || exit 1
       interval: 30s
@@ -120,7 +120,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/nzbget:/config
-      - ${DATA_DIR:-/data}:${DATA_DIR:-/data}
+      - ${DATA_DIR:-/data}:/data
     # depends_on:
     #   gluetun:
     #     condition: service_healthy
@@ -212,7 +212,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/sonarr:/config
-      - ${DATA_DIR:-/data}:${DATA_DIR:-/data}
+      - ${DATA_DIR:-/data}:/data
     ports:
       - ${SONARR_PORT:-8989}:8989
     networks:
@@ -237,7 +237,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/radarr:/config
-      - ${DATA_DIR:-/data}:${DATA_DIR:-/data}
+      - ${DATA_DIR:-/data}:/data
     ports:
       - ${RADARR_PORT:-7878}:7878
     networks:
@@ -258,7 +258,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/lidarr:/config
-      - ${DATA_DIR:-/data}:${DATA_DIR:-/data}
+      - ${DATA_DIR:-/data}:/data
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -287,14 +287,14 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/bazarr:/config
-      - ${DATA_DIR:-/data}:${DATA_DIR:-/data}
+      - ${DATA_DIR:-/data}:/data
     ports:
       - ${BAZARR_PORT:-6767}:6767
     networks:
       servarrnetwork:
         ipv4_address: ${IP_BAZARR:-172.39.0.6}
     healthcheck:
-      test: curl -sf http://localhost:6767/api/system/health || exit 1
+      test: curl -sf http://localhost:6767/ || exit 1
       interval: 30s
       timeout: 10s
       retries: 3
@@ -316,7 +316,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ${CONFIG_DIR:-.}/jellyfin/config:/config
-      - ${DATA_DIR:-/data}:${DATA_DIR:-/data}
+      - ${DATA_DIR:-/data}:/data
     # Hardware acceleration - uncomment for Intel QuickSync
     # devices:
     #   - /dev/dri:/dev/dri
@@ -371,6 +371,7 @@ services:
       - ${CONFIG_DIR:-.}/jellyfin/jellystat/postgres:/var/lib/postgresql/data
     networks:
       servarrnetwork:
+        ipv4_address: ${IP_JELLYSTAT_DB:-172.39.0.13}
     healthcheck:
       test: pg_isready -U ${JELLYSTAT_DB_USER:-postgres}
       interval: 30s
@@ -397,6 +398,7 @@ services:
       - ${JELLYSTAT_PORT:-3000}:3000
     networks:
       servarrnetwork:
+        ipv4_address: ${IP_JELLYSTAT:-172.39.0.14}
     depends_on:
       jellystat-db:
         condition: service_healthy

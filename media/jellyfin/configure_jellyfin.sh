@@ -116,10 +116,16 @@ fi
 echo "Authenticated successfully!"
 
 # Step 5: Add media libraries
-echo "Adding media libraries..."
+echo "Checking existing libraries..."
 
-# Add TV Shows library
-curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=tvshows&refreshLibrary=false&name=TV%20Shows" \
+# Get existing libraries
+LIBRARIES=$(curl -s "$JELLYFIN_URL/Library/VirtualFolders" -H "X-Emby-Token: $ACCESS_TOKEN")
+
+if echo "$LIBRARIES" | python3 -c "import sys,json; libs=json.load(sys.stdin); print('yes' if any(l['Name']=='TV Shows' for l in libs) else 'no')" 2>/dev/null | grep -q "yes"; then
+    echo "  • TV Shows library already exists"
+else
+    echo "Adding TV Shows library..."
+    curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=tvshows&refreshLibrary=false&name=TV%20Shows" \
     -H "X-Emby-Token: $ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{
@@ -133,11 +139,15 @@ curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=tvshows&ref
             ]
         }
     }' > /dev/null
+    echo "  ✓ TV Shows library added (/data/shows)"
+fi
 
-echo "  ✓ TV Shows library added (/data/shows)"
-
-# Add Movies library
-curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=movies&refreshLibrary=false&name=Movies" \
+# Check Movies library
+if echo "$LIBRARIES" | python3 -c "import sys,json; libs=json.load(sys.stdin); print('yes' if any(l['Name']=='Movies' for l in libs) else 'no')" 2>/dev/null | grep -q "yes"; then
+    echo "  • Movies library already exists"
+else
+    echo "Adding Movies library..."
+    curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=movies&refreshLibrary=false&name=Movies" \
     -H "X-Emby-Token: $ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{
@@ -151,11 +161,15 @@ curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=movies&refr
             ]
         }
     }' > /dev/null
+    echo "  ✓ Movies library added (/data/movies)"
+fi
 
-echo "  ✓ Movies library added (/data/movies)"
-
-# Add Music library
-curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=music&refreshLibrary=false&name=Music" \
+# Check Music library
+if echo "$LIBRARIES" | python3 -c "import sys,json; libs=json.load(sys.stdin); print('yes' if any(l['Name']=='Music' for l in libs) else 'no')" 2>/dev/null | grep -q "yes"; then
+    echo "  • Music library already exists"
+else
+    echo "Adding Music library..."
+    curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=music&refreshLibrary=false&name=Music" \
     -H "X-Emby-Token: $ACCESS_TOKEN" \
     -H "Content-Type: application/json" \
     -d '{
@@ -169,8 +183,8 @@ curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=music&refre
             ]
         }
     }' > /dev/null
-
-echo "  ✓ Music library added (/data/music)"
+    echo "  ✓ Music library added (/data/music)"
+fi
 
 echo ""
 echo "✓ Jellyfin setup complete!"

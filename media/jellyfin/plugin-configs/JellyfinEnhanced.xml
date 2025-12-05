@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <JellyseerrEnabled>true</JellyseerrEnabled>
+  <JellyseerrUrls>http://jellyseerr:5055</JellyseerrUrls>
+  <JellyseerrApiKey>__JELLYSEERR_API_KEY__</JellyseerrApiKey>
+  <JellyseerrEnable4KRequests>false</JellyseerrEnable4KRequests>
+  <JellyseerrShowAdvanced>false</JellyseerrShowAdvanced>
+  <JellyseerrUseJellyseerrLinks>false</JellyseerrUseJellyseerrLinks>
+  <JellyseerrUrlMappings></JellyseerrUrlMappings>
+  <QualityTagsEnabled>true</QualityTagsEnabled>
+  <LanguageTagsEnabled>true</LanguageTagsEnabled>
+  <ArrLinksEnabled>true</ArrLinksEnabled>
+  <SonarrUrl>http://sonarr:8989</SonarrUrl>
+  <RadarrUrl>http://radarr:7878</RadarrUrl>
+</PluginConfiguration>

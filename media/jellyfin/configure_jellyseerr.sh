@@ -4,7 +4,8 @@ set -e
 # Automate Jellyseerr initial setup and connection to Jellyfin + Sonarr/Radarr
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/.."
+MEDIA_DIR="$SCRIPT_DIR/.."
+cd "$MEDIA_DIR"
 
 # Load credentials
 if [ ! -f .config/.credentials ]; then
@@ -16,11 +17,11 @@ source .config/.credentials
 
 echo "Configuring Jellyseerr..."
 
-# Ensure Jellyfin is running
+# Ensure Jellyfin is running (uses main compose.yaml with profiles)
 echo "Checking if Jellyfin is running..."
 if ! docker ps | grep -q jellyfin; then
     echo "Starting Jellyfin..."
-    cd jellyfin && docker compose up -d jellyfin && cd ..
+    docker compose --profile jellyfin up -d jellyfin
     echo "Waiting for Jellyfin to be ready..."
     for i in {1..30}; do
         if curl -s http://localhost:8096/health > /dev/null 2>&1; then
@@ -31,15 +32,13 @@ if ! docker ps | grep -q jellyfin; then
     done
 fi
 
-# Ensure Jellyseerr is running
-cd jellyfin
+# Ensure Jellyseerr is running (uses main compose.yaml with profiles)
 if ! docker ps | grep -q jellyseerr; then
     echo "Starting Jellyseerr..."
-    docker compose up -d jellyseerr
+    docker compose --profile jellyfin up -d jellyseerr
     echo "Waiting for Jellyseerr to start..."
     sleep 5
 fi
-cd ..
 
 # Wait for Jellyseerr to be ready
 echo "Waiting for Jellyseerr API..."
@@ -52,7 +51,7 @@ for i in {1..30}; do
 done
 
 # Check if already initialized
-INITIALIZED=$(curl -s http://localhost:5055/api/v1/settings/public | python3 -c 'import sys,json; print(json.load(sys.stdin).get("initialized", False))')
+INITIALIZED=$(curl -s http://localhost:5055/api/v1/settings/public | python3 -c 'import sys,json; print(json.load(sys.stdin).get("initialized", False))' 2>/dev/null || echo "False")
 if [ "$INITIALIZED" = "True" ]; then
     echo "Jellyseerr is already initialized"
     exit 0
@@ -60,17 +59,30 @@ fi
 
 # Get Sonarr and Radarr API keys (trim whitespace)
 echo "Getting Sonarr and Radarr API keys..."
-SONARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ../sonarr/config.xml | tr -d '[:space:]')
-RADARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ../radarr/config.xml | tr -d '[:space:]')
+SONARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' sonarr/config.xml | tr -d '[:space:]')
+RADARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' radarr/config.xml | tr -d '[:space:]')
+
+if [ -z "$SONARR_API_KEY" ] || [ -z "$RADARR_API_KEY" ]; then
+    echo "Error: Could not get API keys from Sonarr/Radarr config files"
+    echo "Make sure Sonarr and Radarr have started at least once"
+    exit 1
+fi
 
 # Stop Jellyseerr to modify configuration
-docker compose stop jellyseerr
+docker stop jellyseerr
 
 # Update settings.json with Sonarr/Radarr configuration
+SETTINGS_FILE="jellyfin/jellyseerr/settings.json"
+if [ ! -f "$SETTINGS_FILE" ]; then
+    echo "Error: $SETTINGS_FILE not found"
+    echo "Jellyseerr needs to start at least once to create this file"
+    exit 1
+fi
+
 echo "Configuring Sonarr and Radarr in settings.json..."
 sudo python3 << PYEOF
 import json
-with open('jellyseerr/settings.json', 'r') as f:
+with open('$SETTINGS_FILE', 'r') as f:
     config = json.load(f)
 
 config['radarr'] = [{
@@ -116,12 +128,12 @@ config['sonarr'] = [{
     "syncEnabled": True
 }]
 
-with open('jellyseerr/settings.json', 'w') as f:
+with open('$SETTINGS_FILE', 'w') as f:
     json.dump(config, f, indent=2)
 PYEOF
 
 # Start Jellyseerr
-docker compose start jellyseerr
+docker start jellyseerr
 
 echo ""
 echo "✓ Jellyseerr fully configured!"

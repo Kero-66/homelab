@@ -84,6 +84,7 @@ echo ""
 # -----------------------------------------------------------------------------
 if [ "$DESTROY_MODE" = true ]; then
     log_warn "DESTROY MODE - This will remove all containers, volumes, and configs!"
+    log_warn "This will DELETE watched history, plugins, and all user data!"
     if [ "$NON_INTERACTIVE" = false ]; then
         read -p "Are you sure? Type 'yes' to confirm: " -r
         if [[ ! $REPLY == "yes" ]]; then
@@ -102,6 +103,39 @@ if [ "$DESTROY_MODE" = true ]; then
     log_info "Destruction complete. Run deploy.sh again to redeploy."
     exit 0
 fi
+
+# -----------------------------------------------------------------------------
+# Backup Jellyfin user data before any changes (watched status, plugins)
+# -----------------------------------------------------------------------------
+backup_jellyfin_userdata() {
+    if [ -d "jellyfin/config/data/data" ]; then
+        log_info "Backing up Jellyfin user data (watched status, plugins)..."
+        BACKUP_DIR="jellyfin/.userdata-backup-$(date +%Y%m%d-%H%M%S)"
+        mkdir -p "$BACKUP_DIR"
+        # Backup database (contains watched status, users, settings)
+        cp jellyfin/config/data/data/jellyfin.db "$BACKUP_DIR/" 2>/dev/null || true
+        # Backup plugins
+        cp -r jellyfin/config/data/plugins "$BACKUP_DIR/" 2>/dev/null || true
+        echo "$BACKUP_DIR" > jellyfin/.last-backup
+        log_info "✓ User data backed up to $BACKUP_DIR"
+    fi
+}
+
+restore_jellyfin_userdata() {
+    if [ -f "jellyfin/.last-backup" ]; then
+        BACKUP_DIR=$(cat jellyfin/.last-backup)
+        if [ -d "$BACKUP_DIR" ] && [ -f "$BACKUP_DIR/jellyfin.db" ]; then
+            log_info "Restoring Jellyfin user data from backup..."
+            # Wait for Jellyfin to create initial structure
+            sleep 5
+            docker stop jellyfin 2>/dev/null || true
+            cp "$BACKUP_DIR/jellyfin.db" jellyfin/config/data/data/jellyfin.db 2>/dev/null || true
+            cp -r "$BACKUP_DIR/plugins/"* jellyfin/config/data/plugins/ 2>/dev/null || true
+            docker start jellyfin 2>/dev/null || true
+            log_info "✓ User data restored (watched status, plugins)"
+        fi
+    fi
+}
 
 # -----------------------------------------------------------------------------
 # Step 1: Check prerequisites
@@ -305,6 +339,11 @@ fi
 # -----------------------------------------------------------------------------
 log_step "Starting Docker containers..."
 
+# Backup Jellyfin user data before any changes
+if [[ "$PROFILE_ARGS" == *"jellyfin"* ]] || [[ "$PROFILE_ARGS" == *"all"* ]]; then
+    backup_jellyfin_userdata
+fi
+
 # Pull latest images
 log_info "Pulling latest images..."
 docker compose $PROFILE_ARGS pull --quiet
@@ -392,6 +431,8 @@ if [[ "$PROFILE_ARGS" == *"jellyfin"* ]] || [[ "$PROFILE_ARGS" == *"all"* ]]; th
         log_info "Configuring Jellyfin..."
         bash jellyfin/configure_jellyfin.sh
     fi
+    # Restore user data (watched status, plugins) if we have a backup
+    restore_jellyfin_userdata
 fi
 
 # Configure Jellyseerr anime integration
