@@ -14,6 +14,13 @@ if [[ -f .env ]]; then
   CONFIG_DIR="${CONFIG_DIR:-.}"
 fi
 
+# Load environment variables from .env
+if [[ -f .env ]]; then
+  set -a
+  source .env
+  set +a
+fi
+
 # Load credentials
 if [ ! -f .config/.credentials ]; then
     echo "Error: .config/.credentials file not found"
@@ -55,7 +62,7 @@ add_qbittorrent() {
             "priority": 1,
             "name": "qBittorrent",
             "fields": [
-                {"name": "host", "value": "172.39.0.2"},
+                {"name": "host", "value": "'"$IP_QBITTORRENT"'"},
                 {"name": "port", "value": 8080},
                 {"name": "useSsl", "value": false},
                 {"name": "urlBase", "value": ""},
@@ -117,7 +124,7 @@ add_nzbget() {
             "priority": 1,
             "name": "NZBGet",
             "fields": [
-                {"name": "host", "value": "172.39.0.7"},
+                {"name": "host", "value": "'"$IP_NZBGET"'"},
                 {"name": "port", "value": 6789},
                 {"name": "useSsl", "value": false},
                 {"name": "urlBase", "value": ""},

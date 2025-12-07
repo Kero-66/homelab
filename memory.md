@@ -46,6 +46,17 @@ Build a **fully automated, reproducible homelab deployment** that can be torn do
 | `media/jellyfin/configure_jellyfin.sh` | Configure Jellyfin settings |
 | `media/jellyfin/configure_jellyseerr.sh` | Configure Jellyseerr integration |
 
+### Integration Status
+| Service | Integration / API hook | Standard automation |
+|---------|----------------------|---------------------|
+| Jellyfin | Notifications wired to Sonarr/Radarr via `scripts/configure_jellyfin_notifications.sh`; API key exposed through `media/jellyfin/jellyseerr/settings.json` and `.env` (`JELLYFIN_API_KEY`). | ✅ Automated after Jellyfin setup script runs. |
+| Jellyseerr | Points at Jellyfin server already in `settings.json`, pulls Sonarr/Radarr API keys from `${CONFIG_DIR}/sonarr/config.xml` and `${CONFIG_DIR}/radarr/config.xml`, and adds anime-aware profiles via `media/scripts/configure_jellyseerr_anime.sh`. | ✅ Automated; run `jellyfin/configure_jellyseerr.sh` plus anime helper. Still requires first-run wizard (choose Jellyfin server → sign in). |
+| Sonarr / Radarr / Lidarr | API keys created in `config.xml` and used by Prowlarr, Jellyseerr, and download-client scripts. Authentication + root folders handled by `scripts/wait_and_configure_auth.sh`, download clients by `scripts/configure_download_clients.sh`, and anime hints by respective scripts. | ✅ Fully automated via `scripts/automate_all.sh` sequence. |
+| Prowlarr | Reads API key from `prowlarr/config.xml`, connects to Arr apps via `scripts/configure_prowlarr.sh`, and routes indexers through FlareSolverr proxy. | ✅ Automated with dedicated script; integration references static IPs (`${IP_*}`). |
+| Bazarr | Integrates with Sonarr/Radarr through `scripts/configure_bazarr.sh`. Notifications and authentication depend on Arr API keys. | ✅ Automated; manual provider choices still optional. |
+| Jellystat | Consumes the Jellyfin API key and PostgreSQL credentials from `.env`. Setup script generates JWT+API values and prompts for UI-based server addition. | ✅ Mostly automated; requires logging into `http://localhost:3000` to add server using stored Jellyfin API token. |
+| Jellyfin plugins | Installed via `media/jellyfin/install_plugins.sh` (runs after Jellyfin is healthy) and recorded under `media/jellyfin/plugin-configs`; the script now covers the JS Injector, Jellyfin Tweaks, Plugin Pages, and NextPVR additions on top of File Transformation/Jellyfin Enhanced/Media Bar/Home Screen Sections/Custom Tabs. Plugin-specific XML/JSON configs (e.g., `Jellyfin.Plugin.JellyfinEnhanced.xml` and `Jellyfin.Plugin.HomeScreenSections.xml`) are part of the repo so the Arr links (Jellyseerr/Sonarr/Radarr/Bazarr/Lidarr) and UI overrides stay consistent. Custom Tabs now defines Home/TV Shows/Movies/Favorites/Watchlist/Requests buttons, the home screen sections plugin ships an `external` Jellyseerr URL pointing at `localhost:5055`, and the JavaScript Injector loads KefinTweaks plus a mutation-observer script that rewrites any `jellyseerr:5055` links to the host the browser is actually using so every Discover/Request click works. | ✅ Automated; run `media/jellyfin/install_plugins.sh` during a bootstrap and restart Jellyfin so the plugin configs are reloaded. |
+
 ### Reference Documentation
 
 #### Jellyfin (v10.11.x)

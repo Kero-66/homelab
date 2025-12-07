@@ -13,6 +13,7 @@ media/.config/bazarr/config.yaml
 
 # Runtime service configurations (created by Docker on first run)
 # These contain API keys, database files, and runtime state
+# But we DO track plugin-configs/ for manual customizations
 media/sonarr/
 media/radarr/
 media/lidarr/
@@ -24,7 +25,13 @@ media/jellyfin/config/
 media/jellyfin/jellyseerr/
 media/jellyfin/jellystat/
 media/gluetun/
+media/tvheadend/
 media/backups/
+
+# Track plugin configurations (exceptions to jellyfin/config exclusion)
+!media/jellyfin/plugin-configs/
+media/jellyfin/plugin-configs/*.log
+media/jellyfin/plugin-configs/*.pid
 
 # Common noise
 **/.DS_Store

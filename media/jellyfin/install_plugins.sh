@@ -26,6 +26,10 @@ PLUGINS=(
     "Media Bar"
     "Home Screen Sections"
     "Custom Tabs"
+    "JavaScript Injector"
+    "Jellyfin Tweaks"
+    "Plugin Pages"
+    "NextPVR"
 )
 
 echo "=== Jellyfin Plugin Installer (API) ==="

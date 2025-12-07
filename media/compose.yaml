@@ -118,7 +118,6 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/nzbget:/config
       - ${DATA_DIR:-/data}:/data
     # depends_on:
@@ -180,7 +179,6 @@ services:
       - 1.1.1.1      # Cloudflare DNS
       - 8.8.8.8      # Google DNS
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/prowlarr:/config
     restart: unless-stopped
     # depends_on:
@@ -210,7 +208,6 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/sonarr:/config
       - ${DATA_DIR:-/data}:/data
     ports:
@@ -235,7 +232,6 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/radarr:/config
       - ${DATA_DIR:-/data}:/data
     ports:
@@ -256,7 +252,6 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/lidarr:/config
       - ${DATA_DIR:-/data}:/data
     environment:
@@ -285,7 +280,6 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - ${CONFIG_DIR:-.}/bazarr:/config
       - ${DATA_DIR:-/data}:/data
     ports:
@@ -412,6 +406,31 @@ services:
   # ===========================================================================
   # Optional Services (uncomment to enable)
   # ===========================================================================
+
+  # tvheadend:
+  #   image: lscr.io/linuxserver/tvheadend:latest
+  #   container_name: tvheadend
+  #   restart: unless-stopped
+  #   mem_limit: 512m
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #   volumes:
+  #     - ${CONFIG_DIR:-.}/tvheadend:/config
+  #     - ${CONFIG_DIR:-.}/tvheadend/recordings:/recordings
+  #   ports:
+  #     - ${TVHEADEND_PORT:-9981}:9981
+  #     - ${TVHEADEND_HTSP_PORT:-9982}:9982
+  #   networks:
+  #     servarrnetwork:
+  #       ipv4_address: ${IP_TVHEADEND:-172.39.0.15}
+  #   healthcheck:
+  #     test: curl -sf http://localhost:9981 || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
   # ytdl-sub:
   #   image: ghcr.io/jmbannon/ytdl-sub:latest
