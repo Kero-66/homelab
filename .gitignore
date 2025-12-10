@@ -27,6 +27,8 @@ media/jellyfin/jellystat/
 media/gluetun/
 media/tvheadend/
 media/backups/
+media/ubooquity/
+media/mylar3/
 
 # Track plugin configurations (exceptions to jellyfin/config exclusion)
 !media/jellyfin/plugin-configs/

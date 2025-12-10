@@ -46,7 +46,7 @@ configure_arr_auth() {
     return 1
   fi
   
-  echo "  Configuring Basic authentication for $SERVICE..."
+  echo "  Configuring Forms authentication for $SERVICE..."
   
   # Get current auth config
   AUTH_JSON=$(curl -s -H "X-Api-Key: $API_KEY" "http://localhost:$PORT/api/v3/config/host" 2>/dev/null || echo "")
@@ -62,7 +62,7 @@ configure_arr_auth() {
 import sys, json
 try:
     config = json.load(sys.stdin)
-    config['authenticationMethod'] = 'basic'
+    config['authenticationMethod'] = 'forms'
     config['authenticationRequired'] = 'enabled'
     config['username'] = '${USERNAME}'
     config['password'] = '${PASSWORD}'

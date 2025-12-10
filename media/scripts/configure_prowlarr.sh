@@ -168,6 +168,80 @@ add_application "Sonarr" "8989" "sonarr/config.xml" "${IP_SONARR:-172.39.0.3}" '
 add_application "Radarr" "7878" "radarr/config.xml" "${IP_RADARR:-172.39.0.4}" '[2000,2010,2020,2030,2040,2045,2050,2060,2070,2080,2090]'
 add_application "Lidarr" "8686" "lidarr/config.xml" "${IP_LIDARR:-172.39.0.5}" '[3000,3010,3020,3030,3040,3050,3060]'
 
+# Helper to add application when API key is already known (e.g. from ini file)
+add_application_with_key() {
+    local APP_NAME=$1
+    local APP_PORT=$2
+    local APP_API_KEY=$3
+    local APP_IP=$4
+    local SYNC_CATEGORIES=$5
+
+    if [[ -z "$APP_API_KEY" ]]; then
+        echo "  ⚠ $APP_NAME: no API key provided, skipping"
+        return 1
+    fi
+
+    EXISTING_APP=$(curl -s -H "X-Api-Key: $API_KEY" \
+        "http://localhost:$PROWLARR_PORT/api/v1/applications" | \
+        python3 -c "import sys,json
+try:
+    apps=json.load(sys.stdin)
+    for app in apps:
+        if app.get('name','').lower()==('${APP_NAME,,}'):
+            print(app.get('id',''))
+            break
+except:
+    pass
+" || echo "")
+
+    if [[ -n "$EXISTING_APP" ]]; then
+        echo "  ✓ $APP_NAME already connected (ID: $EXISTING_APP)"
+        return 0
+    fi
+
+    # Some applications have different 'implementation' names in Prowlarr
+    IMPLEMENTATION_NAME="$APP_NAME"
+    CONFIG_CONTRACT="${APP_NAME}Settings"
+    # Map Mylar3 -> Mylar implementation used by Prowlarr
+    if [[ "${APP_NAME,,}" == "mylar3" ]]; then
+        IMPLEMENTATION_NAME="Mylar"
+        CONFIG_CONTRACT="MylarSettings"
+        # ensure we have a non-empty category for books/comics
+        if [[ "$SYNC_CATEGORIES" == '[]' || -z "$SYNC_CATEGORIES" ]]; then
+            SYNC_CATEGORIES='[7030]'
+        fi
+    fi
+
+    RESPONSE=$(curl -s -X POST \
+        -H "X-Api-Key: $API_KEY" \
+        -H "Content-Type: application/json" \
+        "http://localhost:$PROWLARR_PORT/api/v1/applications" \
+        -d '{
+            "name": "'"$APP_NAME"'",
+            "syncLevel": "addOnly",
+            "implementation": "'"$IMPLEMENTATION_NAME"'",
+            "configContract": "'"$CONFIG_CONTRACT"'",
+            "fields": [
+                {"name": "prowlarrUrl", "value": "http://'"${IP_PROWLARR:-172.39.0.8}"':'"$PROWLARR_PORT"'"},
+                {"name": "baseUrl", "value": "http://'"$APP_IP"':'"$APP_PORT"'"},
+                {"name": "apiKey", "value": "'"$APP_API_KEY"'"},
+                {"name": "syncCategories", "value": '"$SYNC_CATEGORIES"'}
+            ],
+            "tags": []
+        }')
+
+    if echo "$RESPONSE" | grep -q '"id"'; then
+        echo "  ✓ $APP_NAME connected"
+    else
+        echo "  ⚠ $APP_NAME: Could not connect"
+        echo "  Response: $RESPONSE"
+    fi
+}
+
+# Add Mylar3 by reading API key from ini
+MY3_API_KEY=$(grep -oP -m1 '^api_key\s*=\s*\K.*' mylar3/config.ini 2>/dev/null | tr -d '\r\n' || echo "")
+add_application_with_key "Mylar3" "8090" "$MY3_API_KEY" "${IP_MY3:-172.39.0.19}" '[]'
+
 echo ""
 echo "════════════════════════════════════════════════════════════"
 echo "  ✓ Prowlarr Configuration Complete"

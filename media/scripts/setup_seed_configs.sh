@@ -94,8 +94,45 @@ sed -i "s/USERNAME_PLACEHOLDER/$USERNAME/g" "$CONFIG_DIR/nzbget/nzbget.conf"
 sed -i "s/PASSWORD_PLACEHOLDER/$PASSWORD/g" "$CONFIG_DIR/nzbget/nzbget.conf"
 
 # Generate config.xml for Arr apps with Forms authentication pre-configured
-# This skips the first-run authentication wizard
-echo "Generating Arr app configs with authentication disabled..."
+# This skips the first-run authentication wizard and uses form-based login
+echo "Generating Arr app configs with Forms authentication pre-configured..."
+
+# Ensure ApiKeys exist in credentials or import from live configs / generate them
+ensure_api_key() {
+  local var_name="$1"    # e.g. SONARR_API_KEY
+  local live_conf="$2"   # e.g. media/sonarr/config.xml
+  # If variable already set (sourced from CRED_FILE), use it
+  if [ -n "${!var_name:-}" ]; then
+    return 0
+  fi
+  # Try importing from live config
+  if [ -f "$live_conf" ]; then
+    val=$(grep -oP '<ApiKey>\K[^<]+' "$live_conf" 2>/dev/null || true)
+    if [ -n "$val" ]; then
+      echo "Importing $var_name from live config"
+      echo "$var_name=$val" >> "$CRED_FILE"
+      # export for current shell
+      export "$var_name"="$val"
+      return 0
+    fi
+  fi
+  # Generate a new key and append to credentials
+  newkey=$(python3 - <<PY
+import secrets
+print(secrets.token_hex(16))
+PY
+)
+  echo "Generating new $var_name"
+  echo "$var_name=$newkey" >> "$CRED_FILE"
+  export "$var_name"="$newkey"
+}
+
+# Create or import keys for each Arr app
+ensure_api_key SONARR_API_KEY "$MEDIA_DIR/sonarr/config.xml"
+ensure_api_key RADARR_API_KEY "$MEDIA_DIR/radarr/config.xml"
+ensure_api_key LIDARR_API_KEY "$MEDIA_DIR/lidarr/config.xml"
+ensure_api_key PROWLARR_API_KEY "$MEDIA_DIR/prowlarr/config.xml"
+
 
 cat > "$CONFIG_DIR/sonarr/config.xml" <<EOF
 <Config>
@@ -104,11 +141,9 @@ cat > "$CONFIG_DIR/sonarr/config.xml" <<EOF
   <SslPort>9898</SslPort>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>True</LaunchBrowser>
-  <ApiKey>$(python3 -c "import secrets; print(secrets.token_hex(16))")</ApiKey>
-  <AuthenticationMethod>Basic</AuthenticationMethod>
+  <ApiKey>${SONARR_API_KEY}</ApiKey>
+  <AuthenticationMethod>forms</AuthenticationMethod>
   <AuthenticationRequired>Enabled</AuthenticationRequired>
-  <BasicAuthUsername>$USERNAME</BasicAuthUsername>
-  <BasicAuthPassword>$PASSWORD</BasicAuthPassword>
   <Branch>main</Branch>
   <LogLevel>info</LogLevel>
   <SslCertPath></SslCertPath>
@@ -126,11 +161,9 @@ cat > "$CONFIG_DIR/radarr/config.xml" <<EOF
   <SslPort>6868</SslPort>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>True</LaunchBrowser>
-  <ApiKey>$(python3 -c "import secrets; print(secrets.token_hex(16))")    </ApiKey>
-  <AuthenticationMethod>Basic</AuthenticationMethod>
+  <ApiKey>${RADARR_API_KEY}</ApiKey>
+  <AuthenticationMethod>forms</AuthenticationMethod>
   <AuthenticationRequired>Enabled</AuthenticationRequired>
-  <BasicAuthUsername>$USERNAME</BasicAuthUsername>
-  <BasicAuthPassword>$PASSWORD</BasicAuthPassword>
   <Branch>master</Branch>
   <LogLevel>info</LogLevel>
   <SslCertPath></SslCertPath>
@@ -148,11 +181,9 @@ cat > "$CONFIG_DIR/lidarr/config.xml" <<EOF
   <SslPort>6868</SslPort>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>True</LaunchBrowser>
-  <ApiKey>$(python3 -c "import secrets; print(secrets.token_hex(16))")</ApiKey>
-  <AuthenticationMethod>Basic</AuthenticationMethod>
+  <ApiKey>${LIDARR_API_KEY}</ApiKey>
+  <AuthenticationMethod>forms</AuthenticationMethod>
   <AuthenticationRequired>Enabled</AuthenticationRequired>
-  <BasicAuthUsername>$USERNAME</BasicAuthUsername>
-  <BasicAuthPassword>$PASSWORD</BasicAuthPassword>
   <Branch>master</Branch>
   <LogLevel>info</LogLevel>
   <SslCertPath></SslCertPath>
@@ -170,11 +201,9 @@ cat > "$CONFIG_DIR/prowlarr/config.xml" <<EOF
   <SslPort>6969</SslPort>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>True</LaunchBrowser>
-  <ApiKey>$(python3 -c "import secrets; print(secrets.token_hex(16))")    </ApiKey>
-  <AuthenticationMethod>Basic</AuthenticationMethod>
+  <ApiKey>${PROWLARR_API_KEY}</ApiKey>
+  <AuthenticationMethod>forms</AuthenticationMethod>
   <AuthenticationRequired>Enabled</AuthenticationRequired>
-  <BasicAuthUsername>$USERNAME</BasicAuthUsername>
-  <BasicAuthPassword>$PASSWORD</BasicAuthPassword>
   <Branch>master</Branch>
   <LogLevel>info</LogLevel>
   <SslCertPath></SslCertPath>
