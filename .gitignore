@@ -38,3 +38,93 @@ media/jellyfin/plugin-configs/*.pid
 **/Thumbs.db
 *.log
 *.pid
+
+# OS / editors / temp
+desktop.ini
+*~
+*.swp
+*.swo
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+.project
+.classpath
+.settings/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.python-version
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# Build / coverage
+dist/
+build/
+coverage/
+.coverage
+htmlcov/
+
+# Databases and runtime state
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.db-shm
+*.db-wal
+
+# Docker / env files
+.env
+.env.*
+docker-compose.override.yml
+
+#! Keep sample env files tracked
+!.env.sample
+!.env.example
+!media/.env.example
+
+# Secrets / keys / certs
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+secrets.yml
+*.secret
+*.enc
+
+# Logs, caches and backups
+logs/
+tmp/
+temp/
+.cache/
+cache/
+*.bak
+**/Backups/
+
+# Notebooks
+.ipynb_checkpoints/
