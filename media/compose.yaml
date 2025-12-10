@@ -403,34 +403,89 @@ services:
       retries: 3
       start_period: 30s
 
+
+  # ===========================================================================
+  # Ombi - Manga/Anime Request Interface (like Jellyseerr for manga through Sonarr)
+  # ===========================================================================
+  ombi:
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR:-.}/ombi:/config
+    ports:
+      - 8000:3579
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_OMBI:-172.39.0.20}
+    healthcheck:
+      test: curl -sf http://localhost:3579 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+
+  ubooquity:
+    image: lscr.io/linuxserver/ubooquity:latest
+    container_name: ubooquity
+    profiles: ["all"]
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR:-.}/ubooquity:/config
+      - ${DATA_DIR:-/data}:/books
+    ports:
+      - ${UBOOQUIITY_PORT:-2202}:2202
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_UBOOQUIITY:-172.39.0.18}
+    healthcheck:
+      test: curl -sf http://localhost:2202/ubooquity/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  mylar3:
+    image: lscr.io/linuxserver/mylar3:latest
+    container_name: mylar3
+    profiles: ["all"]
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR:-.}/mylar3:/config
+      - ${DATA_DIR:-/data}:/data
+    ports:
+      - ${MYLAR3_PORT:-8090}:8090
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_MY3:-172.39.0.19}
+    healthcheck:
+      test: |
+        curl -sf -u "${MYLAR3_USER:-}:${MYLAR3_PASS:-}" http://localhost:8090/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   # ===========================================================================
   # Optional Services (uncomment to enable)
   # ===========================================================================
 
-  # tvheadend:
-  #   image: lscr.io/linuxserver/tvheadend:latest
-  #   container_name: tvheadend
-  #   restart: unless-stopped
-  #   mem_limit: 512m
-  #   environment:
-  #     - PUID=${PUID}
-  #     - PGID=${PGID}
-  #     - TZ=${TZ}
-  #   volumes:
-  #     - ${CONFIG_DIR:-.}/tvheadend:/config
-  #     - ${CONFIG_DIR:-.}/tvheadend/recordings:/recordings
-  #   ports:
-  #     - ${TVHEADEND_PORT:-9981}:9981
-  #     - ${TVHEADEND_HTSP_PORT:-9982}:9982
-  #   networks:
-  #     servarrnetwork:
-  #       ipv4_address: ${IP_TVHEADEND:-172.39.0.15}
-  #   healthcheck:
-  #     test: curl -sf http://localhost:9981 || exit 1
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 30s
 
   # ytdl-sub:
   #   image: ghcr.io/jmbannon/ytdl-sub:latest
@@ -446,4 +501,33 @@ services:
   #   networks:
   #     servarrnetwork:
   #   restart: unless-stopped
+
+  media-provisioner:
+    image: python:3.12-slim
+    container_name: media-provisioner
+    profiles: ["all"]
+    restart: "no"
+    volumes:
+      - ./scripts:/workdir/scripts:ro
+      - ./sonarr:/workdir/sonarr:ro
+      - ./radarr:/workdir/radarr:ro
+      - ./lidarr:/workdir/lidarr:ro
+      - ./prowlarr:/workdir/prowlarr:ro
+      - ./mylar3:/workdir/mylar3:rw
+      - ./.env:/workdir/.env:ro
+    working_dir: /workdir
+    env_file:
+      - .env
+    command: ["bash", "-c", "apt-get update >/dev/null && apt-get install -y curl >/dev/null && /workdir/scripts/provision_comics.sh"]
+    depends_on:
+      ubooquity:
+        condition: service_started
+      mylar3:
+        condition: service_started
+      prowlarr:
+        condition: service_started
+      qbittorrent:
+        condition: service_started
+      nzbget:
+        condition: service_started
 
