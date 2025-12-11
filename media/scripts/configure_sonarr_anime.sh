@@ -3,9 +3,10 @@ set -e
 
 # Configure Sonarr for Anime with Japanese Audio Preference
 # This script seeds the anime configuration into Sonarr:
-# 1. Creates a custom format for Japanese audio
-# 2. Creates an anime quality profile with Japanese audio preference
-# 3. Applies configuration to existing anime series
+# 1. Configures anime-specific indexers (via configure_anime_indexers.sh)
+# 2. Creates a custom format for Japanese audio
+# 3. Creates an anime quality profile with Japanese audio preference
+# 4. Applies configuration to existing anime series
 #
 # This is part of the standard media stack automation and runs automatically
 # during initial setup via automate_all.sh
@@ -16,6 +17,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MEDIA_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$MEDIA_DIR"
+
+# Configure anime indexers first
+echo "Setting up anime indexers..."
+bash "$SCRIPT_DIR/configure_anime_indexers.sh"
+echo ""
 
 # Load CONFIG_DIR from .env (defaults to current directory)
 CONFIG_DIR="."

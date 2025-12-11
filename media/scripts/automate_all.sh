@@ -35,9 +35,19 @@ echo ""
 echo "Step 3: Configuring download clients (qBittorrent, NZBGet)..."
 bash "$SCRIPT_DIR/configure_download_clients.sh"
 
-# Configure Prowlarr with indexers and app connections
+# Seed Prowlarr indexers into database
 echo ""
-echo "Step 4: Configuring Prowlarr (indexers + app sync)..."
+echo "Step 4: Seeding Prowlarr indexers..."
+bash "$SCRIPT_DIR/seed_prowlarr_indexers.sh"
+
+# Seed Jackett-based indexers
+echo ""
+echo "Step 4a: Seeding Jackett-based indexers..."
+bash "$SCRIPT_DIR/seed_jackett_indexers.sh"
+
+# Configure Prowlarr with FlareSolverr proxy and app connections
+echo ""
+echo "Step 4b: Configuring Prowlarr (FlareSolverr + app sync)..."
 bash "$SCRIPT_DIR/configure_prowlarr.sh"
 
 # Configure Sonarr for anime

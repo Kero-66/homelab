@@ -202,6 +202,29 @@ Next, create a new resource with the IP of your proxy manager and add the local 
 
 # Additional Resources
 
+## Enforcing Basic Auth for Media Services (Jackett, *arr, etc.)
+
+To secure all media services (including Jackett) with a single username and password, configure HTTP Basic Authentication in NGINX Proxy Manager for each service. Use the credentials from `media/.config/.credentials` (see main `README.md`).
+
+**How to set up Basic Auth in NGINX Proxy Manager:**
+1. Open the NGINX Proxy Manager web UI.
+2. Go to "Hosts" > "Proxy Hosts" and edit (or add) the entry for your service (e.g., `jackett.example.com`).
+3. In the "Access List" tab, create or select an Access List.
+4. Add a user with the username and password from `media/.config/.credentials`.
+5. Save and apply the Access List to the proxy host.
+
+**Result:**
+- All requests to the service will require Basic Auth at the proxy. The backend service (Jackett, Sonarr, etc.) does not need to store or enforce its own admin password.
+- This approach keeps credentials out of app configs and centralizes authentication.
+
+**Credential changes:**
+- To change the password, update `media/.config/.credentials` and the Access List in NGINX Proxy Manager.
+
+**Tip:**
+- You can use the same Access List for all media services to enforce unified credentials.
+
+See the main `README.md` for a diagram and credential flow.
+
 | Additional Security Steps | Twingate Guide |
 | ------------- | ------------- |
 | [![Twingate Guide](https://github.com/TechHutTV/homelab/blob/main/proxy/images/technotim-security-guide.jpg)](https://www.youtube.com/watch?v=Cs8yOmTJNYQ "DITCH your VPN! - How I Access my Home Server from ANYWHERE @TechHut")  | [![Additional Security Steps](https://github.com/TechHutTV/homelab/blob/main/proxy/images/twingate-techhut.jpg)](https://youtu.be/yaw2A3DG664 "Self-Hosting Security Guide for your HomeLab @TechnoTim")  |

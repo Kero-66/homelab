@@ -244,9 +244,66 @@ To reduce manual configuration, you can use the provided seed config scripts:
 - ✅ NZBGet credentials and paths configured automatically
 - ✅ Prowlarr configured with FlareSolverr proxy (for indexers without VPN)
 - ✅ Prowlarr apps (Sonarr/Radarr/Lidarr) connected automatically
+- ✅ **Indexers automatically added** (Nyaa, AniDex, ThePirateBay, TorrentGalaxy, 1337x, etc.)
+- ✅ **Anime indexers configured** (DMHY, BakaBT, Anirena)
+- ✅ **Jackett Torznab feeds synced to Prowlarr**
 - ⚠️  qBittorrent password requires one-time WebUI setup
 
 **Skip automation?** You can still configure everything manually via each app's WebUI as described in the sections below.
+
+### Indexer Automation (New!)
+
+Indexers are now **fully automated**—no manual Jackett/Prowlarr setup required:
+
+```bash
+# All indexers are added by default when running:
+./deploy.sh --full
+# or automate_all.sh
+
+# Or manually trigger indexer setup:
+bash scripts/configure_indexers.sh           # General torrent/usenet indexers
+bash scripts/configure_anime_indexers.sh     # Anime-specific (Nyaa, DMHY, BakaBT, etc.)
+```
+
+**Indexers automatically configured:**
+
+| Indexer | Type | Source | Use Case |
+|---------|------|--------|----------|
+| Nyaa | Built-in (Prowlarr) | Anime torrents | Primary anime source |
+| AniDex | Built-in (Prowlarr) | Anime index | Anime metadata/links |
+| AnimeTosho | Built-in (Prowlarr) | High-quality anime | Premium anime releases |
+| Anirena | Built-in (Prowlarr) | Anime scene releases | Anime scene/SD releases |
+| DMHY | Jackett scraper | Chinese anime/donghua | Chinese animation, donghua |
+| BakaBT | Jackett (manual auth) | Private anime tracker | High-quality older anime |
+| ThePirateBay | Built-in (Prowlarr) | General torrents | Movie/show backups |
+| TorrentGalaxy | Built-in (Prowlarr) | General torrents | Movies/shows |
+| 1337x | Built-in (Prowlarr) | General torrents | Movies/shows |
+| RARBG | Built-in (Prowlarr) | Scene releases | High-quality movies/shows |
+
+**Private/Invite-only trackers** (BakaBT, TokyoTosho):
+- Requires manual account setup in Jackett
+**✅ Automated Setup:** Indexers are now fully automated!
+
+- **Prowlarr Indexers** (10 direct): Seeded via `seed_prowlarr_indexers.sh` into SQLite database
+  - Cardigann: Nyaa.si, The Pirate Bay, TorrentGalaxy, 1337x, RARBG, Anidex
+  - Torznab: AnimeTosho
+  - Newznab: Generic Newznab, EZTV
+  
+- **Jackett Indexers** (3 Torznab proxies): Seeded via `seed_jackett_indexers.sh`
+  - DMHY (anime), 52BT (anime), Nyaa.si (via Jackett)
+  
+- **FlareSolverr**: Configured in both Prowlarr and Jackett to bypass Cloudflare challenges
+  - Prowlarr FlareSolverr host: `http://172.39.0.9:8191/`
+  - Jackett FlareSolverr enabled automatically on container start
+
+**Verify indexers in database:**
+```bash
+# Check all Prowlarr indexers (13 total):
+sqlite3 prowlarr/prowlarr.db "SELECT Name FROM Indexers ORDER BY Name;"
+
+# Check Jackett is using FlareSolverr:
+docker logs jackett | grep FlareSolverr
+```
 
 ### Jellyfin Setup (Automated)
 

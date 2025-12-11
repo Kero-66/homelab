@@ -39,6 +39,27 @@ docker compose up -d
 - **Media Server**: Jellyfin with Jellyseerr for requests
 - **Arr Stack**: Sonarr, Radarr, Lidarr, Prowlarr, Bazarr
 
+
+## Unified Credentials and Proxy Authentication
+
+All media services (Jellyfin, *arr apps, Jackett, etc.) use a single set of credentials, stored in `media/.config/.credentials` (gitignored). This file is referenced by all Docker Compose files and injected into containers as environment variables. The same username and password are used for all web UIs and API authentication.
+
+**Security Model:**
+- **Reverse Proxy (NGINX Proxy Manager):** All external access is routed through the proxy, which enforces HTTP Basic Authentication using the unified credentials. This means you only need to log in once at the proxy, and backend services (including Jackett) do not store or enforce their own admin passwords.
+- **No Plaintext Passwords in App Configs:** Jackett and other services do not store the admin password in their config files. Authentication is handled at the proxy layer.
+- **Credential Changes:** To change your password, update `media/.config/.credentials` and restart the affected containers and proxy.
+
+**Credential Flow Example:**
+1. User requests `https://jackett.example.com` (or any media service).
+2. NGINX Proxy Manager prompts for Basic Auth using the credentials from `media/.config/.credentials`.
+3. Upon successful login, the request is forwarded to the backend service (e.g., Jackett), which does not require a separate password.
+4. All other media services follow the same pattern.
+
+**Note:**
+- If you want to enforce per-service credentials, you can set admin passwords in each app, but this is not recommended for most home lab setups.
+
+See `media/jackett/README.md` and `proxy/README.md` for more details.
+
 ## Credits
 
 - Original project: [TechHutTV/homelab](https://github.com/TechHutTV/homelab) by [Brandon](https://github.com/TechHutTV)

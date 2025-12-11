@@ -166,6 +166,29 @@ services:
       retries: 3
       start_period: 30s
 
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    mem_limit: 256m
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR:-.}/jackett:/config
+    ports:
+      - ${JACKETT_PORT:-9117}:9117
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_JACKETT:-172.39.0.17}
+    restart: unless-stopped
+    healthcheck:
+      test: curl -sf http://localhost:9117 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
