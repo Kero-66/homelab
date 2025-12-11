@@ -130,3 +130,18 @@ cache/
 
 # Notebooks
 .ipynb_checkpoints/
+
+# Jackett runtime config and secrets
+media/jackett/Jackett/
+media/jackett/config/
+# BUT track the empty README for the structure
+!media/jackett/README.md
+
+# Ombi runtime config and encryption keys
+media/ombi/.aspnet/
+media/ombi/Logs/
+
+# Prowlarr runtime config (SQLite database contains API keys)
+media/prowlarr/prowlarr.db
+media/prowlarr/config.xml
+
