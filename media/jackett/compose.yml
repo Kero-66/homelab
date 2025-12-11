@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  jackett:
+    image: linuxserver/jackett:latest
+    container_name: jackett
+    env_file:
+      - ../.config/.credentials
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    volumes:
+      - ./config:/config
+      - ./setup_jackett_creds.sh:/setup_jackett_creds.sh:ro
+    command: /bin/bash -c "/setup_jackett_creds.sh && /init"
+    ports:
+      - "9117:9117"
+    restart: unless-stopped
