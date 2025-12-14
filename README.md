@@ -34,10 +34,24 @@ docker compose up -d
 
 ## My Setup
 
-- **Host**: Windows 11 + WSL2 (Fedora)
+- **Host**: Windows 11 + WSL2 (Fedora) → Migrating to native Linux
 - **Storage**: HDD mounted at `/mnt/d/homelab-data`
 - **Media Server**: Jellyfin with Jellyseerr for requests
 - **Arr Stack**: Sonarr, Radarr, Lidarr, Prowlarr, Bazarr
+
+## 🚀 Migrating to Linux?
+
+Complete backup and migration tools included! See [BACKUP_README.md](BACKUP_README.md).
+
+**Quick Start:**
+```bash
+./backup_quick_start.sh  # Interactive backup wizard
+# or
+./verify_before_migration.sh  # Check your system
+./backup_to_d_drive.sh        # Backup everything
+```
+
+All your configurations, databases, and scripts will be safely backed up to D drive, ready for restore on your new Linux system. Full migration guide included!
 
 
 ## Unified Credentials and Proxy Authentication
