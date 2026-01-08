@@ -57,7 +57,7 @@ check_service "NZBGet" "6789" "http://localhost:6789"
 check_service "Bazarr" "6767" "http://localhost:6767/ping"
 check_service "Jellyfin" "8096" "http://localhost:8096/health"
 check_service "Jellyseerr" "5055" "http://localhost:5055/api/v1/settings/public"
-check_service "Jellystat" "3000" "http://localhost:3000"
+check_service "Jellystat" "3002" "http://localhost:3002"
 check_service "FlareSolverr" "8191" "http://localhost:8191"
 
 echo ""

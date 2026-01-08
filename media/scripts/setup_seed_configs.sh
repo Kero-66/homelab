@@ -30,7 +30,7 @@ if [[ -f "$ENV_FILE" ]]; then
   DATA_DIR=${DATA_DIR:-/data}
 fi
 
-mkdir -p "$CONFIG_DIR/qbittorrent" "$CONFIG_DIR/nzbget" "$CONFIG_DIR/sonarr" "$CONFIG_DIR/radarr" "$CONFIG_DIR/lidarr" "$CONFIG_DIR/prowlarr" "$CONFIG_DIR/bazarr"
+mkdir -p "$CONFIG_DIR/qbittorrent" "$CONFIG_DIR/nzbget" "$CONFIG_DIR/sonarr" "$CONFIG_DIR/radarr" "$CONFIG_DIR/lidarr" "$CONFIG_DIR/prowlarr" "$CONFIG_DIR/bazarr" "$CONFIG_DIR/huntarr" "$CONFIG_DIR/cleanuparr"
 
 # Generate PBKDF2 hash for qBittorrent password
 echo "Generating PBKDF2 hash for qBittorrent password..."
@@ -132,6 +132,8 @@ ensure_api_key SONARR_API_KEY "$MEDIA_DIR/sonarr/config.xml"
 ensure_api_key RADARR_API_KEY "$MEDIA_DIR/radarr/config.xml"
 ensure_api_key LIDARR_API_KEY "$MEDIA_DIR/lidarr/config.xml"
 ensure_api_key PROWLARR_API_KEY "$MEDIA_DIR/prowlarr/config.xml"
+ensure_api_key HUNTARR_API_KEY "$MEDIA_DIR/huntarr/config.yml"
+ensure_api_key CLEANUPARR_API_KEY "$MEDIA_DIR/cleanuparr/config.yml"
 
 
 cat > "$CONFIG_DIR/sonarr/config.xml" <<EOF
@@ -222,6 +224,27 @@ general:
   base_url: ''
 auth:
   type: none
+EOF
+
+# Generate Huntarr sample config
+cat > "$CONFIG_DIR/huntarr/config.yml" <<EOF
+# Huntarr minimal config (seeded)
+bind_address: 0.0.0.0
+port: ${HUNTARR_PORT:-8001}
+api_key: ${HUNTARR_API_KEY}
+data_path: ${DATA_DIR:-/data}
+# Add additional Huntarr settings as needed
+EOF
+
+# Generate CleanupArr sample config
+cat > "$CONFIG_DIR/cleanuparr/config.yml" <<EOF
+# CleanupArr minimal config (seeded)
+bind_address: 0.0.0.0
+port: ${CLEANUPARR_PORT:-8002}
+api_key: ${CLEANUPARR_API_KEY}
+paths:
+  media_root: ${DATA_DIR:-/data}
+# Add cleanup rules below as needed
 EOF
 
 # Generate root folder configs for Arr apps

@@ -1,0 +1,14 @@
+# Huntarr sample config
+# Replace or extend with real config as required by your chosen Huntarr image.
+
+server:
+  bind_address: 0.0.0.0
+  port: 8001
+
+logging:
+  level: INFO
+
+# Paths inside container mapped from ${DATA_DIR} and ${CONFIG_DIR}
+paths:
+  downloads: /data/downloads
+  media_root: /data

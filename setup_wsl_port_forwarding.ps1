@@ -29,7 +29,7 @@ netsh interface portproxy add v4tov4 listenport=6767 listenaddress=0.0.0.0 conne
 netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=8080 connectaddress=$wslIp  # qBittorrent
 netsh interface portproxy add v4tov4 listenport=6789 listenaddress=0.0.0.0 connectport=6789 connectaddress=$wslIp  # NZBGet
 netsh interface portproxy add v4tov4 listenport=5055 listenaddress=0.0.0.0 connectport=5055 connectaddress=$wslIp  # Jellyseerr
-netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 connectport=3000 connectaddress=$wslIp  # Jellystat
+netsh interface portproxy add v4tov4 listenport=3002 listenaddress=0.0.0.0 connectport=3002 connectaddress=$wslIp  # Jellystat
 
 # Configure Windows Firewall
 Write-Host "`nConfiguring Windows Firewall..."
@@ -44,7 +44,7 @@ New-NetFirewallRule -DisplayName "Bazarr" -Direction Inbound -LocalPort 6767 -Pr
 New-NetFirewallRule -DisplayName "qBittorrent" -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
 New-NetFirewallRule -DisplayName "NZBGet" -Direction Inbound -LocalPort 6789 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
 New-NetFirewallRule -DisplayName "Jellyseerr" -Direction Inbound -LocalPort 5055 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
-New-NetFirewallRule -DisplayName "Jellystat" -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
+New-NetFirewallRule -DisplayName "Jellystat" -Direction Inbound -LocalPort 3002 -Protocol TCP -Action Allow -ErrorAction SilentlyContinue
 
 Write-Host "`n✅ Port forwarding setup complete!"
 Write-Host "`nCurrent port proxy configuration:"

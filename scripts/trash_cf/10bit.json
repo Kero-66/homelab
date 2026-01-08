@@ -1,0 +1,6 @@
+{
+  "name": "10bit",
+  "selector": "releaseTitle =~ /10bit|10-bit|10 bit/i or MediaInfo: VideoBitDepth >= 10",
+  "score": 10,
+  "forms": [ { "name": "10bit", "value": "10bit" } ]
+}

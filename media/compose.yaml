@@ -19,6 +19,15 @@
 # See: https://github.com/TechHutTV/homelab/tree/main/media#docker-compose-and-env
 # =============================================================================
 
+x-common: &media-common
+  # Shared settings for homepage; env files listed with the shared file first so local vars override
+  env_file:
+    # - ../../media/.env
+    - .config/.credentials
+    - .env
+  restart: "${RESTART_POLICY}"
+  profiles: ["media", "all"]
+
 networks:
   servarrnetwork:
     name: servarrnetwork
@@ -31,33 +40,33 @@ services:
   # VPN Container (Optional - use --profile vpn)
   # ===========================================================================
   # AirVPN recommended: https://airvpn.org/?referred_by=673908
-  gluetun:
-    image: qmcgaw/gluetun
-    container_name: gluetun
-    profiles: ["vpn", "all"]
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun:/dev/net/tun
-    networks:
-      servarrnetwork:
-        ipv4_address: 172.39.0.250
-    ports:
-      # When VPN is enabled, these services route through gluetun
-      - ${QBIT_WEBUI_PORT:-8080}:8080
-      - ${QBIT_TORRENT_PORT_TCP:-6881}:6881/tcp
-      - ${QBIT_TORRENT_PORT_UDP:-6881}:6881/udp
-      - ${NZBGET_PORT:-6789}:6789
-    volumes:
-      - ${CONFIG_DIR:-.}/gluetun:/gluetun
-    env_file:
-      - .env
-    healthcheck:
-      test: ping -c 1 www.google.com || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: unless-stopped
+  # gluetun:
+  #   image: qmcgaw/gluetun
+  #   container_name: gluetun
+  #   profiles: ["vpn", "all"]
+  #   cap_add:
+  #     - NET_ADMIN
+  #   devices:
+  #     - /dev/net/tun:/dev/net/tun
+  #   networks:
+  #     servarrnetwork:
+  #       ipv4_address: 172.39.0.250
+  #   ports:
+  #     # When VPN is enabled, these services route through gluetun
+  #     - ${QBIT_WEBUI_PORT:-8080}:8080
+  #     - ${QBIT_TORRENT_PORT_TCP:-6881}:6881/tcp
+  #     - ${QBIT_TORRENT_PORT_UDP:-6881}:6881/udp
+  #     - ${NZBGET_PORT:-6789}:6789
+  #   volumes:
+  #     - ${CONFIG_DIR:-.}/gluetun:/gluetun
+  #   env_file:
+  #     - .env
+  #   healthcheck:
+  #     test: ping -c 1 www.google.com || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #   restart: unless-stopped
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
@@ -109,23 +118,44 @@ services:
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock
 
-  nzbget:
-    image: lscr.io/linuxserver/nzbget:latest
-    container_name: nzbget
-    mem_limit: 128m
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    mem_limit: 512m
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
+      - ${CONFIG_DIR:-.}/sabnzbd:/config
+      - ${DATA_DIR:-/data}:/data
+    restart: unless-stopped
+    ports:
+      - ${SABNZBD_PORT:-8085}:8080
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_SABNZBD:-172.39.0.24}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8080/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  nzbget:
+    image: lscr.io/linuxserver/nzbget:latest
+    container_name: nzbget
+    mem_limit: 512m
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - NZBGET_USER=${NZBGET_USER}
+      - NZBGET_PASS=${NZBGET_PASS}
+    volumes:
       - ${CONFIG_DIR:-.}/nzbget:/config
       - ${DATA_DIR:-/data}:/data
-    # depends_on:
-    #   gluetun:
-    #     condition: service_healthy
-    #     restart: true
     restart: unless-stopped
-    # network_mode: service:gluetun
     ports:
       - ${NZBGET_PORT:-6789}:6789
     networks:
@@ -136,7 +166,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 30s
 
   # FlareSolverr helps bypass Cloudflare protection on indexers
   # Required for many indexers when running without VPN
@@ -165,29 +195,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-
-  jackett:
-    image: lscr.io/linuxserver/jackett:latest
-    container_name: jackett
-    mem_limit: 256m
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ${CONFIG_DIR:-.}/jackett:/config
-    ports:
-      - ${JACKETT_PORT:-9117}:9117
-    networks:
-      servarrnetwork:
-        ipv4_address: ${IP_JACKETT:-172.39.0.17}
-    restart: unless-stopped
-    healthcheck:
-      test: curl -sf http://localhost:9117 || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   prowlarr:
     image: lscr.io/linuxserver/prowlarr:latest
@@ -268,30 +275,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-
-  lidarr:
-    container_name: lidarr
-    image: lscr.io/linuxserver/lidarr:latest
-    restart: unless-stopped
-    mem_limit: 512m
-    volumes:
-      - ${CONFIG_DIR:-.}/lidarr:/config
-      - ${DATA_DIR:-/data}:/data
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    ports:
-      - ${LIDARR_PORT:-8686}:8686
-    networks:
-      servarrnetwork:
-        ipv4_address: ${IP_LIDARR:-172.39.0.5}
-    healthcheck:
-      test: curl -sf http://localhost:8686/ping || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # lidarr: (commented out)
+  #   container_name: lidarr
+  #   image: lscr.io/linuxserver/lidarr:latest
+  #   restart: unless-stopped
+  #   mem_limit: 512m
+  #   volumes:
+  #     - ${CONFIG_DIR:-.}/lidarr:/config
+  #     - ${DATA_DIR:-/data}:/data
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #   ports:
+  #     - ${LIDARR_PORT:-8686}:8686
+  #   networks:
+  #     servarrnetwork:
+  #       ipv4_address: ${IP_LIDARR:-172.39.0.5}
+  #   healthcheck:
+  #     test: curl -sf http://localhost:8686/ping || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -382,15 +388,15 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     environment:
-      - POSTGRES_USER=${JELLYSTAT_DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${JELLYSTAT_DB_PASS:-jellystat}
+      - POSTGRES_USER=${JELLYSTAT_DB_USER}
+      - POSTGRES_PASSWORD=${JELLYSTAT_DB_PASS}
     volumes:
       - ${CONFIG_DIR:-.}/jellyfin/jellystat/postgres:/var/lib/postgresql/data
     networks:
       servarrnetwork:
         ipv4_address: ${IP_JELLYSTAT_DB:-172.39.0.13}
     healthcheck:
-      test: pg_isready -U ${JELLYSTAT_DB_USER:-postgres}
+      test: pg_isready -U ${JELLYSTAT_DB_USER}
       interval: 30s
       timeout: 10s
       retries: 3
@@ -403,16 +409,16 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     environment:
-      - POSTGRES_USER=${JELLYSTAT_DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${JELLYSTAT_DB_PASS:-jellystat}
+      - POSTGRES_USER=${JELLYSTAT_DB_USER}
+      - POSTGRES_PASSWORD=${JELLYSTAT_DB_PASS}
       - POSTGRES_IP=jellystat-db
       - POSTGRES_PORT=5432
-      - JWT_SECRET=${JELLYSTAT_JWT_SECRET:-change_me_please}
+      - JWT_SECRET=${JELLYSTAT_JWT_SECRET}
       - TZ=${TZ}
     volumes:
       - ${CONFIG_DIR:-.}/jellyfin/jellystat/backup-data:/app/backend/backup-data
     ports:
-      - ${JELLYSTAT_PORT:-3000}:3000
+      - ${JELLYSTAT_PORT:-3002}:3000
     networks:
       servarrnetwork:
         ipv4_address: ${IP_JELLYSTAT:-172.39.0.14}
@@ -420,7 +426,7 @@ services:
       jellystat-db:
         condition: service_healthy
     healthcheck:
-      test: wget -q --spider http://localhost:3000 || exit 1
+      test: wget -q --spider http://localhost:3002 || exit 1
       interval: 30s
       timeout: 10s
       retries: 3
@@ -429,81 +435,81 @@ services:
 
   # ===========================================================================
   # Ombi - Manga/Anime Request Interface (like Jellyseerr for manga through Sonarr)
-  # ===========================================================================
-  ombi:
-    image: lscr.io/linuxserver/ombi:latest
-    container_name: ombi
-    restart: unless-stopped
-    mem_limit: 512m
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ${CONFIG_DIR:-.}/ombi:/config
-    ports:
-      - 8000:3579
-    networks:
-      servarrnetwork:
-        ipv4_address: ${IP_OMBI:-172.39.0.20}
-    healthcheck:
-      test: curl -sf http://localhost:3579 || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # Service commented out per user request.
+  # ombi:
+  #   image: lscr.io/linuxserver/ombi:latest
+  #   container_name: ombi
+  #   restart: unless-stopped
+  #   mem_limit: 512m
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #   volumes:
+  #     - ${CONFIG_DIR:-.}/ombi:/config
+  #   ports:
+  #     - 8000:3579
+  #   networks:
+  #     servarrnetwork:
+  #       ipv4_address: ${IP_OMBI:-172.39.0.20}
+  #   healthcheck:
+  #     test: curl -sf http://localhost:3579 || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
 
-  ubooquity:
-    image: lscr.io/linuxserver/ubooquity:latest
-    container_name: ubooquity
-    profiles: ["all"]
-    restart: unless-stopped
-    mem_limit: 256m
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ${CONFIG_DIR:-.}/ubooquity:/config
-      - ${DATA_DIR:-/data}:/books
-    ports:
-      - ${UBOOQUIITY_PORT:-2202}:2202
-    networks:
-      servarrnetwork:
-        ipv4_address: ${IP_UBOOQUIITY:-172.39.0.18}
-    healthcheck:
-      test: curl -sf http://localhost:2202/ubooquity/ || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # ubooquity: (commented out)
+  #   image: lscr.io/linuxserver/ubooquity:latest
+  #   container_name: ubooquity
+  #   profiles: ["all"]
+  #   restart: unless-stopped
+  #   mem_limit: 256m
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #   volumes:
+  #     - ${CONFIG_DIR:-.}/ubooquity:/config
+  #     - ${DATA_DIR:-/data}:/books
+  #   ports:
+  #     - ${UBOOQUIITY_PORT:-2202}:2202
+  #   networks:
+  #     servarrnetwork:
+  #       ipv4_address: ${IP_UBOOQUIITY:-172.39.0.18}
+  #   healthcheck:
+  #     test: curl -sf http://localhost:2202/ubooquity/ || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
-  mylar3:
-    image: lscr.io/linuxserver/mylar3:latest
-    container_name: mylar3
-    profiles: ["all"]
-    restart: unless-stopped
-    mem_limit: 512m
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ${CONFIG_DIR:-.}/mylar3:/config
-      - ${DATA_DIR:-/data}:/data
-    ports:
-      - ${MYLAR3_PORT:-8090}:8090
-    networks:
-      servarrnetwork:
-        ipv4_address: ${IP_MY3:-172.39.0.19}
-    healthcheck:
-      test: |
-        curl -sf -u "${MYLAR3_USER:-}:${MYLAR3_PASS:-}" http://localhost:8090/ || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # mylar3: (commented out)
+  #   image: lscr.io/linuxserver/mylar3:latest
+  #   container_name: mylar3
+  #   profiles: ["all"]
+  #   restart: unless-stopped
+  #   mem_limit: 512m
+  #   environment:
+  #     - PUID=${PUID}
+  #     - PGID=${PGID}
+  #     - TZ=${TZ}
+  #   volumes:
+  #     - ${CONFIG_DIR:-.}/mylar3:/config
+  #     - ${DATA_DIR:-/data}:/data
+  #   ports:
+  #     - ${MYLAR3_PORT:-8090}:8090
+  #   networks:
+  #     servarrnetwork:
+  #       ipv4_address: ${IP_MY3:-172.39.0.19}
+  #   healthcheck:
+  #     test: |
+  #       curl -sf -u "${MYLAR3_USER:-}:${MYLAR3_PASS:-}" http://localhost:8090/ || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
   # ===========================================================================
   # Optional Services (uncomment to enable)
@@ -525,6 +531,71 @@ services:
   #     servarrnetwork:
   #   restart: unless-stopped
 
+  # Huntarr (optional) - enable by setting image/port in .env and leaving uncommented
+  huntarr:
+    image: ghcr.io/plexguide/huntarr:latest
+    container_name: huntarr
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR:-.}/huntarr:/config
+      - ${DATA_DIR:-/data}:/data
+    ports:
+      - ${HUNTARR_PORT:-9705}:9705
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_HUNTARR:-172.39.0.21}
+    healthcheck:
+      test: curl -sf http://localhost:9705/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # CleanupArr (optional) - enable by setting image/port in .env and leaving uncommented
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr:latest
+    container_name: cleanuparr
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_DIR:-.}/cleanuparr:/config
+      - ${DATA_DIR:-/data}:/data
+    ports:
+      - ${CLEANUPARR_PORT:-11011}:11011
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_CLEANUPARR:-172.39.0.22}
+    healthcheck:
+      test: curl -sf http://localhost:11011/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  recyclarr:
+    image: recyclarr/recyclarr:latest
+    container_name: recyclarr
+    restart: unless-stopped
+    user: ${PUID:-1000}:${PGID:-1000}
+    profiles: ["media", "all"]
+    environment:
+      - TZ=${TZ}
+      - CRON_SCHEDULE=@daily
+    volumes:
+      - ${CONFIG_DIR:-.}/recyclarr/config:/config
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_RECYCLARR:-172.39.0.25}
+
   media-provisioner:
     image: python:3.12-slim
     container_name: media-provisioner
@@ -539,18 +610,11 @@ services:
       - ./mylar3:/workdir/mylar3:rw
       - ./.env:/workdir/.env:ro
     working_dir: /workdir
-    env_file:
-      - .env
+    <<: *media-common
     command: ["bash", "-c", "apt-get update >/dev/null && apt-get install -y curl >/dev/null && /workdir/scripts/provision_comics.sh"]
     depends_on:
-      ubooquity:
-        condition: service_started
-      mylar3:
-        condition: service_started
       prowlarr:
         condition: service_started
       qbittorrent:
-        condition: service_started
-      nzbget:
         condition: service_started
 

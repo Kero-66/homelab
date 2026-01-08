@@ -1,0 +1,58 @@
+x-common: &homepage-common
+  # Shared settings for homepage; env files listed with the shared file first so local vars override
+  env_file:
+    - ../../media/.config/.credentials
+    - ../../media/.env
+    - .env
+  restart: "${RESTART_POLICY}"
+  profiles: ["homepage", "all"]
+
+services:
+  homepage:
+    <<: *homepage-common
+    image: "${HOMEPAGE_IMAGE}"
+    container_name: homepage
+    ports:
+      - "${HOMEPAGE_PORT}:${HOMEPAGE_CONTAINER_PORT}"
+    volumes:
+      - ./config:/app/config
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - HOMEPAGE_VAR_JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - HOMEPAGE_VAR_RADARR_API_KEY=${RADARR_API_KEY}
+      - HOMEPAGE_VAR_PROWLARR_API_KEY=${PROWLARR_API_KEY}
+      - HOMEPAGE_VAR_SONARR_API_KEY=${SONARR_API_KEY}
+      - HOMEPAGE_VAR_BAZARR_API_KEY=${BAZARR_API_KEY}
+      - HOMEPAGE_VAR_IP_QBITTORRENT=${IP_QBITTORRENT}
+      - HOMEPAGE_VAR_IP_SONARR=${IP_SONARR}
+      - HOMEPAGE_VAR_IP_RADARR=${IP_RADARR}
+      - HOMEPAGE_VAR_IP_LIDARR=${IP_LIDARR}
+      - HOMEPAGE_VAR_IP_BAZARR=${IP_BAZARR}
+      - HOMEPAGE_VAR_IP_NZBGET=${IP_NZBGET}
+      - HOMEPAGE_VAR_IP_PROWLARR=${IP_PROWLARR}
+      - HOMEPAGE_VAR_IP_FLARESOLVERR=${IP_FLARESOLVERR}
+      - HOMEPAGE_VAR_SABNZBD_API_KEY=${SABNZBD_API_KEY}
+      # Explicit homepage template variables mapped from media credentials
+      - HOMEPAGE_VAR_QBITTORRENT_USER=${QBITTORRENT_USER}
+      - HOMEPAGE_VAR_QBITTORRENT_PASS=${QBITTORRENT_PASS}
+      - HOMEPAGE_VAR_NZBGET_USER=${NZBGET_USER}
+      - HOMEPAGE_VAR_NZBGET_PASS=${NZBGET_PASS}
+      - HOMEPAGE_VAR_JELLYSEERR_API_KEY=${JELLYSEERR_API_KEY}
+      - HOMEPAGE_VAR_JELLYSTAT_API_KEY=${JELLYSTAT_API_KEY}
+      - HOMEPAGE_VAR_HUNTARR_API_KEY=${HUNTARR_API_KEY}
+      - HOMEPAGE_VAR_CLEANUPARR_API_KEY=${CLEANUPARR_API_KEY}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -S --spider http://127.0.0.1:${HOMEPAGE_CONTAINER_PORT:-3000}/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_HOMEPAGE:-172.39.0.21}
+
+networks:
+  servarrnetwork:
+    external: true
+    name: ${SERVARR_NETWORK_NAME}
+    
+

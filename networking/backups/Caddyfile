@@ -1,0 +1,78 @@
+# Caddyfile — example configuration for this networking stack
+# This configuration is tuned for local testing only (HTTP on loopback).
+# To enable public HTTPS later, replace or extend this file with your real domains and set `CADDY_EMAIL`.
+
+# Disable automatic HTTPS so Caddy does not try to obtain certificates for example domains
+{
+    auto_https off
+}
+
+# Local / testing configuration (HTTP only)
+
+# Listen on localhost:80 for local testing (matches original behaviour).
+# This avoids differences when browsers use an IP vs hostname.
+http://localhost:80 {
+    # Simple health check for monitoring
+    handle_path /health {
+        respond "OK" 200
+    }
+
+    # Path-based proxies for local testing of other services on the media stack
+    handle_path /jackett/* {
+        reverse_proxy jackett:9117
+    }
+    # Redirect bare /sonarr (no trailing slash) to /sonarr/ so the
+    # existing proxy rule for the subpath will match requests.
+    @sonarr_exact {
+        path /sonarr
+    }
+    redir @sonarr_exact /sonarr/ 308
+
+    # Use `handle` (not `handle_path`) so the `/sonarr` prefix is preserved
+    # when proxying. Sonarr is configured with `UrlBase=/sonarr`, so it
+    # expects requests to include that prefix.
+    handle /sonarr/* {
+        reverse_proxy sonarr:8989
+    }
+
+    @radarr_exact {
+        path /radarr
+    }
+    redir @radarr_exact /radarr/ 308
+
+    # Preserve the /radarr prefix when proxying; Radarr is configured with UrlBase=/radarr
+    handle /radarr/* {
+        reverse_proxy radarr:7878
+    }
+    @nzbget_exact {
+        path /nzbget
+    }
+    redir @nzbget_exact /nzbget/ 308
+
+    # NZBGet web UI does not have a UrlBase setting; keep strip-prefix behavior
+    handle_path /nzbget/* {
+        reverse_proxy nzbget:6789
+    }
+
+    @prowlarr_exact {
+        path /prowlarr
+    }
+    redir @prowlarr_exact /prowlarr/ 308
+
+    # Preserve the /prowlarr prefix when proxying; Prowlarr is configured with UrlBase=/prowlarr
+    handle /prowlarr/* {
+        reverse_proxy prowlarr:9696
+    }
+    # Homepage path
+    handle_path /homepage/* {
+        reverse_proxy homepage:3000
+    }
+    # Adjust or add services as needed
+
+    # Proxy root to AdGuard Home web UI (AdGuard serves on port 80 inside the container)
+    # Place this last so specific service paths above take precedence.
+    handle_path / {
+        reverse_proxy adguardhome:80
+    }
+
+}

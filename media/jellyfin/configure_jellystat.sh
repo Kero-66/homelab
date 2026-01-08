@@ -14,7 +14,7 @@ fi
 
 source .config/.credentials
 
-JELLYSTAT_URL="http://localhost:3000"
+JELLYSTAT_URL="http://localhost:3002"
 JELLYFIN_URL="http://localhost:8096"
 
 echo "Waiting for Jellystat to be ready..."
@@ -84,7 +84,7 @@ if [ ! -z "$JELLYSTAT_TOKEN" ]; then
     echo ""
     echo "✓ Jellystat fully configured!"
     echo ""
-    echo "Access Jellystat at: http://localhost:3000"
+    echo "Access Jellystat at: http://localhost:3002"
     echo "Username: $USERNAME"
     echo "Password: $PASSWORD"
 else
@@ -94,7 +94,7 @@ else
     echo "Jellyfin API Key created: $JELLYSTAT_API_KEY"
     echo ""
     echo "Manual setup (one-time):"
-    echo "1. Go to http://localhost:3000"
+    echo "1. Go to http://localhost:3002"
     echo "2. Create account or sign in"
     echo "3. Add server:"
     echo "   - Name: Jellyfin"

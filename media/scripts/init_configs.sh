@@ -64,6 +64,40 @@ if [[ ! -f ./bazarr/config/config.yaml && -f "$CONFIG_DIR/bazarr/config.yaml" ]]
   cp "$CONFIG_DIR/bazarr/config.yaml" ./bazarr/config/config.yaml
 fi
 
+# Huntarr
+if [[ ! -f ./huntarr/config.yml && -f "$CONFIG_DIR/huntarr/config.yml" ]]; then
+  echo "  Copying Huntarr config..."
+  mkdir -p ./huntarr
+  cp "$CONFIG_DIR/huntarr/config.yml" ./huntarr/config.yml
+fi
+
+# CleanupArr
+if [[ ! -f ./cleanuparr/config.yml && -f "$CONFIG_DIR/cleanuparr/config.yml" ]]; then
+  echo "  Copying CleanupArr config..."
+  mkdir -p ./cleanuparr
+  cp "$CONFIG_DIR/cleanuparr/config.yml" ./cleanuparr/config.yml
+fi
+
 echo "Config initialization complete."
 echo ""
 echo "Note: After services start, run add_root_folders.sh to configure root folders via API."
+
+# Automatically run Huntarr API-driven setup in background (idempotent).
+# Controlled by env var AUTO_SETUP_HUNTARR (default: true). The script itself
+# waits for the service to be reachable so it's safe to start before containers.
+AUTO_SETUP_HUNTARR="${AUTO_SETUP_HUNTARR:-true}"
+AUTO_SETUP_SCRIPT="$SCRIPT_DIR/auto_setup_huntarr.sh"
+if [[ "${AUTO_SETUP_HUNTARR}" = "true" && -x "${AUTO_SETUP_SCRIPT}" ]]; then
+  echo "Starting Huntarr auto-setup (background)..."
+  nohup bash "${AUTO_SETUP_SCRIPT}" > "$MEDIA_DIR/huntarr_auto_setup.log" 2>&1 &
+fi
+
+echo "Note: 2FA automation is deferred. Add to TODO if needed later."
+
+# Start CleanupArr auto-setup probe (idempotent). Controlled by AUTO_SETUP_CLEANUPARR (default: true)
+AUTO_SETUP_CLEANUPARR="${AUTO_SETUP_CLEANUPARR:-true}"
+AUTO_CLEANUP_SCRIPT="$SCRIPT_DIR/auto_setup_cleanuparr.sh"
+if [[ "${AUTO_SETUP_CLEANUPARR}" = "true" && -x "${AUTO_CLEANUP_SCRIPT}" ]]; then
+  echo "Starting CleanupArr auto-setup probe (background)..."
+  nohup bash "${AUTO_CLEANUP_SCRIPT}" > "$MEDIA_DIR/cleanuparr_auto_setup.log" 2>&1 &
+fi

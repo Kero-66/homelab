@@ -4,11 +4,17 @@
 	NOTES:
 	 - Keep suggestions mindful of the homelab / production services in this repo.
 	 - This file should be concise and actionable.
--->
+---
 
-# GitHub Copilot / AI Assistant Instructions for homelab
+## AI Behaviour — unanswered questions and todo recording
 
-✅ Purpose
+- **Policy**: If the AI asks a clarifying question and the user does not answer (or indicates "defer"), the AI MUST append the question as an `open` item to `ai/todo.md` with context and a suggested next step. The AI should then continue only with safe, non-destructive tasks (e.g., creating sample files, docs, or proposals) and avoid making irreversible changes.
+- **Recording**: The AI must record any external sources used into `ai/reference.md` when it references documentation or web resources.
+- **Secrets**: Under no circumstances should the AI populate real secrets; instead create `.sample` files and document where real values must be placed.
+
+💡 Tip: When in doubt, propose a minimal and reversible change in a PR, include validation instructions, and request maintainers' approval.
+
+Thank you for helping to keep this homelab repository safe and reliable. If you'd like, I can also add CI job suggestions (shellcheck, yamllint, docker compose validation) to help enforce these rules automatically.
 
 - Help contributors and AI assistants make safe, consistent, and testable changes to the homelab repository.
 - Provide repository-specific guidance: where to make changes, how to validate them, and what to avoid.
@@ -18,6 +24,7 @@
 ## Scope — where AI can safely help
 
 - Documentation and READMEs: update, add or correct instructions in `README.md`, `docs/`, and service README files (e.g. `media/README.md`, `homeassistant/README.md`).
+- Make sure you find and record the API guides provided by the servcies used in this homelab.
 - Deployment and automation scripts: modify or improve scripts in `scripts/`, `automations/`, `deploy.sh`, and `compose`-based deployment helpers.
 - Docker Compose and YAML configuration: propose changes in `*.yaml`, `compose.yml` and `compose.yaml` files, or `images/` small updates (image tags and metadata updates are OK with validation steps).
 - Monitoring and alerts: propose changes to `monitoring/` files including Prometheus, Grafana dashboards (but include validation steps and confirm alerts scope).

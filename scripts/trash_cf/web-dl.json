@@ -1,0 +1,6 @@
+{
+  "name": "WEB-DL/WEBRip",
+  "selector": "releaseTitle =~ /WEB-?DL|WEBRip|WEBRip/i",
+  "score": 50,
+  "forms": [ { "name": "webdl", "value": "webdl" } ]
+}

@@ -1,0 +1,44 @@
+# NZBGet config sample (safe example) — Newshosting as primary
+# Copy this into the container at /config/nzbget.conf or edit via NZBGet web UI.
+# DO NOT commit real credentials to the repo. Replace placeholders locally.
+
+# --- Primary: Newshosting (replace credentials) ---------------------------
+Server1.Active=yes
+Server1.Level=0
+Server1.Optional=no
+Server1.Host=news.newshosting.com
+Server1.Encryption=yes
+Server1.Port=563
+Server1.Username=YOUR_NEWSHOSTING_USERNAME_HERE
+Server1.Password=YOUR_NEWSHOSTING_PASSWORD_HERE
+Server1.Connections=12
+Server1.Retention=0
+Server1.CertVerification=Strict
+
+# --- Secondary / Fill server (example, optional) -------------------------
+#Server2.Active=yes
+#Server2.Level=1
+#Server2.Optional=no
+#Server2.Host=fill.server.example
+#Server2.Encryption=yes
+#Server2.Port=563
+#Server2.Username=YOUR_USERNAME
+#Server2.Password=YOUR_PASSWORD
+#Server2.Connections=8
+
+# --- Optional text-only fallback (Eternal-September) --------------------
+# Useful to keep as an optional read/write text fallback; NOT for binaries.
+Server3.Active=yes
+Server3.Level=2
+Server3.Optional=yes
+Server3.Host=news.eternal-september.org
+Server3.Encryption=no
+Server3.Port=119
+Server3.Username=
+Server3.Password=
+Server3.Connections=4
+
+# Notes:
+# - After filling credentials, restart NZBGet: `sudo docker restart nzbget`.
+# - Adjust `Connections` to match provider account limits.
+# - Keep this file local; never store real passwords in the git repo.

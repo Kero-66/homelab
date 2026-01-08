@@ -1,0 +1,6 @@
+{
+  "name": "Dual Audio",
+  "selector": "releaseTitle =~ /dual audio|dual-audio|dualaudio/i or MediaInfo: AudioChannels > 2",
+  "score": 10,
+  "forms": [ { "name": "dual", "value": "dual" } ]
+}

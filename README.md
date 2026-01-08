@@ -12,6 +12,14 @@ This is my personal homelab configuration, heavily customized for my own setup. 
 - WSL2/Windows host environment
 - Different hardware
 
+## Automation & Quality
+
+This setup includes several advanced automation features:
+
+- **[TRaSH Guides Integration](docs/TRASH_GUIDES.md)**: Automated quality scoring for Sonarr/Radarr.
+- **[Huntarr & Cleanuparr](media/README.md)**: Proactive content hunting and queue maintenance.
+- **Environment Syncing**: Scripts to automatically sync API keys and IPs between containers.
+
 ## What's Here
 
 | Directory | Purpose |
@@ -77,8 +85,8 @@ See `media/jackett/README.md` and `proxy/README.md` for more details.
 ## Credits
 
 - Original project: [TechHutTV/homelab](https://github.com/TechHutTV/homelab) by [Brandon](https://github.com/TechHutTV)
-- TRaSH Guides: https://trash-guides.info/
-- Servarr Wiki: https://wiki.servarr.com/
+- [TRaSH Guides](https://trash-guides.info/)
+- [Servarr Wiki](https://wiki.servarr.com/)
 
 ## License
 

@@ -33,6 +33,27 @@ Make sure to review everything here and if you have any issues please submit it 
 > [!NOTE]
 > **Migrating to a New Server?** See [docs/MIGRATION.md](docs/MIGRATION.md) for step-by-step instructions.
 
+---
+
+## DrunkenSlug, NZBIndex & Prowlarr: Safe Setup and Quota-Respecting Usage
+
+If you use DrunkenSlug or NZBIndex with Prowlarr, please review:
+
+- [media/prowlarr/DRUNKENSLUG.md](prowlarr/DRUNKENSLUG.md) — Full API reference, safe setup, and quota/terms summary
+- [media/prowlarr/NZBINDEX.md](prowlarr/NZBINDEX.md) — Important note: NZBIndex API is no longer public
+- [media/docs/USENET_SETUP.md](docs/USENET_SETUP.md) — How to setup Newshosting in SABnzbd and NZBGet
+- [media/prowlarr/fetch_caps.sh](prowlarr/fetch_caps.sh) — Script to safely fetch categories (does not use API quota)
+- [TRaSH Guide: Prowlarr Setup with Limited API](https://trash-guides.info/Prowlarr/prowlarr-setup-limited-api/)
+
+**Key points:**
+
+- Never commit your DrunkenSlug API key; use `.env` files
+- Respect all API and download quotas (see your DrunkenSlug profile)
+- Scraping or excessive requests will result in a ban
+- Always use the `?t=caps` endpoint for category discovery (no quota used)
+
+---
+
 ## CLI Tool (YAMS-Style)
 
 We provide a simple CLI tool inspired by [YAMS](https://yams.media/) for easy management:
@@ -360,7 +381,7 @@ bash configure_jellystat.sh
    - Bazarr will automatically download subtitles!
 
 2. **Jellystat** - Add server (API key auto-created):
-   - Go to http://localhost:3000
+  - Go to http://localhost:3002
    - Create account or sign in
    - Add server with the API key shown in the script output
    - View detailed viewing statistics!

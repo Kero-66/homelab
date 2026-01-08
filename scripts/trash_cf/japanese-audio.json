@@ -1,0 +1,11 @@
+{
+  "name": "Japanese Audio",
+  "selector": "MediaInfo: AudioLanguages (jpn)",
+  "score": 1000,
+  "forms": [
+    {
+      "name": "jpn",
+      "value": "jpn"
+    }
+  ]
+}

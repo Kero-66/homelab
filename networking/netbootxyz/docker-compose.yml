@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  netbootxyz:
+    image: netbootxyz/netboot.xyz:latest
+    network_mode: "host"      # required for DHCP/TFTP/ProxyDHCP
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - TZ=UTC
+    volumes:
+      - ./config:/config      # menus/config for dnsmasq inside the image
+      - ./tftp:/srv/tftp      # optional persistent tftp/http content
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

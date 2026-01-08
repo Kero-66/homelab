@@ -1,0 +1,19 @@
+{
+  "name": "Remux-1080p - Anime",
+  "upgradeAllowed": true,
+  "upgradeUntilQuality": "Bluray-1080p",
+  "upgradeUntilCustomFormatScore": 10000,
+  "minCustomFormatScore": 1000,
+  "items": [
+    "Bluray-1080p Remux",
+    "Bluray-1080p",
+    "HD - 720p/1080p - Anime/Japanese",
+    "HD-1080p",
+    "HD-720p/480p - Anime/Japanese",
+    "WEBDL-1080p",
+    "WEBDL-720p",
+    "WEBRip-1080p",
+    "WEBRip-720p",
+    "HDTV-720p/1080p"
+  ]
+}

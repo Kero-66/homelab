@@ -389,5 +389,31 @@ window.KefinTweaksConfig = {
       <RequiresAuthentication>false</RequiresAuthentication>
     </CustomJavaScriptEntry>
   </CustomJavaScripts>
+    <CustomJavaScriptEntry>
+      <Name>Requests-Header-Tab</Name>
+      <Script>(function(){
+  const buildUrl = () => `${window.location.protocol}//${window.location.hostname}:5055`;
+  const insertTab = () => {
+    const nav = document.querySelector('.navbar-nav') || document.querySelector('.topbar-nav') || document.querySelector('ul.nav');
+    if (!nav) return;
+    if (nav.querySelector('a[data-injected="requests"]')) return;
+    const li = document.createElement('li');
+    li.className = 'nav-item';
+    const a = document.createElement('a');
+    a.className = 'nav-link';
+    a.href = buildUrl();
+    a.textContent = 'Requests';
+    a.target = '_blank';
+    a.setAttribute('data-injected','requests');
+    li.appendChild(a);
+    nav.appendChild(li);
+  };
+  const observer = new MutationObserver(insertTab);
+  observer.observe(document.body, { childList: true, subtree: true });
+  insertTab();
+})();</Script>
+      <Enabled>true</Enabled>
+      <RequiresAuthentication>false</RequiresAuthentication>
+    </CustomJavaScriptEntry>
   <PluginJavaScripts />
 </PluginConfiguration>

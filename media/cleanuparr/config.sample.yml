@@ -1,0 +1,6 @@
+# CleanupArr minimal config (sample)
+bind_address: 0.0.0.0
+port: 8002
+api_key: YOUR_CLEANUPARR_API_KEY
+paths:
+  media_root: /mnt/wd_media/homelab-data

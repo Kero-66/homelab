@@ -470,7 +470,7 @@ echo "  • Bazarr:        http://localhost:6767"
 if [[ "$PROFILE_ARGS" == *"jellyfin"* ]] || [[ "$PROFILE_ARGS" == *"all"* ]]; then
     echo "  • Jellyfin:      http://localhost:8096"
     echo "  • Jellyseerr:    http://localhost:5055"
-    echo "  • Jellystat:     http://localhost:3000"
+    echo "  • Jellystat:     http://localhost:3002"
 fi
 
 echo ""
@@ -483,7 +483,7 @@ echo ""
 if [[ "$PROFILE_ARGS" == *"jellyfin"* ]] || [[ "$PROFILE_ARGS" == *"all"* ]]; then
     echo "Remaining manual steps (~5 minutes):"
     echo "  1. Jellyseerr: Visit http://localhost:5055 to complete setup wizard"
-    echo "  2. Jellystat: Visit http://localhost:3000 to create account"
+    echo "  2. Jellystat: Visit http://localhost:3002 to create account"
     echo ""
 fi
 

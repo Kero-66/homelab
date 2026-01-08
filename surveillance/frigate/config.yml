@@ -1,8 +1,8 @@
 mqtt:
   enabled: true
   host: 10.0.0.50
-  user: mqtt-user
-  password: password
+  user: {{MQTT_USER}}
+  password: {{MQTT_PASSWORD}}
   port: 1883
 
 record:
@@ -41,46 +41,46 @@ timestamp_style:
 go2rtc:
   streams:
     kitchen:
-      - rtsp://admin:password@10.0.0.104/Preview_01_main
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.104/Preview_01_main
       - "ffmpeg:living_room#audio=opus"
     kitchen_sub:
-      - rtsp://admin:password@10.0.0.104/Preview_01_sub
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.104/Preview_01_sub
     studio:
-      - rtsp://admin:password@10.0.0.102/cam/realmonitor?channel=1&subtype=01
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.102/cam/realmonitor?channel=1&subtype=01
       - "ffmpeg:studio#audio=opus"
     studio_sub:
-      - rtsp://admin:password@10.0.0.102/cam/realmonitor?channel=1&subtype=0
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.102/cam/realmonitor?channel=1&subtype=0
     kids_room:
-      - rtsp://admin:password@10.0.0.103/Preview_01_main
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.103/Preview_01_main
       - "ffmpeg:kids_room#audio=opus"
     kids_room_sub:
-      - rtsp://admin:password@10.0.0.103/Preview_01_sub
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.103/Preview_01_sub
     living_room:
-      - rtsp://admin:password@10.0.0.100/cam/realmonitor?channel=1&subtype=01
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.100/cam/realmonitor?channel=1&subtype=01
       - "ffmpeg:kitchen#audio=opus"
     living_room_sub:
-      - rtsp://admin:password@10.0.0.100/cam/realmonitor?channel=1&subtype=0
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.100/cam/realmonitor?channel=1&subtype=0
     flood_light:
-      - rtsp://admin:password@10.0.0.105/Preview_01_main
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.105/Preview_01_main
       - "ffmpeg:flood_light#audio=opus"
     flood_light_sub:
-      - rtsp://admin:password@10.0.0.105/Preview_01_sub
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.105/Preview_01_sub
     front_porch:
-      - rtsp://admin:password@10.0.0.99/Preview_01_main
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_01_main
     front_porch_sub:
-      - rtsp://admin:password@10.0.0.99/Preview_01_sub
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_01_sub
     nana_porch:
-      - rtsp://admin:password@10.0.0.99/Preview_02_main
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_02_main
     nana_porch_sub:
-      - rtsp://admin:password@10.0.0.99/Preview_02_sub
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_02_sub
     east_side:
-      - rtsp://admin:password@10.0.0.99/Preview_03_main
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_03_main
     east_side_sub:
-      - rtsp://admin:password@10.0.0.99/Preview_03_sub
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_03_sub
     west_side:
-      - rtsp://admin:password@10.0.0.99/Preview_04_main
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_04_main
     west_side_sub:
-      - rtsp://admin:password@10.0.0.99/Preview_04_sub
+      - rtsp://{{CAMERA_USER}}:{{CAMERA_PASSWORD}}@10.0.0.99/Preview_04_sub
 
 ffmpeg:
   hwaccel_args: preset-vaapi

@@ -182,7 +182,7 @@ curl -X POST "http://localhost:8096/Library/Refresh" -H "X-Emby-Token: $JELLYFIN
    - Complete initialization wizard with Jellyfin credentials
 
 2. **Jellystat Server Addition** (~2 minutes)
-   - Visit http://localhost:3000
+   - Visit http://localhost:3002
    - Create account
    - Add Jellyfin server with auto-generated API key
 

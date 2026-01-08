@@ -1,0 +1,6 @@
+{
+  "name": "Dubs Only",
+  "selector": "releaseTitle =~ /dub|english dub|dubbed/i",
+  "score": -1000,
+  "forms": [ { "name": "dub token", "value": "dub" } ]
+}

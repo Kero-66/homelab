@@ -1,0 +1,111 @@
+- Media:
+     - Radarr:
+         icon: radarr.png
+         href: http://localhost/radarr/
+         description: Movie management
+         widget:
+           type: radarr
+           url: http://radarr:7878
+           key: {{HOMEPAGE_VAR_RADARR_API_KEY}}
+
+     - Sonarr:
+         icon: sonarr.png
+         href: http://localhost/sonarr/
+         description: Series management
+         widget:
+           type: sonarr
+           url: http://sonarr:8989
+           key: {{HOMEPAGE_VAR_SONARR_API_KEY}}
+
+     - Prowlarr:
+         icon: prowlarr.png
+         href: http://localhost/prowlarr/
+         description: Indexer manager
+         widget:
+           type: prowlarr
+           url: http://prowlarr:9696
+           key: {{HOMEPAGE_VAR_PROWLARR_API_KEY}}
+
+     - Bazarr:
+         icon: bazarr.png
+         href: http://localhost/bazarr/
+         description: Subtitle management
+         widget:
+           type: bazarr
+           url: http://bazarr:6767/bazarr
+           key: {{HOMEPAGE_VAR_BAZARR_API_KEY}}
+    
+     - Jellyfin:
+         icon: jellyfin.png
+         href: http://localhost/jellyfin/
+         description: Jellyfin Media Server
+         widget:
+           type: jellyfin
+           url: http://jellyfin:8096
+           key: {{HOMEPAGE_VAR_JELLYFIN_API_KEY}}
+
+     - Jellyseerr:
+         icon: jellyseerr.png
+         href: http://jellyseerr.localhost/
+         description: Media request manager
+         widget:
+           type: jellyseerr
+           url: http://jellyseerr:5055
+           key: {{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}
+
+     - qBittorrent:
+         icon: qbittorrent.png
+         href: http://localhost/qbittorrent/
+         description: Torrent client
+         widget:
+           type: qbittorrent
+           url: http://qbittorrent:8080
+           username: {{HOMEPAGE_VAR_QBITTORRENT_USER}}
+           password: {{HOMEPAGE_VAR_QBITTORRENT_PASS}}
+
+     - SABnzbd:
+         icon: sabnzbd.png
+         href: http://localhost/sabnzbd/
+         description: Usenet downloader
+         widget:
+           type: sabnzbd
+           url: http://sabnzbd:8080
+           key: {{HOMEPAGE_VAR_SABNZBD_API_KEY}}
+
+     - NZBGet:
+         icon: nzbget.png
+         href: http://localhost/nzbget/
+         description: Usenet downloader
+         widget:
+           type: nzbget
+           url: http://nzbget:6789
+           username: {{HOMEPAGE_VAR_NZBGET_USER}}
+           password: {{HOMEPAGE_VAR_NZBGET_PASS}}
+
+     - Jellystat:
+         icon: jellystat.png
+         href: http://jellystat.localhost/
+         description: Media statistics
+         widget:
+           type: jellystat
+           url: http://jellystat:3000
+           key: {{HOMEPAGE_VAR_JELLYSTAT_API_KEY}}
+           days: 30 # optional, defaults to 30
+- Maintenance:
+    - Huntarr:
+        icon: huntarr.png
+        href: http://localhost:9705/
+        description: Content hunter
+        widget:
+          type: huntarr
+          url: http://huntarr:9705
+          key: {{HOMEPAGE_VAR_HUNTARR_API_KEY}}
+
+    - Cleanuparr:
+        icon: cleanuparr.png
+        href: http://localhost:11011/
+        description: Queue cleaner
+        widget:
+          type: cleanuparr
+          url: http://cleanuparr:11011
+          key: {{HOMEPAGE_VAR_CLEANUPARR_API_KEY}}

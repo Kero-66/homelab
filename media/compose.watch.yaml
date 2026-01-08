@@ -1,0 +1,26 @@
+# Docker Compose Watch Configuration
+# See: https://docs.docker.com/compose/how-tos/file-watch/
+
+watch:
+  # Example: Watch for changes in the config or scripts directory and restart the service
+  - path: ./media
+    action: rebuild
+    service: bazarr
+  - path: ./media
+    action: rebuild
+    service: jackett
+  - path: ./media
+    action: rebuild
+    service: nzbget
+  - path: ./media
+    action: rebuild
+    service: prowlarr
+  - path: ./media
+    action: rebuild
+    service: qbittorrent
+  - path: ./media
+    action: rebuild
+    service: radarr
+  - path: ./media
+    action: rebuild
+    service: sonarr
