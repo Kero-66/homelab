@@ -10,3 +10,9 @@
 - search:
     provider: duckduckgo
     target: _blank
+
+- beszel:
+    url: http://beszel:8090
+    username: {{HOMEPAGE_VAR_BESZEL_USER}}
+    password: {{HOMEPAGE_VAR_BESZEL_PASS}}
+    version: 2

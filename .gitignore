@@ -32,6 +32,15 @@ media/tvheadend/
 media/backups/
 media/ubooquity/
 media/mylar3/
+media/fileflows/
+media/recyclarr/
+media/cleanuparr/
+
+# Monitoring runtime data
+monitoring/beszel/
+monitoring/netdata/
+monitoring/prometheus/data/
+monitoring/grafana/data/
 
 # Track plugin configurations (exceptions to jellyfin/config exclusion)
 !media/jellyfin/plugin-configs/
@@ -195,3 +204,5 @@ media/recyclarr/config/settings.yml
 networking/.config/caddy/data/
 networking/.config/caddy/config/
 networking/.config/adguard/work/
+media/fileflows/Data/Config/*
+monitoring/.config/.credentials

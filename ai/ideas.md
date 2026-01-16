@@ -47,3 +47,11 @@ References
 - GitHub Actions secrets: https://docs.github.com/en/actions/security-guides/encrypted-secrets
 - AWS Secrets Manager / GCP Secret Manager docs
 
+
+## External Monitoring & Fail-safe Alerting
+
+1) Better Stack (Uptime & Logs)
+- Type: Cloud-managed monitoring and status pages.
+- Pros: Fail-safe (not dependent on local power/internet), clean incident management, public status pages.
+- Cons: Cloud-only (not fully self-hosted), data privacy considerations for logs.
+- Status: Deferred (User prefers self-hosted for now). Review in the future as an external health check complement to Prometheus.

@@ -27,8 +27,9 @@ echo ""
 # Wait for Prowlarr
 # -----------------------------------------------------------------------------
 echo "Waiting for Prowlarr to be ready..."
+PROWLARR_HOST="prowlarr"
 for i in {1..30}; do
-    if curl -s "http://localhost:$PROWLARR_PORT/ping" > /dev/null 2>&1; then
+    if curl -s "http://$PROWLARR_HOST:$PROWLARR_PORT/ping" > /dev/null 2>&1; then
         echo "✓ Prowlarr is up!"
         break
     fi
@@ -49,7 +50,7 @@ fi
 echo ""
 echo "Step 1: Configuring FlareSolverr proxy..."
 
-EXISTING_PROXY=$(curl -s -H "X-Api-Key: $API_KEY" "http://localhost:$PROWLARR_PORT/api/v1/indexerproxy" | python3 -c "
+EXISTING_PROXY=$(curl -s -H "X-Api-Key: $API_KEY" "http://$PROWLARR_HOST:$PROWLARR_PORT/api/v1/indexerproxy" | python3 -c "
 import sys, json
 try:
     proxies = json.load(sys.stdin)
@@ -78,14 +79,14 @@ if [[ -n "$EXISTING_PROXY" ]]; then
     curl -s -X PUT \
         -H "X-Api-Key: $API_KEY" \
         -H "Content-Type: application/json" \
-        "http://localhost:$PROWLARR_PORT/api/v1/indexerproxy/$EXISTING_PROXY" \
+        "http://$PROWLARR_HOST:$PROWLARR_PORT/api/v1/indexerproxy/$EXISTING_PROXY" \
         -d "$(echo "$FLARESOLVERR_PAYLOAD" | python3 -c "import sys,json; d=json.load(sys.stdin); d['id']=$EXISTING_PROXY; print(json.dumps(d))")" > /dev/null
     echo "  ✓ FlareSolverr proxy updated"
 else
     RESPONSE=$(curl -s -X POST \
         -H "X-Api-Key: $API_KEY" \
         -H "Content-Type: application/json" \
-        "http://localhost:$PROWLARR_PORT/api/v1/indexerproxy" \
+        "http://$PROWLARR_HOST:$PROWLARR_PORT/api/v1/indexerproxy" \
         -d "$FLARESOLVERR_PAYLOAD")
     
     if echo "$RESPONSE" | grep -q '"id"'; then
@@ -118,7 +119,7 @@ add_application() {
     
     # Check if app already exists
     EXISTING_APP=$(curl -s -H "X-Api-Key: $API_KEY" \
-        "http://localhost:$PROWLARR_PORT/api/v1/applications" | \
+        "http://$PROWLARR_HOST:$PROWLARR_PORT/api/v1/applications" | \
         python3 -c "
 import sys, json
 try:
@@ -140,7 +141,7 @@ except:
     RESPONSE=$(curl -s -X POST \
         -H "X-Api-Key: $API_KEY" \
         -H "Content-Type: application/json" \
-        "http://localhost:$PROWLARR_PORT/api/v1/applications" \
+        "http://$PROWLARR_HOST:$PROWLARR_PORT/api/v1/applications" \
         -d '{
             "name": "'"$APP_NAME"'",
             "syncLevel": "addOnly",
@@ -182,7 +183,7 @@ add_application_with_key() {
     fi
 
     EXISTING_APP=$(curl -s -H "X-Api-Key: $API_KEY" \
-        "http://localhost:$PROWLARR_PORT/api/v1/applications" | \
+        "http://$PROWLARR_HOST:$PROWLARR_PORT/api/v1/applications" | \
         python3 -c "import sys,json
 try:
     apps=json.load(sys.stdin)
@@ -215,7 +216,7 @@ except:
     RESPONSE=$(curl -s -X POST \
         -H "X-Api-Key: $API_KEY" \
         -H "Content-Type: application/json" \
-        "http://localhost:$PROWLARR_PORT/api/v1/applications" \
+        "http://$PROWLARR_HOST:$PROWLARR_PORT/api/v1/applications" \
         -d '{
             "name": "'"$APP_NAME"'",
             "syncLevel": "addOnly",

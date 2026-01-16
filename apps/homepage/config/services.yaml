@@ -91,21 +91,64 @@
            url: http://jellystat:3000
            key: {{HOMEPAGE_VAR_JELLYSTAT_API_KEY}}
            days: 30 # optional, defaults to 30
-- Maintenance:
-    - Huntarr:
-        icon: huntarr.png
-        href: http://localhost:9705/
-        description: Content hunter
-        widget:
-          type: huntarr
-          url: http://huntarr:9705
-          key: {{HOMEPAGE_VAR_HUNTARR_API_KEY}}
+- Status:
+    - Maintenance:
+        - Huntarr:
+            icon: mdi-shield-search
+            href: http://localhost:9705/
+            description: Content hunter
 
-    - Cleanuparr:
-        icon: cleanuparr.png
-        href: http://localhost:11011/
-        description: Queue cleaner
+        - Cleanuparr:
+            icon: mdi-delete-sweep
+            href: http://localhost:11011/
+            description: Queue cleaner
+
+        - FileFlows:
+            icon: mdi-file-video
+            href: http://localhost:19200/
+            description: Video processing
+            widget:
+              type: fileflows
+              url: http://fileflows:5000
+
+    - Calendar:
+        - Release Schedule:
+            icon: mdi-calendar
+            widget:
+              type: calendar
+              view: agenda
+              maxEvents: 15
+              maxDays: 30
+              previousDays: 3
+              showTime: true
+              showDetails: true
+              integrations:
+                - type: sonarr
+                  service_group: Media
+                  service_name: Sonarr
+                  color: sky
+                - type: radarr
+                  service_group: Media
+                  service_name: Radarr
+                  color: orange
+
+- Monitoring:
+    - Beszel:
+        icon: beszel.png
+        href: http://beszel.localhost/
+        description: Lightweight server monitoring
         widget:
-          type: cleanuparr
-          url: http://cleanuparr:11011
-          key: {{HOMEPAGE_VAR_CLEANUPARR_API_KEY}}
+          type: beszel
+          url: http://beszel:8090
+          username: {{HOMEPAGE_VAR_BESZEL_USER}}
+          password: {{HOMEPAGE_VAR_BESZEL_PASS}}
+          systemId: ibcojulxpoa6st3
+          version: 2
+
+    - Netdata:
+        icon: netdata.png
+        href: http://localhost:19999/
+        description: Real-time performance monitoring
+        widget:
+          type: netdata
+          url: http://netdata:19999

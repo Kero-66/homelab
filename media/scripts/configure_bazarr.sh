@@ -32,7 +32,11 @@ for i in {1..30}; do
 done
 
 # Get Bazarr API key
-BAZARR_API_KEY=$(grep "apikey:" "$CONFIG_DIR/bazarr/config/config.yaml" | head -1 | cut -d' ' -f4)
+BAZARR_API_KEY=$BAZARR_API_KEY
+
+if [ -z "$BAZARR_API_KEY" ]; then
+    BAZARR_API_KEY=$(grep "apikey:" "$CONFIG_DIR/bazarr/config/config.yaml" | head -1 | cut -d' ' -f4)
+fi
 
 if [ -z "$BAZARR_API_KEY" ]; then
     echo "Error: Could not find Bazarr API key"
@@ -41,12 +45,9 @@ fi
 
 echo "Bazarr API Key: ${BAZARR_API_KEY:0:8}..."
 
-# Get Sonarr and Radarr API keys
-echo "Getting Sonarr API key..."
-SONARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' "$CONFIG_DIR/sonarr/config.xml")
-
-echo "Getting Radarr API key..."
-RADARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' "$CONFIG_DIR/radarr/config.xml")
+# Use API keys from .credentials
+SONARR_API_KEY=$SONARR_API_KEY
+RADARR_API_KEY=$RADARR_API_KEY
 
 # Configure Bazarr config file directly
 echo "Updating Bazarr configuration..."
@@ -60,13 +61,15 @@ sed -i "s|use_sonarr: false|use_sonarr: true|g" "$CONFIG_DIR/bazarr/config/confi
 
 # Update Sonarr settings
 sed -i "/^sonarr:/,/^[a-z]/ s|apikey: ''|apikey: '$SONARR_API_KEY'|" "$CONFIG_DIR/bazarr/config/config.yaml"
-sed -i "/^sonarr:/,/^[a-z]/ s|ip: 127.0.0.1|ip: 172.39.0.4|" "$CONFIG_DIR/bazarr/config/config.yaml"
-sed -i "/^sonarr:/,/^[a-z]/ s|port: 8989|port: 8989|" "$CONFIG_DIR/bazarr/config/config.yaml"
+sed -i "/^sonarr:/,/^[a-z]/ s|ip: .*|ip: 'sonarr'|" "$CONFIG_DIR/bazarr/config/config.yaml"
+sed -i "/^sonarr:/,/^[a-z]/ s|port: .*|port: 8989|" "$CONFIG_DIR/bazarr/config/config.yaml"
+sed -i "/^sonarr:/,/^[a-z]/ s|base_url: .*|base_url: '/sonarr'|" "$CONFIG_DIR/bazarr/config/config.yaml"
 
 # Update Radarr settings
 sed -i "/^radarr:/,/^[a-z]/ s|apikey: ''|apikey: '$RADARR_API_KEY'|" "$CONFIG_DIR/bazarr/config/config.yaml"
-sed -i "/^radarr:/,/^[a-z]/ s|ip: 127.0.0.1|ip: 172.39.0.5|" "$CONFIG_DIR/bazarr/config/config.yaml"
-sed -i "/^radarr:/,/^[a-z]/ s|port: 7878|port: 7878|" "$CONFIG_DIR/bazarr/config/config.yaml"
+sed -i "/^radarr:/,/^[a-z]/ s|ip: .*|ip: 'radarr'|" "$CONFIG_DIR/bazarr/config/config.yaml"
+sed -i "/^radarr:/,/^[a-z]/ s|port: .*|port: 7878|" "$CONFIG_DIR/bazarr/config/config.yaml"
+sed -i "/^radarr:/,/^[a-z]/ s|base_url: .*|base_url: '/radarr'|" "$CONFIG_DIR/bazarr/config/config.yaml"
 
 echo "✓ Bazarr configuration updated"
 

@@ -37,15 +37,14 @@ add_jellyfin_notification() {
         echo "⚠️  Could not get $app_name API key"
         return 1
     fi
+
+    # Get UrlBase
+    local url_base=$(grep -oP '<UrlBase>\K[^<]+' "$config_file" 2>/dev/null | tr -d '[:space:]' || echo "")
+    local api_url="http://localhost:$port${url_base}/api/v3/notification"
     
     # Check if Jellyfin notification already exists
-    local existing=$(curl -s "http://localhost:$port/api/v3/notification" -H "X-Api-Key: $api_key" 2>/dev/null | \
-        python3 -c "import sys,json; data=json.load(sys.stdin); print('exists' if any(n.get('name')=='Jellyfin' for n in data) else 'none')" 2>/dev/null || echo "error")
-    
-    if [[ "$existing" == "exists" ]]; then
-        echo "✅ $app_name: Jellyfin notification already configured"
-        return 0
-    fi
+    local existing_id=$(curl -s "$api_url" -H "X-Api-Key: $api_key" 2>/dev/null | \
+        python3 -c "import sys,json; data=json.load(sys.stdin); print(next((n.get('id') for n in data if n.get('name')=='Jellyfin'), 'none'))" 2>/dev/null || echo "error")
     
     # Build the notification payload
     local payload='{
@@ -60,7 +59,7 @@ add_jellyfin_notification() {
         "tags": [],
         '"$events"',
         "fields": [
-            {"name": "host", "value": "host.docker.internal"},
+            {"name": "host", "value": "jellyfin"},
             {"name": "port", "value": 8096},
             {"name": "useSsl", "value": false},
             {"name": "urlBase", "value": ""},
@@ -71,9 +70,30 @@ add_jellyfin_notification() {
             {"name": "mapTo", "value": ""}
         ]
     }'
+
+    if [[ "$existing_id" != "none" && "$existing_id" != "error" ]]; then
+        echo "🔄 $app_name: Updating existing Jellyfin notification (ID: $existing_id)..."
+        # Add ID to payload for update
+        payload=$(echo "$payload" | python3 -c "import sys,json; d=json.load(sys.stdin); d['id'] = $existing_id; print(json.dumps(d))")
+        
+        local result=$(curl -s -X PUT "$api_url/$existing_id" \
+            -H "X-Api-Key: $api_key" \
+            -H "Content-Type: application/json" \
+            -d "$payload" 2>/dev/null)
+        
+        if echo "$result" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if 'id' in d else 1)" 2>/dev/null; then
+            echo "✅ $app_name: Updated Jellyfin notification"
+            return 0
+        else
+            echo "❌ $app_name: Failed to update notification"
+            echo "   Response: $result"
+            return 1
+        fi
+    fi
     
-    # Add the notification
-    local result=$(curl -s -X POST "http://localhost:$port/api/v3/notification" \
+    # Add the notification (if not exists)
+    echo "➕ $app_name: Adding new Jellyfin notification..."
+    local result=$(curl -s -X POST "$api_url" \
         -H "X-Api-Key: $api_key" \
         -H "Content-Type: application/json" \
         -d "$payload" 2>/dev/null)
@@ -108,9 +128,11 @@ echo ""
 
 for app_info in "Radarr:7878:radarr" "Sonarr:8989:sonarr"; do
     IFS=':' read -r app_name port config_name <<< "$app_info"
-    api_key=$(grep -oP '<ApiKey>\K[^<]+' "${CONFIG_DIR}/${config_name}/config.xml" 2>/dev/null | tr -d '[:space:]')
+    config_file="${CONFIG_DIR}/${config_name}/config.xml"
+    api_key=$(grep -oP '<ApiKey>\K[^<]+' "$config_file" 2>/dev/null | tr -d '[:space:]')
+    url_base=$(grep -oP '<UrlBase>\K[^<]+' "$config_file" 2>/dev/null | tr -d '[:space:]' || echo "")
     if [[ -n "$api_key" ]]; then
-        curl -s "http://localhost:$port/api/v3/notification" -H "X-Api-Key: $api_key" | \
+        curl -s "http://localhost:$port${url_base}/api/v3/notification" -H "X-Api-Key: $api_key" | \
             python3 -c "
 import sys, json
 data = json.load(sys.stdin)

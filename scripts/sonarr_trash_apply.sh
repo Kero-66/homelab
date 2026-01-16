@@ -203,38 +203,9 @@ else
 fi
 
 echo
-echo "Step 4: Apply profile to series tagged as anime"
-# Find anime tag id
-tagid=$(curl -s -H "X-Api-Key: $SONARR_API" "$SONARR_URL/api/v3/tag" | jq -r '.[] | select(.label|ascii_downcase=="anime") | .id' || true)
-if [[ -z "$tagid" ]]; then
-  # fallback to tag id 1 if present
-  tagid=$(curl -s -H "X-Api-Key: $SONARR_API" "$SONARR_URL/api/v3/tag" | jq -r '.[] | .id' | head -n1 || true)
-fi
-
-if [[ -z "$tagid" ]]; then
-  echo "No tags available in Sonarr; skipping series assignment"
-else
-  echo "Using tag id: $tagid to detect anime series"
-  series=$(curl -s -H "X-Api-Key: $SONARR_API" "$SONARR_URL/api/v3/series")
-  echo "$series" | jq -c '.[]' | while read -r s; do
-    sid=$(echo "$s" | jq -r '.id')
-    tags=$(echo "$s" | jq -r '.tags // [] | @csv' )
-    # check if tag id in series tags
-    if echo "$s" | jq -e --arg t "$tagid" '.tags | index((($t|tonumber)))' > /dev/null 2>&1; then
-      curq=$(echo "$s" | jq -r '.qualityProfileId')
-      if [[ "$curq" == "$prof_id" ]]; then
-        echo "  - series $(echo "$s" | jq -r '.title') already uses profile $prof_id"
-      else
-        echo "  - would set series $(echo "$s" | jq -r '.title') (id:$sid) profile -> $prof_id"
-        if [[ "$DRY_RUN" == "false" ]]; then
-          updated_series=$(echo "$s" | jq --argjson q "$prof_id" '.qualityProfileId = ($q|tonumber)')
-          curl -s -X PUT -H "X-Api-Key: $SONARR_API" -H "Content-Type: application/json" "$SONARR_URL/api/v3/series/$sid" -d "$updated_series" > /dev/null
-          echo "    -> updated"
-        fi
-      fi
-    fi
-  done
-fi
+echo "Step 4: Cleanup (Anime tagging logic removed)"
+# This section previously applied profiles to series tagged as anime.
+# It has been removed as we now use generic English profiles and global custom formats.
 
 echo
 echo "Step 5: Identify old anime profiles (names containing 'Anime')"

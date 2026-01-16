@@ -5,6 +5,7 @@
 # Disable automatic HTTPS so Caddy does not try to obtain certificates for example domains
 {
     auto_https off
+    debug
 }
 
 # Jellyseerr prefers a dedicated host/subdomain — use the .localhost TLD for local testing
@@ -15,6 +16,25 @@ http://jellyseerr.localhost {
 # Jellystat prefers a dedicated host/subdomain to avoid subpath limitations
 http://jellystat.localhost {
     reverse_proxy jellystat:3000
+}
+
+# Beszel Hub monitoring dashboard
+http://beszel.localhost {
+    reverse_proxy beszel:8090 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+    }
+}
+
+# Netdata real-time monitoring
+http://netdata.localhost {
+    reverse_proxy netdata:19999 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
 }
 
 

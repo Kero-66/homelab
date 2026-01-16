@@ -77,3 +77,9 @@ Recording rationale:
   - `episodes/wanted`: List missing subtitles for episodes.
   - `system/tasks`: Run manual syncs (`update_series`, `update_movies`).
 - **Notes**: Bazarr uses a flat schema for many endpoints. If an endpoint returns the SPA HTML instead of JSON, check the base URL prefix (`/bazarr`) and ensure the trailing slash is omitted unless required by the Swagger spec.
+
+## Beszel Hub & Agent (2026-01-09)
+- **Documentation**: [https://beszel.dev/](https://beszel.dev/)
+- **Auto-Provisioning**: Use `USER_EMAIL` and `USER_PASSWORD` env vars for the Hub to bypass the setup screen.
+- **Agent Communication**: In a Docker bridge network, set `extra_hosts` with `host.docker.internal:host-gateway` on the Hub to allow it to reach the Agent running in `network_mode: host`. 
+- **Registration**: System records can be managed via PocketBase API at `/api/collections/systems/records`.

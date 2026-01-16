@@ -4,3 +4,12 @@ layout:
   Media:
     style: row
     columns: 4
+  Status:
+    style: row
+    columns: 2
+    Maintenance:
+      style: row
+      columns: 2
+    Calendar:
+      style: row
+      columns: 1

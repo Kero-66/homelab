@@ -4,125 +4,93 @@
 	NOTES:
 	 - Keep suggestions mindful of the homelab / production services in this repo.
 	 - This file should be concise and actionable.
----
+-->
 
-## AI Behaviour — unanswered questions and todo recording
+# GitHub Copilot Instructions for homelab
 
-- **Policy**: If the AI asks a clarifying question and the user does not answer (or indicates "defer"), the AI MUST append the question as an `open` item to `ai/todo.md` with context and a suggested next step. The AI should then continue only with safe, non-destructive tasks (e.g., creating sample files, docs, or proposals) and avoid making irreversible changes.
-- **Recording**: The AI must record any external sources used into `ai/reference.md` when it references documentation or web resources.
-- **Secrets**: Under no circumstances should the AI populate real secrets; instead create `.sample` files and document where real values must be placed.
-
-💡 Tip: When in doubt, propose a minimal and reversible change in a PR, include validation instructions, and request maintainers' approval.
-
-Thank you for helping to keep this homelab repository safe and reliable. If you'd like, I can also add CI job suggestions (shellcheck, yamllint, docker compose validation) to help enforce these rules automatically.
-
+## Purpose
 - Help contributors and AI assistants make safe, consistent, and testable changes to the homelab repository.
-- Provide repository-specific guidance: where to make changes, how to validate them, and what to avoid.
+- Provide repository-specific direction so we minimize rework, avoid rerunning commands unnecessarily, and cut down on repeated experimentation when the answer is already available.
 
----
+## Key principles
+- READ THE DOCUMENTATION before assuming anything; use MCP or other docs listed below and cite the source in ai/reference.md.
+- USE THE API FIRST when investigating or changing infrastructure; rely on service APIs before manual terminal exploration.
+- WORK EFFICIENTLY: reuse recorded commands/results, double-check prior logs before rerunning validations, and surface any repeated effort in your summary so maintainers can trust you revisited the right state.
+- IF YOU ASK A CLARIFYING QUESTION AND IT GOES UNANSWERED, add it as an **open** item to ai/todo.md with context and a suggested next step, then restrict yourself to safe, reversible work.
+- LOG any newly discovered working API call or troubleshooting command in `.github/TROUBLESHOOTING.md` with sanitized placeholders and enough context so future troubleshooters can reuse it.
+
+## Source of truth (consult before guessing)
+- [README.md](../README.md)
+- [networking/README.md](../networking/README.md)
+- [networking/.config/caddy/Caddyfile](../networking/.config/caddy/Caddyfile)
+- [monitoring/README.md](../monitoring/README.md)
+- [monitoring/compose.yaml](../monitoring/compose.yaml)
+- [media/README.md](../media/README.md)
+- [media/compose.yaml](../media/compose.yaml)
+- [homeassistant/README.md](../homeassistant/README.md)
+- Record any additional external resources you consult in ai/reference.md, even if they come from MCP or other docs.
 
 ## Scope — where AI can safely help
+- Documentation and READMEs (including service-specific READMEs and docs/*).
+- Deployment and automation scripts under scripts/, automations/, deploy.sh, and related compose helpers.
+- Docker Compose or YAML configuration files; always include the validation commands (yamllint, docker compose config) that you used in your summary.
+- Monitoring and alert files (Prometheus rules, Grafana provisioning); note any alert owner impact and include validation steps.
+- Tooling/helper utilities (scripts/, tools/, service helpers) with repo-standard style and linting.
 
-- Documentation and READMEs: update, add or correct instructions in `README.md`, `docs/`, and service README files (e.g. `media/README.md`, `homeassistant/README.md`).
-- Make sure you find and record the API guides provided by the servcies used in this homelab.
-- Deployment and automation scripts: modify or improve scripts in `scripts/`, `automations/`, `deploy.sh`, and `compose`-based deployment helpers.
-- Docker Compose and YAML configuration: propose changes in `*.yaml`, `compose.yml` and `compose.yaml` files, or `images/` small updates (image tags and metadata updates are OK with validation steps).
-- Monitoring and alerts: propose changes to `monitoring/` files including Prometheus, Grafana dashboards (but include validation steps and confirm alerts scope).
-- Tooling and helper utilities: small improvements to `scripts/`, `tools/`, or service-specific scripts (maintain existing style and linting).
+## Service Specific Rules
 
-## Out-of-scope — do NOT make these changes without explicit human confirmation
+### Recyclarr
+- **API Keys:** Never hardcode. Use `!secret` tags referencing `secrets.yml`.
+- **Profiles:** Map Trash Guides custom formats manually to existing profiles: `Anime (1080p)`, `Standard (1080p)`, and `Ultra-HD (4K)`. Do NOT use quality-profile templates that create new profiles.
+- **Anime Audio:** Penalize English-only dubs with a score of `-10000` on the "Dubs Only" custom format to prioritize Japanese/Original audio.
+- **Warnings:** Ignore Recyclarr warnings about "missing profile definitions" for template-default names (e.g., "Remux-1080p - Anime") to maintain official template compatibility.
+- **Naming:** Use `WEBDL-1080p` and `WEBDL-2160p` style naming for quality targets in Recyclarr mapping.
 
-- Secrets, credentials, API keys, or tokens: never add or modify values in `config_backups/` or anywhere that would store secrets in plaintext. If a secret needs to be managed, propose using environment variables and an external secrets manager.
-- Large or risky infrastructure changes that could cause production downtime (remove or reconfigure services such as `homeassistant`, `jellyfin`, `prowlarr`, `radarr`, `sonarr`, `updating core proxies` etc.) without explicit owner approval.
-- Changes requiring credential rotation, re-deploying critical services, or rebooting hosts. Suggest the change in a PR and mention the operational steps and owner approval required.
+## Out-of-scope — ask a human before touching
+- Secrets, credentials, API keys, tokens, or anything that would live in config_backups/. Recommend using `.env` / documented secret storage and never commit real values.
+- Large or risky infra changes (core proxy rewrites, service removals, new ports) that could cause downtime, unless an explicit owner approves.
+- Work that requires rotating credentials, redeploying critical services, or rebooting hosts; open an issue or request direct owner coordination instead.
 
----
+## Secrets handling
+- Never insert real secrets in the repo; use `.sample` placeholders and describe where real values belong in documentation.
+- Store credentials for each service inside its gitignored credentials file (for example, `media/.config/.credentials` or `apps/homepage/.env`) and reference that file in docs/README updates instead of copying secrets.
+- Document the vault/secret manager expectation for each change when a new secret would be required.
 
 ## Style and conventions
+- Shell: use `#!/usr/bin/env bash`, `set -euo pipefail`, prefer idempotent designs, and run `shellcheck` before claiming the script is ready.
+- YAML / Docker Compose: run `yamllint <file>` and `docker compose -f <file> config` (include `compose -f` target in your summary) for every modified compose file.
+- Python: format with `black` and lint with `ruff`/`flake8`; include new tests when feasible.
+- Documentation: keep prose concise, add a short example or command to validate the doc change, and cite the relevant README.
 
-- Shell scripts
-	- Use POSIX-ish bash: include `#!/usr/bin/env bash` and set `set -euo pipefail` where appropriate.
-	- Prefer idempotent scripts and document assumptions in the script header.
-	- Run `shellcheck` on changes to existing or new `.sh` files and follow linter suggestions where possible.
+## Efficiency checklist for AI-proposed work
+1. Validate yaml/compose files
+   - `yamllint <file>`
+   - `docker compose -f <file> config`
+2. Validate shell scripts
+   - `shellcheck <script>` or `bash -n <script>`
+3. Validate Python changes
+   - `python -m pytest <target>` or run `ruff .` and `black --check .`
+4. Security check
+   - confirm no secrets were added; document required secret sources in docs or `.env.sample`.
+5. Documentation follow-up
+   - update user-facing README/CHANGELOG entries when behavior changes.
+6. Coordination note
+   - mention any needed downtime or owner approvals; cite the owner (kero-66) when responsibilities are handed off.
 
-- YAML / Docker Compose
-	- Validate YAML syntax with `yamllint` and `docker compose -f <file> config` when editing compose files.
-	- Keep service definitions minimal and documented in the respective folder README when adding or altering services.
+## Branching and commits
+- Branch names: `feature/<short-description>`, `fix/<short-description>`, `hotfix/<short-description>`.
+- Commit messages: `<type>(<scope>): <short summary>` (e.g., `fix(scripts): handle missing MEDIA_PATH env var`, `chore(docs): refresh media README`).
 
-- Python
-	- Use `black` or the repository's already used formatting tooling. Run `ruff` or `flake8` for linting.
-	- Add unit tests where feasible and include instructions for running them in the updated README.
+## When to ask for help or approval
+- Touching production service definitions, scheduled jobs, or monitoring/alerting rules.
+- Changes that require credential rotations, redeploys, or architectural shifts (new services, new networks).
+- Any work that cannot be validated without owner coordination or that could cause downtime.
 
-- Documentation
-	- Use clear, short, and actionable changes. Include a small example or command to validate the change locally where possible.
+## Examples
+- Good: tweak a deployment script, run `shellcheck`, and document the command in the summary.
+- Good: bump an image tag in a compose file, run `yamllint` + `docker compose -f <file> config`, and describe the validation output.
+- Bad: adding API keys to config_backups/ or altering a proxy config without human signoff.
 
----
-
-## Suggested PR checklist for changes proposed by AI
-
-Before opening a PR, or when PRs include AI-proposed changes, ensure the following:
-
-1. Validate yaml/compose files:
-	 - `yamllint` on modified YAML files
-	 - `docker compose -f path/to/compose.yaml config` for all modified compose files
-2. Validate shell scripts:
-	 - `shellcheck` (or at least `bash -n` and a simple smoke test)
-3. Validate Python changes (if present):
-	 - `python -m pytest` for related tests, or at least run a quick linter like `ruff` / `flake8`.
-4. Security checks:
-	 - Ensure no secrets are added. If a secret is required, use `.env` (ignored in the repo) and document where to populate it.
-5. Documentation and changelog:
-	 - Update related README or `CHANGELOG.md` when adding or changing functionality that affects users or operations.
-6. Coordination and downtime:
-	 - If changes require downtime or re-deploys, mention this in the PR and get explicit approval from the repo owner or the on-call maintainer.
-
----
-
-## Commit and branch naming suggestions
-
-- Branches
-	- Feature branches: `feature/<short-description>`
-	- Fix branches: `fix/<short-description>`
-	- Hotfix/urgent: `hotfix/<short-description>`
-
-- Commit messages (conventional and clear)
-	- Format: `<type>(<scope>): <short summary>`
-	- Examples: `fix(scripts): handle missing MEDIA_PATH env var`, `chore(docs): update README media section`
-
----
-
-## When to ask for help or confirmation
-
-- Ask a human maintainer in a PR or an issue when making changes that:
-	- touch production service definitions, scheduled jobs, or monitoring/alerting rules.
-	- require credential or key rotation.
-	- change architecture (e.g., adding a new VM, exposing new ports, changing proxies).
-	- introduce a brand new service or automation for which there are no tests.
-
----
-
-## Examples (what to do / what NOT to do)
-
-- Good
-	- Small performance improvement to a script and update README with `how-to-run` instructions.
-	- Update a Docker image version and validate via `docker compose -f ... config`.
-	- Add a new lint rule and update CI instructions for the repository.
-
-- Bad
-	- Adding API keys or exposing SSH keys in `images/` or `config_backups/`.
-	- Replacing a service's network configuration without owner confirmation.
-
----
-
-## Contact and owners
-
-- Primary repo owner: `kero-66` (maintainer). If you need to escalate or coordinate, open an issue describing the change and assign the owner.
-
----
-
-💡 Tip: When in doubt, propose a minimal and reversible change in a PR, include validation instructions, and request maintainers' approval.
-
----
-
-Thank you for helping to keep this homelab repository safe and reliable. If you'd like, I can also add CI job suggestions (shellcheck, yamllint, docker compose validation) to help enforce these rules automatically.
+## Contact
+- Primary repo owner: kero-66. Open an issue or mention them on the PR for any major or risky change.
 

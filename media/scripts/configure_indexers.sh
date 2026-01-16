@@ -153,6 +153,7 @@ echo ""
 
 # Usenet indexers
 add_indexer_by_definition "NZBGeek" "nzbgeek" "usenet"
+add_indexer_by_definition "SceneNZB" "newznab" "usenet"
 add_indexer_by_definition "Generic Newznab" "newznab" "usenet"
 
 # =============================================================================
@@ -213,6 +214,7 @@ echo "Summary:"
 echo "  ✓ Anime: Nyaa.si, Anidex, AnimeTosho"
 echo "  ✓ General Torrents: ThePirateBay, TorrentGalaxy, 1337x, RARBG"
 echo "  ✓ Usenet: NZBGeek, Generic Newznab"
+add_indexer_by_definition "SceneNZB" "newznab" "usenet"
 echo ""
 echo "These indexers are now available in Sonarr/Radarr/Lidarr"
 echo ""
