@@ -142,3 +142,5 @@
     - Containers:
         icon: docker.png
         description: Container management
+        widget:
+          type: docker
