@@ -72,16 +72,6 @@
            url: http://sabnzbd:8080
            key: {{HOMEPAGE_VAR_SABNZBD_API_KEY}}
 
-     - NZBGet:
-         icon: nzbget.png
-         href: http://localhost/nzbget/
-         description: Usenet downloader
-         widget:
-           type: nzbget
-           url: http://nzbget:6789
-           username: {{HOMEPAGE_VAR_NZBGET_USER}}
-           password: {{HOMEPAGE_VAR_NZBGET_PASS}}
-
      - Jellystat:
          icon: jellystat.png
          href: http://jellystat.localhost/
@@ -93,11 +83,6 @@
            days: 30 # optional, defaults to 30
 - Status:
     - Maintenance:
-        - Huntarr:
-            icon: mdi-shield-search
-            href: http://localhost:9705/
-            description: Content hunter
-
         - Cleanuparr:
             icon: mdi-delete-sweep
             href: http://localhost:11011/
@@ -152,3 +137,8 @@
         widget:
           type: netdata
           url: http://netdata:19999
+
+- Docker:
+    - Containers:
+        icon: docker.png
+        description: Container management
