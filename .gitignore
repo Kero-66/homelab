@@ -1,7 +1,10 @@
 # Ignore local credentials and environment files
-media/.config/.credentials
-networking/.config/.credentials
-media/.env
+# These are now at the root of each stack directory
+media/.credentials
+monitoring/.credentials
+networking/.credentials
+apps/homepage/.credentials
+.env
 
 # Generated seed configs (created by setup_seed_configs.sh)
 media/.config/qbittorrent/qBittorrent.conf
@@ -205,4 +208,3 @@ networking/.config/caddy/data/
 networking/.config/caddy/config/
 networking/.config/adguard/work/
 media/fileflows/Data/Config/*
-monitoring/.config/.credentials

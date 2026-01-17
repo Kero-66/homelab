@@ -1,28 +1,45 @@
 x-common: &homepage-common
   # Shared settings for homepage; env files listed with the shared file first so local vars override
   env_file:
-    - ../../media/.config/.credentials
-    - ../../media/.env
     - .env
+    - ../../media/.credentials
+    - ../../monitoring/.credentials
+    - ../../networking/.credentials
+    - .credentials
   restart: "${RESTART_POLICY}"
   profiles: ["homepage", "all"]
 
 services:
   homepage:
     <<: *homepage-common
-    image: "${HOMEPAGE_IMAGE}"
+    image: "${HOMEPAGE_IMAGE:-ghcr.io/gethomepage/homepage:latest}"
     container_name: homepage
     ports:
-      - "${HOMEPAGE_PORT}:${HOMEPAGE_CONTAINER_PORT}"
+      - "${HOMEPAGE_PORT:-3000}:${HOMEPAGE_CONTAINER_PORT:-3000}"
     volumes:
       - ./config:/app/config
     environment:
       - NODE_ENV=${NODE_ENV}
-      - HOMEPAGE_VAR_JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      # Media Stack Credentials (sourced from .env for compose-time interpolation)
+      - HOMEPAGE_VAR_SONARR_API_KEY=${SONARR_API_KEY}
       - HOMEPAGE_VAR_RADARR_API_KEY=${RADARR_API_KEY}
       - HOMEPAGE_VAR_PROWLARR_API_KEY=${PROWLARR_API_KEY}
-      - HOMEPAGE_VAR_SONARR_API_KEY=${SONARR_API_KEY}
       - HOMEPAGE_VAR_BAZARR_API_KEY=${BAZARR_API_KEY}
+      - HOMEPAGE_VAR_SABNZBD_API_KEY=${SABNZBD_API_KEY}
+      - HOMEPAGE_VAR_JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+      - HOMEPAGE_VAR_JELLYSEERR_API_KEY=${JELLYSEERR_API_KEY}
+      - HOMEPAGE_VAR_JELLYSTAT_API_KEY=${JELLYSTAT_API_KEY}
+      - HOMEPAGE_VAR_LIDARR_API_KEY=${LIDARR_API_KEY}
+      - HOMEPAGE_VAR_HUNTARR_API_KEY=${HUNTARR_API_KEY}
+      - HOMEPAGE_VAR_CLEANUPARR_API_KEY=${CLEANUPARR_API_KEY}
+      - HOMEPAGE_VAR_QBITTORRENT_USER=${QBITTORRENT_USER}
+      - HOMEPAGE_VAR_QBITTORRENT_PASS=${QBITTORRENT_PASS}
+      - HOMEPAGE_VAR_NZBGET_USER=${NZBGET_USER}
+      - HOMEPAGE_VAR_NZBGET_PASS=${NZBGET_PASS}
+      # Monitoring Stack Credentials
+      - HOMEPAGE_VAR_BESZEL_USER=${BESZEL_USER}
+      - HOMEPAGE_VAR_BESZEL_PASS=${BESZEL_PASS}
+      # IP addresses for dashboard (configuration, not credentials)
       - HOMEPAGE_VAR_IP_QBITTORRENT=${IP_QBITTORRENT}
       - HOMEPAGE_VAR_IP_SONARR=${IP_SONARR}
       - HOMEPAGE_VAR_IP_RADARR=${IP_RADARR}
@@ -31,18 +48,6 @@ services:
       - HOMEPAGE_VAR_IP_NZBGET=${IP_NZBGET}
       - HOMEPAGE_VAR_IP_PROWLARR=${IP_PROWLARR}
       - HOMEPAGE_VAR_IP_FLARESOLVERR=${IP_FLARESOLVERR}
-      - HOMEPAGE_VAR_SABNZBD_API_KEY=${SABNZBD_API_KEY}
-      # Explicit homepage template variables mapped from media credentials
-      - HOMEPAGE_VAR_QBITTORRENT_USER=${QBITTORRENT_USER}
-      - HOMEPAGE_VAR_QBITTORRENT_PASS=${QBITTORRENT_PASS}
-      - HOMEPAGE_VAR_NZBGET_USER=${NZBGET_USER}
-      - HOMEPAGE_VAR_NZBGET_PASS=${NZBGET_PASS}
-      - HOMEPAGE_VAR_JELLYSEERR_API_KEY=${JELLYSEERR_API_KEY}
-      - HOMEPAGE_VAR_JELLYSTAT_API_KEY=${JELLYSTAT_API_KEY}
-      - HOMEPAGE_VAR_HUNTARR_API_KEY=${HUNTARR_API_KEY}
-      - HOMEPAGE_VAR_CLEANUPARR_API_KEY=${CLEANUPARR_API_KEY}
-      - HOMEPAGE_VAR_BESZEL_USER=${BESZEL_USER}
-      - HOMEPAGE_VAR_BESZEL_PASS=${BESZEL_PASS}
     healthcheck:
       test: ["CMD-SHELL", "wget -q -S --spider http://127.0.0.1:${HOMEPAGE_CONTAINER_PORT:-3000}/ || exit 1"]
       interval: 30s
