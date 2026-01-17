@@ -4,6 +4,18 @@ services:
     container_name: 'beszel'
     restart: ${RESTART_POLICY:-unless-stopped}
     mem_limit: 512m
+    labels:
+      - homepage.group=Monitoring
+      - homepage.name=Beszel
+      - homepage.icon=beszel.png
+      - homepage.href=http://beszel.localhost/
+      - homepage.description=Lightweight server monitoring
+      - homepage.widget.type=beszel
+      - homepage.widget.url=http://beszel:8090
+      - homepage.widget.username=${BESZEL_USER}
+      - homepage.widget.password=${BESZEL_PASS}
+      - homepage.widget.systemId=ibcojulxpoa6st3
+      - homepage.widget.version=2
     env_file:
       - .config/.credentials
       - .env
@@ -12,8 +24,8 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
       - APP_URL=${APP_URL}
-      - USER_EMAIL=${USER_EMAIL}
-      - USER_PASSWORD=${USER_PASSWORD}
+      - USER_EMAIL=${BESZEL_USER}
+      - USER_PASSWORD=${BESZEL_PASS}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -55,6 +67,14 @@ services:
     container_name: netdata
     hostname: ${HOSTNAME:-homelab}
     restart: ${RESTART_POLICY:-unless-stopped}
+    labels:
+      - homepage.group=Monitoring
+      - homepage.name=Netdata
+      - homepage.icon=netdata.png
+      - homepage.href=http://localhost:19999/
+      - homepage.description=Real-time performance monitoring
+      - homepage.widget.type=netdata
+      - homepage.widget.url=http://netdata:19999
     cap_add:
       - SYS_PTRACE
       - SYS_ADMIN

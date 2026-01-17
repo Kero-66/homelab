@@ -76,8 +76,16 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     mem_limit: 512m
-    # labels:
-    #   - deunhealth.restart.on.unhealthy=true
+    labels:
+      - homepage.group=Media
+      - homepage.name=qBittorrent
+      - homepage.icon=qbittorrent.png
+      - homepage.href=http://localhost:8080/qbittorrent/
+      - homepage.description=Torrent client
+      - homepage.widget.type=qbittorrent
+      - homepage.widget.url=http://qbittorrent:8080
+      - homepage.widget.username=${QBITTORRENT_USER}
+      - homepage.widget.password=${QBITTORRENT_PASS}
     #  - TORRENTING_PORT=${FIREWALL_VPN_INPUT_PORTS} # airvpn forwarded port, pulled from .env
     environment:
       - PUID=${PUID}
@@ -126,6 +134,15 @@ services:
     image: lscr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
     mem_limit: 512m
+    labels:
+      - homepage.group=Media
+      - homepage.name=SABnzbd
+      - homepage.icon=sabnzbd.png
+      - homepage.href=http://localhost/sabnzbd/
+      - homepage.description=Usenet downloader
+      - homepage.widget.type=sabnzbd
+      - homepage.widget.url=http://sabnzbd:8080
+      - homepage.widget.key=${SABNZBD_API_KEY}
     volumes:
       - ${CONFIG_DIR:-.}/sabnzbd:/config
       - ${DATA_DIR:-/data}:/data
@@ -174,6 +191,15 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     mem_limit: 512m
+    labels:
+      - homepage.group=Media
+      - homepage.name=Prowlarr
+      - homepage.icon=prowlarr.png
+      - homepage.href=http://localhost/prowlarr/
+      - homepage.description=Indexer manager
+      - homepage.widget.type=prowlarr
+      - homepage.widget.url=http://prowlarr:9696
+      - homepage.widget.key=${PROWLARR_API_KEY}
     # Use public DNS servers to resolve indexer domains without VPN
     dns:
       - 1.1.1.1      # Cloudflare DNS
@@ -202,6 +228,15 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     mem_limit: 512m
+    labels:
+      - homepage.group=Media
+      - homepage.name=Sonarr
+      - homepage.icon=sonarr.png
+      - homepage.href=http://localhost/sonarr/
+      - homepage.description=Series management
+      - homepage.widget.type=sonarr
+      - homepage.widget.url=http://sonarr:8989
+      - homepage.widget.key=${SONARR_API_KEY}
     volumes:
       - ${CONFIG_DIR:-.}/sonarr:/config
       - ${DATA_DIR:-/data}:/data
@@ -222,6 +257,15 @@ services:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     mem_limit: 512m
+    labels:
+      - homepage.group=Media
+      - homepage.name=Radarr
+      - homepage.icon=radarr.png
+      - homepage.href=http://localhost/radarr/
+      - homepage.description=Movie management
+      - homepage.widget.type=radarr
+      - homepage.widget.url=http://radarr:7878
+      - homepage.widget.key=${RADARR_API_KEY}
     volumes:
       - ${CONFIG_DIR:-.}/radarr:/config
       - ${DATA_DIR:-/data}:/data
@@ -265,6 +309,15 @@ services:
     image: lscr.io/linuxserver/bazarr:latest
     container_name: bazarr
     mem_limit: 256m
+    labels:
+      - homepage.group=Media
+      - homepage.name=Bazarr
+      - homepage.icon=bazarr.png
+      - homepage.href=http://localhost/bazarr/
+      - homepage.description=Subtitle management
+      - homepage.widget.type=bazarr
+      - homepage.widget.url=http://bazarr:6767/bazarr
+      - homepage.widget.key=${BAZARR_API_KEY}
     volumes:
       - ${CONFIG_DIR:-.}/bazarr:/config
       - ${DATA_DIR:-/data}:/data
@@ -290,6 +343,15 @@ services:
     container_name: jellyfin
     profiles: ["jellyfin", "all"]
     mem_limit: 2g
+    labels:
+      - homepage.group=Media
+      - homepage.name=Jellyfin
+      - homepage.icon=jellyfin.png
+      - homepage.href=http://localhost/jellyfin/
+      - homepage.description=Media Server
+      - homepage.widget.type=jellyfin
+      - homepage.widget.url=http://jellyfin:8096
+      - homepage.widget.key=${JELLYFIN_API_KEY}
     volumes:
       - ${CONFIG_DIR:-.}/jellyfin/config:/config
       - ${DATA_DIR:-/data}:/data
@@ -316,6 +378,15 @@ services:
     container_name: jellyseerr
     profiles: ["jellyfin", "all"]
     mem_limit: 512m
+    labels:
+      - homepage.group=Media
+      - homepage.name=Jellyseerr
+      - homepage.icon=jellyseerr.png
+      - homepage.href=http://jellyseerr.localhost/
+      - homepage.description=Media request manager
+      - homepage.widget.type=jellyseerr
+      - homepage.widget.url=http://jellyseerr:5055
+      - homepage.widget.key=${JELLYSEERR_API_KEY}
     volumes:
       - ${CONFIG_DIR:-.}/jellyfin/jellyseerr:/app/config
     ports:
@@ -357,6 +428,15 @@ services:
     container_name: jellystat
     profiles: ["jellyfin", "all"]
     mem_limit: 256m
+    labels:
+      - homepage.group=Media
+      - homepage.name=Jellystat
+      - homepage.icon=jellystat.png
+      - homepage.href=http://jellystat.localhost/
+      - homepage.description=Media statistics
+      - homepage.widget.type=jellystat
+      - homepage.widget.url=http://jellystat:3000
+      - homepage.widget.key=${JELLYSTAT_API_KEY}
     environment:
       - POSTGRES_USER=${JELLYSTAT_DB_USER}
       - POSTGRES_PASSWORD=${JELLYSTAT_DB_PASS}

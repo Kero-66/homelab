@@ -208,3 +208,10 @@ networking/.config/caddy/data/
 networking/.config/caddy/config/
 networking/.config/adguard/work/
 media/fileflows/Data/Config/*
+
+# Credentials in .config directories
+**/.config/.credentials
+
+# Temp json dumps
+*_queue.json
+*_manual_import.json
