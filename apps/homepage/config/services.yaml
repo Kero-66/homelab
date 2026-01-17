@@ -34,7 +34,7 @@
            type: bazarr
            url: http://bazarr:6767/bazarr
            key: {{HOMEPAGE_VAR_BAZARR_API_KEY}}
-    
+
      - Jellyfin:
          icon: jellyfin.png
          href: http://localhost/jellyfin/
@@ -137,10 +137,3 @@
         widget:
           type: netdata
           url: http://netdata:19999
-
-- Docker:
-    - Containers:
-        icon: docker.png
-        description: Container management
-        widget:
-          type: docker
