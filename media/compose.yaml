@@ -141,32 +141,6 @@ services:
       retries: 3
       start_period: 30s
 
-  nzbget:
-    <<: *media-common
-    image: lscr.io/linuxserver/nzbget:latest
-    container_name: nzbget
-    mem_limit: 512m
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-      - NZBGET_USER=${NZBGET_USER}
-      - NZBGET_PASS=${NZBGET_PASS}
-    volumes:
-      - ${CONFIG_DIR:-.}/nzbget:/config
-      - ${DATA_DIR:-/data}:/data
-    ports:
-      - ${NZBGET_PORT:-6789}:6789
-    networks:
-      servarrnetwork:
-        ipv4_address: ${IP_NZBGET:-172.39.0.7}
-    healthcheck:
-      test: curl -sf http://localhost:6789 || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
   # FlareSolverr helps bypass Cloudflare protection on indexers
   # Required for many indexers when running without VPN
   flaresolverr:
