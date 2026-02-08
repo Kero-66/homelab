@@ -176,7 +176,6 @@ backup_service_config "jellyfin" "media/jellyfin/config"
 backup_service_config "jellyseerr" "media/jellyfin/jellyseerr"
 backup_service_config "jellystat" "media/jellyfin/jellystat"
 backup_service_config "qbittorrent" "media/qbittorrent"
-backup_service_config "nzbget" "media/nzbget"
 backup_service_config "jackett" "media/jackett"
 backup_service_config "mylar3" "media/mylar3"
 backup_service_config "ubooquity" "media/ubooquity"
@@ -461,7 +460,7 @@ docker compose up -d
 ## Post-Migration Checklist
 
 - [ ] All services accessible
-- [ ] Download clients working (qBittorrent, NZBGet)
+- [ ] Download clients working (qBittorrent)
 - [ ] Indexers connected in Prowlarr
 - [ ] *arr apps can see media folders
 - [ ] Jellyfin libraries scanning

@@ -8,9 +8,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$REPO_ROOT"
 
-CRED=media/.config/.credentials
-SONARR_API=$(grep -E '^SONARR_API_KEY=' "$CRED" | cut -d= -f2- || echo "$SONARR_API")
-SONARR_URL=$(grep -E '^SONARR_URL=' "$CRED" | cut -d= -f2- || echo "http://localhost/sonarr")
+SONARR_API="${SONARR_API_KEY:-}"
+SONARR_URL="${SONARR_URL:-http://localhost/sonarr}"
+
+if [[ -z "$SONARR_API" ]]; then
+  echo "Error: SONARR_API_KEY not found in environment."
+  echo "Usage: infisical run -- bash $0"
+  exit 1
+fi
 
 DRY_RUN=true
 if [[ "${RUN_SONARR_TRASH_APPLY:-0}" == "1" ]]; then

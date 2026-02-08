@@ -53,7 +53,6 @@ check_service "Radarr" "7878" "http://localhost:7878/ping"
 check_service "Lidarr" "8686" "http://localhost:8686/ping"
 check_service "Prowlarr" "9696" "http://localhost:9696/ping"
 check_service "qBittorrent" "8080" "http://localhost:8080"
-check_service "NZBGet" "6789" "http://localhost:6789"
 check_service "Bazarr" "6767" "http://localhost:6767/ping"
 check_service "Jellyfin" "8096" "http://localhost:8096/health"
 check_service "Jellyseerr" "5055" "http://localhost:5055/api/v1/settings/public"
@@ -90,10 +89,10 @@ fi
 SONARR_KEY=$(grep -oP '<ApiKey>\K[^<]+' "$CONFIG_DIR/sonarr/config.xml" 2>/dev/null | tr -d '[:space:]')
 if [ -n "$SONARR_KEY" ]; then
     DL_COUNT=$(curl -s "http://localhost:8989/api/v3/downloadclient" -H "X-Api-Key: $SONARR_KEY" | python3 -c 'import sys,json; print(len(json.load(sys.stdin)))' 2>/dev/null || echo "0")
-    if [ "$DL_COUNT" -ge "2" ]; then
+    if [ "$DL_COUNT" -ge "1" ]; then
         echo "  ✓ Sonarr has $DL_COUNT download clients"
     else
-        echo "  ✗ Sonarr has only $DL_COUNT download clients (expected 2+)"
+        echo "  ✗ Sonarr has only $DL_COUNT download clients (expected 1+)"
     fi
 else
     echo "  ✗ Cannot read Sonarr API key"
@@ -114,7 +113,7 @@ fi
 
 echo ""
 echo "Memory Limits:"
-docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" | grep -E "NAME|jellyfin|jellyseerr|jellystat|sonarr|radarr|prowlarr|bazarr|qbittorrent|nzbget|lidarr|flaresolverr" | head -12
+docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" | grep -E "NAME|jellyfin|jellyseerr|jellystat|sonarr|radarr|prowlarr|bazarr|qbittorrent|lidarr|flaresolverr" | head -12
 
 echo ""
 echo "════════════════════════════════════════════════════════════"

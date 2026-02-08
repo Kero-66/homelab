@@ -23,7 +23,8 @@ This guide explains how to migrate your media stack from one machine (e.g., desk
 
 3. **Note your current configuration**
    - Copy your `.env` file
-   - Copy your `.config/.credentials` file
+   - Record your Infisical project ID and ensure secrets exist under `/media`
+   - Copy `.infisical.json` if you rely on it for tooling context
    - Note any VPN credentials if using Gluetun
 
 ### On Your New Server

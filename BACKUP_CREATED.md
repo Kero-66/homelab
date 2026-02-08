@@ -88,7 +88,7 @@ The backup script creates a complete snapshot:
 ✅ **Configurations**
 - Radarr, Sonarr, Lidarr, Prowlarr, Bazarr
 - Jellyfin, Jellyseerr, Jellystat
-- qBittorrent, NZBGet
+- qBittorrent
 - All other services
 
 ✅ **Databases**

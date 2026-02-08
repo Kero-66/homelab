@@ -47,9 +47,16 @@ Notes:
 Environment & API keys
 ----------------------
 - This compose references `../../media/.env` to reuse API keys and network settings from the media stack. Ensure `apps/homepage/.env` and `media/.env` exist and contain the required variables before starting the container.
-- Important variables often present in `media/.env` (examples): `SONARR_API_KEY`, `RADARR_API_KEY`, `PROWLARR_API_KEY`, `JELLYFIN_API_KEY`, `PROWLARR_API_KEY`, `QBITTORRENT_USER`, `QBITTORRENT_PASS`, `NZBGET_USER`, `NZBGET_PASS`.
+- Important variables often present in `media/.env` (examples): `SONARR_API_KEY`, `RADARR_API_KEY`, `PROWLARR_API_KEY`, `JELLYFIN_API_KEY`, `QBITTORRENT_USER`, `QBITTORRENT_PASS`.
 
-Run `scripts/generate_env_from_media.sh` to populate `apps/homepage/.env` from the media service config files (Radarr, Prowlarr, Sonarr) for local testing — this avoids hardcoding secrets. Do NOT commit the generated `.env` file to git (it's ignored by default).
+Run `scripts/generate_homepage_env.sh` to populate `apps/homepage/.env` from Infisical `/homepage` for local testing — this avoids hardcoding secrets. Do NOT commit the generated `.env` file to git (it's ignored by default).
+
+If Homepage is missing keys from other stacks, mirror them into `/homepage` first:
+
+```bash
+INFISICAL_PROJECT_ID=<PROJECT_ID> \
+bash security/infisical/sync_homepage_secrets.sh
+```
 - You must set `HOMEPAGE_ALLOWED_HOSTS` to include the host:port you will use (for example `localhost:3001`) to avoid host header validation errors.
 - If the container needs to write `settings.yaml` on first run, ensure `./config` is mounted writable (do not use read-only mounts for the `config` folder).
 

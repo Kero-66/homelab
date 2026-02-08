@@ -177,13 +177,6 @@ pages:
                 url: https://torrent.hopki.net/
                 check-url: http://10.0.0.100:8080
                 icon: di:qbittorrent
-              - title: NZBGet
-                url: https://nzbget.hopki.net/
-                check-url: http://10.0.0.100:6789
-                icon: di:nzbget
-                alt-status-codes:
-                  - 401
-                  - 403
               - title: File Browser
                 url: https://arrfiles.hopki.net/
                 icon: di:filebrowser

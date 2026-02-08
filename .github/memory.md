@@ -330,14 +330,12 @@ Services include: automations, media, monitoring, surveillance, proxy, cloud, et
 - **Gluetun**: VPN container (AirVPN with WireGuard) - acts as network gateway
 - **Download Clients** (run through VPN):
   - qBittorrent (port 8080, torrent port 6881)
-  - NZBget (port 6789)
 - **Arr Apps** (on servarrnetwork 172.39.0.0/24):
   - Prowlarr (port 9696, IP 172.39.0.8) - Indexer manager
   - Sonarr (port 8989, IP 172.39.0.3) - TV shows
   - Radarr (port 7878, IP 172.39.0.4) - Movies
   - Lidarr (port 8686, IP 172.39.0.5) - Music
   - Bazarr (port 6767, IP 172.39.0.6) - Subtitles
-  - NZBget (port 6789, IP 172.39.0.7) - Usenet client
   - qBittorrent (port 8080, IP 172.39.0.12) - Torrent client
   - FlareSolverr (port 8191, IP 172.39.0.9) - Cloudflare bypass
 - **Jellyfin Stack** (on servarrnetwork):
@@ -352,7 +350,6 @@ Services include: automations, media, monitoring, surveillance, proxy, cloud, et
    data/
    ├── downloads/
    │   ├── qbittorrent/{completed,incomplete,torrents}
-   │   └── nzbget/{completed,intermediate,nzb,queue,tmp}
    ├── movies/
    ├── shows/
    ├── music/
@@ -391,7 +388,6 @@ Services include: automations, media, monitoring, surveillance, proxy, cloud, et
 | Lidarr | ✅ Running | Music management |
 | Bazarr | ✅ Running | Subtitles - Podnapisi/Gestdown providers |
 | qBittorrent | ✅ Running | Download client |
-| NZBGet | ✅ Running | Usenet client |
 
 ### Known Issues / Quirks
 - **Playback progress**: May not save reliably (investigate `Sessions/Playing/Stopped` errors in logs)
@@ -464,7 +460,6 @@ Location: `/data`
 Create directory structure:
 ```bash
 mkdir -p /data/downloads/qbittorrent/{completed,incomplete,torrents}
-mkdir -p /data/downloads/nzbget/{completed,intermediate,nzb,queue,tmp}
 mkdir -p /data/{movies,shows,music,books}
 ```
 
@@ -476,12 +471,6 @@ Full structure:
 │   │   ├── completed/
 │   │   ├── incomplete/
 │   │   └── torrents/
-│   └── nzbget/
-│       ├── completed/
-│       ├── intermediate/
-│       ├── nzb/
-│       ├── queue/
-│       └── tmp/
 ├── movies/
 ├── shows/
 ├── music/
@@ -491,7 +480,6 @@ Full structure:
 ### 3. Service Configuration Directories
 These are created automatically by docker compose on first run:
 - `media/qbittorrent/` - qBittorrent config
-- `media/nzbget/` - NZBget config
 - `media/prowlarr/` - Prowlarr config
 - `media/sonarr/` - Sonarr config
 - `media/radarr/` - Radarr config
@@ -543,7 +531,6 @@ To minimize manual UI configuration, we provide scripts that generate seeded con
 
 **What gets configured automatically:**
 - **qBittorrent**: Download directories, WebUI port (8080), WebUI username pre-set (password must be set manually via WebUI)
-- **NZBGet**: Credentials and download paths configured automatically via `configure_nzbget.sh`
 - **Prowlarr**: FlareSolverr proxy configured via `configure_prowlarr.sh` for Cloudflare-protected indexers (no VPN required)
 - **All Arr apps**: 
   - API keys (randomly generated)
@@ -571,7 +558,6 @@ After startup, services available at:
 - Radarr: http://localhost:7878
 - Lidarr: http://localhost:8686
 - Bazarr: http://localhost:6767
-- NZBget: http://172.39.0.7:6789
 
 ## Automation Roadmap
 TODO: Create setup script to automate:
@@ -627,14 +613,12 @@ media/
 │   ├── init_configs.sh          # Seeds config files before container start
 │   ├── setup_seed_configs.sh    # Generates seed configs from credentials
 │   ├── wait_and_configure_auth.sh   # Arr app authentication + root folders
-│   ├── configure_download_clients.sh # qBittorrent/NZBGet to Arr apps
+│   ├── configure_download_clients.sh # qBittorrent to Arr apps
 │   ├── configure_prowlarr.sh    # FlareSolverr + Sonarr/Radarr/Lidarr connections
 │   ├── configure_sonarr_anime.sh    # Sonarr Japanese audio preference
 │   ├── configure_radarr_anime.sh    # Radarr Japanese audio preference + auto-detection
 │   ├── configure_jellyseerr_anime.sh # Jellyseerr anime profile integration
 │   ├── configure_bazarr.sh      # Subtitle integration + provider setup
-│   ├── configure_nzbget.sh      # NZBGet credentials/paths
-│   ├── configure_nzbget_categories.sh # NZBGet categories
 │   ├── configure_jellyfin_notifications.sh # Radarr/Sonarr → Jellyfin library refresh
 │   ├── configure_jellyfin_plugins.sh # Plugin repos + trickplay setup
 │   ├── add_root_folders.sh      # Add root folders via API
@@ -669,7 +653,6 @@ media/
     ├── lidarr/
     ├── prowlarr/
     ├── bazarr/
-    ├── nzbget/
     └── qbittorrent/
 ```
 
@@ -678,8 +661,8 @@ Main automation: `scripts/automate_all.sh` → orchestrates all other scripts
 ### Docker Compose Profiles
 | Profile | Services |
 |---------|----------|
-| (none) | qBittorrent, NZBGet, FlareSolverr, Prowlarr, Sonarr, Radarr, Lidarr, Bazarr |
-| `vpn` | + Gluetun (routes qBittorrent/NZBGet through VPN) |
+| (none) | qBittorrent, FlareSolverr, Prowlarr, Sonarr, Radarr, Lidarr, Bazarr |
+| `vpn` | + Gluetun (routes qBittorrent through VPN) |
 | `jellyfin` | + Jellyfin, Jellyseerr, Jellystat, Jellystat-DB |
 | `all` | All services |
 
@@ -920,7 +903,6 @@ timeout 60 bash -c 'until curl -s http://localhost:8989/ping > /dev/null; do sle
 | Prowlarr | 9696 | /api/v1 |
 | Bazarr | 6767 | /api |
 | qBittorrent | 8080 | /api/v2 |
-| NZBGet | 6789 | /jsonrpc |
 | Jellyfin | 8096 | (various) |
 | Jellyseerr | 5055 | /api/v1 |
 

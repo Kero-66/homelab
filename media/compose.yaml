@@ -22,7 +22,6 @@
 x-common: &media-common
   # Shared settings for media stack
   env_file:
-    - .config/.credentials
     - .env
   restart: "${RESTART_POLICY:-unless-stopped}"
   profiles: ["media", "all"]
@@ -59,7 +58,6 @@ services:
   #     - ${QBIT_WEBUI_PORT:-8080}:8080
   #     - ${QBIT_TORRENT_PORT_TCP:-6881}:6881/tcp
   #     - ${QBIT_TORRENT_PORT_UDP:-6881}:6881/udp
-  #     - ${NZBGET_PORT:-6789}:6789
   #   volumes:
   #     - ${CONFIG_DIR:-.}/gluetun:/gluetun
   #   env_file:
@@ -77,10 +75,10 @@ services:
     container_name: qbittorrent
     mem_limit: 512m
     labels:
-      - homepage.group=Media
+      - homepage.group=Downloaders
       - homepage.name=qBittorrent
       - homepage.icon=qbittorrent.png
-      - homepage.href=http://localhost:8080/qbittorrent/
+      - homepage.href=http://localhost/qbittorrent/
       - homepage.description=Torrent client
       - homepage.widget.type=qbittorrent
       - homepage.widget.url=http://qbittorrent:8080
@@ -135,7 +133,7 @@ services:
     container_name: sabnzbd
     mem_limit: 512m
     labels:
-      - homepage.group=Media
+      - homepage.group=Downloaders
       - homepage.name=SABnzbd
       - homepage.icon=sabnzbd.png
       - homepage.href=http://localhost/sabnzbd/
@@ -190,9 +188,9 @@ services:
     <<: *media-common
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
-    mem_limit: 512m
+    mem_limit: 1g
     labels:
-      - homepage.group=Media
+      - homepage.group=Arr Apps
       - homepage.name=Prowlarr
       - homepage.icon=prowlarr.png
       - homepage.href=http://localhost/prowlarr/
@@ -227,9 +225,9 @@ services:
     <<: *media-common
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
-    mem_limit: 512m
+    mem_limit: 256m
     labels:
-      - homepage.group=Media
+      - homepage.group=Arr Apps
       - homepage.name=Sonarr
       - homepage.icon=sonarr.png
       - homepage.href=http://localhost/sonarr/
@@ -256,9 +254,9 @@ services:
     <<: *media-common
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
-    mem_limit: 512m
+    mem_limit: 256m
     labels:
-      - homepage.group=Media
+      - homepage.group=Arr Apps
       - homepage.name=Radarr
       - homepage.icon=radarr.png
       - homepage.href=http://localhost/radarr/
@@ -308,9 +306,9 @@ services:
     <<: *media-common
     image: lscr.io/linuxserver/bazarr:latest
     container_name: bazarr
-    mem_limit: 256m
+    mem_limit: 512m
     labels:
-      - homepage.group=Media
+      - homepage.group=Arr Apps
       - homepage.name=Bazarr
       - homepage.icon=bazarr.png
       - homepage.href=http://localhost/bazarr/
@@ -344,7 +342,7 @@ services:
     profiles: ["jellyfin", "all"]
     mem_limit: 2g
     labels:
-      - homepage.group=Media
+      - homepage.group=Streaming
       - homepage.name=Jellyfin
       - homepage.icon=jellyfin.png
       - homepage.href=http://localhost/jellyfin/
@@ -379,7 +377,7 @@ services:
     profiles: ["jellyfin", "all"]
     mem_limit: 512m
     labels:
-      - homepage.group=Media
+      - homepage.group=Streaming
       - homepage.name=Jellyseerr
       - homepage.icon=jellyseerr.png
       - homepage.href=http://jellyseerr.localhost/
@@ -429,7 +427,7 @@ services:
     profiles: ["jellyfin", "all"]
     mem_limit: 256m
     labels:
-      - homepage.group=Media
+      - homepage.group=Streaming
       - homepage.name=Jellystat
       - homepage.icon=jellystat.png
       - homepage.href=http://jellystat.localhost/
@@ -560,27 +558,6 @@ services:
   #     servarrnetwork:
   #   restart: unless-stopped
 
-  # Huntarr (optional) - enable by setting image/port in .env and leaving uncommented
-  # huntarr:
-  #   <<: *media-common
-  #   image: ghcr.io/plexguide/huntarr:latest
-  #   container_name: huntarr
-  #   mem_limit: 256m
-  #   volumes:
-  #     - ${CONFIG_DIR:-.}/huntarr:/config
-  #     - ${DATA_DIR:-/data}:/data
-  #   ports:
-  #     - ${HUNTARR_PORT:-9705}:9705
-  #   networks:
-  #     servarrnetwork:
-  #       ipv4_address: ${IP_HUNTARR:-172.39.0.21}
-  #   healthcheck:
-  #     test: curl -sf http://localhost:9705/ || exit 1
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 30s
-
   fileflows:
     <<: *media-common
     image: revenz/fileflows:latest
@@ -637,6 +614,7 @@ services:
     <<: *media-common
     image: recyclarr/recyclarr:latest
     container_name: recyclarr
+    mem_limit: 256m
     user: ${PUID:-1000}:${PGID:-1000}
     profiles: ["media", "all"]
     environment:

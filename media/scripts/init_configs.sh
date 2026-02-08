@@ -26,13 +26,6 @@ if [[ ! -f ./qbittorrent/qBittorrent/qBittorrent.conf && -f "$CONFIG_DIR/qbittor
   grep -v "AuthSubnetWhitelist" "$CONFIG_DIR/qbittorrent/qBittorrent.conf" > ./qbittorrent/qBittorrent/qBittorrent.conf
 fi
 
-# NZBGet
-if [[ ! -f ./nzbget/nzbget.conf && -f "$CONFIG_DIR/nzbget/nzbget.conf" ]]; then
-  echo "  Copying NZBGet config..."
-  mkdir -p ./nzbget
-  cp "$CONFIG_DIR/nzbget/nzbget.conf" ./nzbget/nzbget.conf
-fi
-
 # Sonarr
 if [[ ! -f ./sonarr/config.xml && -f "$CONFIG_DIR/sonarr/config.xml" ]]; then
   echo "  Copying Sonarr config..."
@@ -64,13 +57,6 @@ if [[ ! -f ./bazarr/config/config.yaml && -f "$CONFIG_DIR/bazarr/config.yaml" ]]
   cp "$CONFIG_DIR/bazarr/config.yaml" ./bazarr/config/config.yaml
 fi
 
-# Huntarr
-if [[ ! -f ./huntarr/config.yml && -f "$CONFIG_DIR/huntarr/config.yml" ]]; then
-  echo "  Copying Huntarr config..."
-  mkdir -p ./huntarr
-  cp "$CONFIG_DIR/huntarr/config.yml" ./huntarr/config.yml
-fi
-
 # CleanupArr
 if [[ ! -f ./cleanuparr/config.yml && -f "$CONFIG_DIR/cleanuparr/config.yml" ]]; then
   echo "  Copying CleanupArr config..."
@@ -81,16 +67,6 @@ fi
 echo "Config initialization complete."
 echo ""
 echo "Note: After services start, run add_root_folders.sh to configure root folders via API."
-
-# Automatically run Huntarr API-driven setup in background (idempotent).
-# Controlled by env var AUTO_SETUP_HUNTARR (default: true). The script itself
-# waits for the service to be reachable so it's safe to start before containers.
-AUTO_SETUP_HUNTARR="${AUTO_SETUP_HUNTARR:-true}"
-AUTO_SETUP_SCRIPT="$SCRIPT_DIR/auto_setup_huntarr.sh"
-if [[ "${AUTO_SETUP_HUNTARR}" = "true" && -x "${AUTO_SETUP_SCRIPT}" ]]; then
-  echo "Starting Huntarr auto-setup (background)..."
-  nohup bash "${AUTO_SETUP_SCRIPT}" > "$MEDIA_DIR/huntarr_auto_setup.log" 2>&1 &
-fi
 
 echo "Note: 2FA automation is deferred. Add to TODO if needed later."
 

@@ -74,12 +74,6 @@ ensure_section('Import')
 # Mylar container mounts ${DATA_DIR} at /data
 cfg['Import']['comic_dir'] = '/data/books'
 
-ensure_section('NZBGet')
-cfg['NZBGet']['nzbget_host'] = os.environ.get('NZBGET_HOST','nzbget')
-cfg['NZBGet']['nzbget_port'] = os.environ.get('NZBGET_PORT','6789')
-cfg['NZBGet']['nzbget_username'] = os.environ.get('USERNAME','') or ''
-cfg['NZBGet']['nzbget_password'] = os.environ.get('PASSWORD','') or ''
-
 ensure_section('qBittorrent')
 qhost = os.environ.get('QBITTORRENT_HOST','qbittorrent')
 qport = os.environ.get('QBIT_WEBUI_PORT','8080')
@@ -92,9 +86,9 @@ cfg['Torrents']['enable_torrents'] = 'True'
 cfg['Torrents']['enable_torrent_search'] = 'True'
 
 ensure_section('Client')
-# 0 = qBittorrent, 3 = NZBGet (matches Mylar expected codes)
+# 0 = qBittorrent
 cfg['Client']['torrent_downloader'] = '0'
-cfg['Client']['nzb_downloader'] = '3'
+cfg['Client']['nzb_downloader'] = '0'
 
 # Optional: placeholder for ComicVine API key
 ensure_section('CV')
@@ -134,12 +128,6 @@ api_key = ${MYLAR3_API_KEY:-$GENERATED_API_KEY}
 [Import]
 comic_dir = /data/books
 
-[NZBGet]
-nzbget_host = ${NZBGET_HOST:-nzbget}
-nzbget_port = ${NZBGET_PORT:-6789}
-nzbget_username = ${USERNAME:-}
-nzbget_password = ${PASSWORD:-}
-
 [qBittorrent]
 qbittorrent_host = http://${QBITTORRENT_HOST:-qbittorrent}:${QBIT_WEBUI_PORT:-8080}
 qbittorrent_username = ${USERNAME:-}
@@ -152,9 +140,9 @@ enable_torrents = True
 enable_torrent_search = True
 
 [Client]
-# 0 = qBittorrent, 3 = NZBGet
+# 0 = qBittorrent
 torrent_downloader = 0
-nzb_downloader = 3
+nzb_downloader = 0
 
 [Prowlarr]
 enabled = true

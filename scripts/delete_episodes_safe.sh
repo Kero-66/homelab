@@ -2,17 +2,12 @@
 set -eo pipefail
 
 # Safe Sonarr episodefile deletion script
-# Reads API key from repository credentials and deletes by episodefile id
-CREDS="/mnt/library/repos/homelab/media/.config/.credentials"
-if [ ! -f "$CREDS" ]; then
-  echo "Credentials file not found: $CREDS" >&2
-  exit 1
-fi
+# Requires SONARR_API_KEY to be set in environment (e.g., via Infisical)
+API_KEY="${SONARR_API_KEY:-}"
 
-API_KEY=$(grep -Ei 'sonarr' "$CREDS" | head -n1 | sed -E 's/^[^=]*=//; s/^"|"$//g')
-API_KEY=${API_KEY:-}
 if [ -z "$API_KEY" ]; then
-  echo "No Sonarr API key found in $CREDS" >&2
+  echo "Error: SONARR_API_KEY environment variable is not set." >&2
+  echo "Usage: infisical run -- bash $0" >&2
   exit 1
 fi
 

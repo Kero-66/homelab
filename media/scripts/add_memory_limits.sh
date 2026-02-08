@@ -10,7 +10,6 @@ set -e
 # - Prowlarr: 193MB → 512MB limit
 # - Bazarr: 162MB → 256MB limit
 # - Jellystat: 127MB → 256MB limit
-# - NZBGet: 9MB → 128MB limit
 # - Jellystat-db: 41MB → 256MB limit
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -35,7 +34,6 @@ try:
     
     memory_limits = {
         'qbittorrent': '512m',
-        'nzbget': '128m',
         'prowlarr': '512m',
         'sonarr': '512m',
         'radarr': '512m',
@@ -116,6 +114,5 @@ echo "  Prowlarr:      512MB"
 echo "  Bazarr:        256MB"
 echo "  Jellystat:     256MB"
 echo "  Jellystat-db:  256MB"
-echo "  NZBGet:        128MB"
 echo ""
 echo "To apply: docker compose down && docker compose up -d"

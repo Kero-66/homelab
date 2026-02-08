@@ -15,6 +15,7 @@ This folder contains prompt-engineering resources and a working file to improve 
 ## Logging & troubleshooting
 
 - When you find a command or API call that resolves an issue, add it to `.github/TROUBLESHOOTING.md` with sanitized placeholder data so future work can copy the steps instead of rediscovering them.
+- Infisical CLI requires a project ID for `infisical run`; note `INFISICAL_PROJECT_ID` or `--projectId` in troubleshooting entries to prevent repeat failures.
 
 ## How to use
 

@@ -1,0 +1,13 @@
+services:
+  glance:
+    image: glanceapp/glance
+    container_name: glance
+    restart: unless-stopped
+    mem_limit: 128m
+    volumes:
+      - ./config:/app/config
+      - ./assets:/app/assets
+    ports:
+      - "8095:8080"
+    environment:
+      - TZ=UTC

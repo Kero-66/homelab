@@ -21,7 +21,7 @@ docker compose -f media/compose.yaml up -d komga kavita ubooquity mylar3
 
 - **Integrating Mylar3 with Prowlarr and download clients**
   - Workflow we recommend:
-    1. Configure your download client(s) in Mylar3 (qBittorrent, NZBGet) using the container host/ports (or `qbittorrent:8080` if on same compose network). This allows Mylar3 to send downloads to your client.
+    1. Configure your download client in Mylar3 (qBittorrent) using the container host/ports (or `qbittorrent:8080` if on same compose network). This allows Mylar3 to send downloads to your client.
     2. In Prowlarr, add Mylar3 as an "Application" (Settings → Apps) using the Mylar3 API URL and API key — this allows Prowlarr to push indexer configuration to Mylar3 and centralize indexer management.
     3. In Mylar3, enable Prowlarr as an indexer target if you prefer Mylar3 to query Prowlarr-managed indexers.
 

@@ -1,0 +1,56 @@
+services:
+  infisical-backend:
+    container_name: infisical-backend
+    image: infisical/infisical:latest
+    restart: unless-stopped
+    mem_limit: 1g
+    depends_on:
+      - infisical-db
+      - infisical-redis
+    env_file:
+      - .env
+    ports:
+      - "8081:8081"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - infisical-net
+      - servarrnetwork
+
+  infisical-db:
+    container_name: infisical-db
+    image: postgres:14-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      - POSTGRES_USER=infisical
+      - POSTGRES_PASSWORD=infisical_password
+      - POSTGRES_DB=infisical
+    volumes:
+      - ./infisical-db-data:/var/lib/postgresql/data
+    networks:
+      - infisical-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infisical"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  infisical-redis:
+    container_name: infisical-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ./infisical-redis-data:/data
+    networks:
+      - infisical-net
+
+networks:
+  infisical-net:
+    driver: bridge
+  servarrnetwork:
+    external: true
+    name: servarrnetwork

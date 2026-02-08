@@ -1,0 +1,19 @@
+services:
+  rss:
+    image: codeberg.org/danb/rss:latest
+    container_name: rss
+    mem_limit: 256m
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/storage
+    ports:
+      - "8086:80"
+    restart: unless-stopped
+    networks:
+      servarrnetwork:
+        ipv4_address: 172.39.0.35
+
+networks:
+  servarrnetwork:
+    external: true

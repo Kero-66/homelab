@@ -4,8 +4,8 @@ set -euo pipefail
 # Idempotent Mylar configuration helper
 # - ensures API key exists
 # - aligns destination/import dirs to /data/books
-# - normalizes qBittorrent and NZBGet settings
-# - sets client downloader IDs (qBittorrent=0, NZBGet=3)
+# - normalizes qBittorrent settings
+# - sets client downloader IDs (qBittorrent=0)
 # - enables Prowlarr integration (uses PROWLARR_API_KEY and IP_PROWLARR from .env)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,9 +44,9 @@ api_key =
 comic_dir = /data/books
 
 [Client]
-# 0 = qBittorrent, 3 = NZBGet
+# 0 = qBittorrent
 torrent_downloader = 0
-nzb_downloader = 3
+nzb_downloader = 0
 EOF
 fi
 
@@ -92,13 +92,6 @@ else:
 ensure('Import')
 cfg['Import']['comic_dir'] = '/data/books'
 
-# NZBGet
-ensure('NZBGet')
-cfg['NZBGet']['nzbget_host'] = os.environ.get('NZBGET_HOST','nzbget')
-cfg['NZBGet']['nzbget_port'] = os.environ.get('NZBGET_PORT','6789')
-cfg['NZBGet']['nzbget_username'] = os.environ.get('USERNAME','') or ''
-cfg['NZBGet']['nzbget_password'] = os.environ.get('PASSWORD','') or ''
-
 # qBittorrent
 ensure('qBittorrent')
 qhost = os.environ.get('QBITTORRENT_HOST','qbittorrent')
@@ -111,7 +104,7 @@ cfg['qBittorrent']['qbittorrent_password'] = os.environ.get('PASSWORD','') or ''
 # Client flags
 ensure('Client')
 cfg['Client']['torrent_downloader'] = '0'
-cfg['Client']['nzb_downloader'] = '3'
+cfg['Client']['nzb_downloader'] = '0'
 
 # ComicVine
 ensure('CV')
@@ -143,7 +136,7 @@ if os.environ.get('PROWLARR_API_KEY'):
 # remove any stray numeric-only client values that look off
 if cfg.has_section('Client'):
     if cfg['Client'].get('nzb_downloader') in ('1','5','None'):
-        cfg['Client']['nzb_downloader'] = '3'
+        cfg['Client']['nzb_downloader'] = '0'
     if cfg['Client'].get('torrent_downloader') in ('5','None'):
         cfg['Client']['torrent_downloader'] = '0'
 

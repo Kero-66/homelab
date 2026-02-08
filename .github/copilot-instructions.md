@@ -47,13 +47,13 @@
 - **Naming:** Use `WEBDL-1080p` and `WEBDL-2160p` style naming for quality targets in Recyclarr mapping.
 
 ## Out-of-scope — ask a human before touching
-- Secrets, credentials, API keys, tokens, or anything that would live in config_backups/. Recommend using `.env` / documented secret storage and never commit real values.
+- Secrets, credentials, API keys, tokens, or anything that would live in config_backups/. 
 - Large or risky infra changes (core proxy rewrites, service removals, new ports) that could cause downtime, unless an explicit owner approves.
 - Work that requires rotating credentials, redeploying critical services, or rebooting hosts; open an issue or request direct owner coordination instead.
 
 ## Secrets handling
 - Never insert real secrets in the repo; use `.sample` placeholders and describe where real values belong in documentation.
-- Store credentials for each service inside its gitignored credentials file (for example, `media/.config/.credentials` or `apps/homepage/.env`) and reference that file in docs/README updates instead of copying secrets.
+- Store credentials in Infisical and reference the relevant secret path (for example, `/media`, `/monitoring`, `/homepage`) in docs/README updates instead of copying secrets.
 - Document the vault/secret manager expectation for each change when a new secret would be required.
 
 ## Style and conventions

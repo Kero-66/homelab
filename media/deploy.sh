@@ -97,7 +97,7 @@ if [ "$DESTROY_MODE" = true ]; then
     docker compose --profile all down -v 2>/dev/null || true
     
     log_step "Removing configuration directories..."
-    rm -rf sonarr radarr lidarr prowlarr bazarr nzbget qbittorrent gluetun 2>/dev/null || true
+    rm -rf sonarr radarr lidarr prowlarr bazarr qbittorrent gluetun 2>/dev/null || true
     rm -rf jellyfin/config jellyfin/jellyseerr jellyfin/jellystat 2>/dev/null || true
     
     log_info "Destruction complete. Run deploy.sh again to redeploy."
@@ -293,8 +293,6 @@ fi
 log_info "Creating subdirectories..."
 mkdir -p "$DATA_DIR/downloads/qbittorrent"/{completed,incomplete,torrents} 2>/dev/null || \
     sudo mkdir -p "$DATA_DIR/downloads/qbittorrent"/{completed,incomplete,torrents}
-mkdir -p "$DATA_DIR/downloads/nzbget"/{completed,intermediate,nzb,queue,tmp} 2>/dev/null || \
-    sudo mkdir -p "$DATA_DIR/downloads/nzbget"/{completed,intermediate,nzb,queue,tmp}
 mkdir -p "$DATA_DIR"/{movies,shows,music,books,youtube} 2>/dev/null || \
     sudo mkdir -p "$DATA_DIR"/{movies,shows,music,books,youtube}
 
@@ -311,7 +309,7 @@ if [ "$CONFIG_DIR" != "." ]; then
         sudo chown -R "$PUID:$PGID" "$CONFIG_DIR"
     fi
     # Create subdirectories for each service
-    for svc in sonarr radarr lidarr prowlarr bazarr nzbget qbittorrent gluetun jellyfin/config jellyfin/jellyseerr jellyfin/jellystat; do
+    for svc in sonarr radarr lidarr prowlarr bazarr qbittorrent gluetun jellyfin/config jellyfin/jellyseerr jellyfin/jellystat; do
         mkdir -p "$CONFIG_DIR/$svc" 2>/dev/null || sudo mkdir -p "$CONFIG_DIR/$svc"
     done
     sudo chown -R "$PUID:$PGID" "$CONFIG_DIR" 2>/dev/null || true
@@ -350,7 +348,24 @@ docker compose $PROFILE_ARGS pull --quiet
 
 # Start services
 log_info "Starting services..."
-docker compose $PROFILE_ARGS up -d
+if command -v infisical >/dev/null 2>&1 && [ -f "${SCRIPT_DIR}/../.infisical.json" ]; then
+    log_info "Detected Infisical - injecting secrets via CLI..."
+    INFISICAL_PROJECT_ID=${INFISICAL_PROJECT_ID:-}
+    if [ -z "$INFISICAL_PROJECT_ID" ]; then
+        INFISICAL_PROJECT_ID=$(grep -Eo '"projectId"\s*:\s*"[^"]+"' "${SCRIPT_DIR}/../.infisical.json" \
+            | head -1 \
+            | sed -E 's/.*"([^"]+)".*/\1/')
+    fi
+
+    if [ -n "$INFISICAL_PROJECT_ID" ]; then
+        infisical run --env dev --path /media --projectId "$INFISICAL_PROJECT_ID" --silent -- docker compose $PROFILE_ARGS up -d
+    else
+        log_warn "Infisical project ID not found. Set INFISICAL_PROJECT_ID to enable secret injection."
+        docker compose $PROFILE_ARGS up -d
+    fi
+else
+    docker compose $PROFILE_ARGS up -d
+fi
 
 # Wait for services to be healthy
 log_info "Waiting for services to be healthy..."
@@ -464,7 +479,6 @@ echo "  • Radarr:        http://localhost:7878"
 echo "  • Lidarr:        http://localhost:8686"
 echo "  • Prowlarr:      http://localhost:9696"
 echo "  • qBittorrent:   http://localhost:8080"
-echo "  • NZBGet:        http://localhost:6789"
 echo "  • Bazarr:        http://localhost:6767"
 
 if [[ "$PROFILE_ARGS" == *"jellyfin"* ]] || [[ "$PROFILE_ARGS" == *"all"* ]]; then

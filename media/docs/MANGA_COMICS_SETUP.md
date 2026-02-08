@@ -17,7 +17,7 @@ This setup provides three complementary tools for different content types:
 ### Sonarr (Anime/Manga Downloader)
 - **URL:** http://localhost:8989
 - **Purpose:** Auto-download manga/anime from indexers
-- **API Key:** Check `.env` file (`SONARR_API_KEY`)
+- **API Key:** Check Infisical `/media` (`SONARR_API_KEY`)
 - **Download Client:** qBittorrent (configured automatically)
 
 ### Komga (Manga/Comic Reader)
@@ -31,7 +31,7 @@ This setup provides three complementary tools for different content types:
 ### Jellyfin (Media Server)
 - **URL:** http://localhost:8096
 - **Bookshelf Plugin:** Provides book/comic metadata and display
-- **Comic Vine API:** Check `.config/.credentials` file for `MYLAR_COMICVINE_API` value
+- **Comic Vine API:** Check Infisical `/media` for `MYLAR_COMICVINE_API`
 
 ### Prowlarr (Indexer Aggregator)
 - **URL:** http://localhost:9696
@@ -105,7 +105,7 @@ In Sonarr → Settings → Quality:
 4. **Restart Jellyfin**
 5. Go to **Settings** → **Plugins** → **Bookshelf**
 6. Configure:
-   - Comic Vine API: Use value from `.config/.credentials` file (`MYLAR_COMICVINE_API`)
+   - Comic Vine API: Use value from Infisical `/media` (`MYLAR_COMICVINE_API`)
    - Enable metadata providers
    - Select libraries to scan
 

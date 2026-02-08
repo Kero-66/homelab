@@ -50,7 +50,7 @@ bash scripts/automate_all.sh
 
 ### What Gets Automated
 1. ✅ Arr apps (Sonarr, Radarr, Lidarr)
-2. ✅ Download clients (qBittorrent, NZBGet)
+2. ✅ Download clients (qBittorrent)
 3. ✅ Prowlarr indexers (10 direct)
 4. ✅ Jackett indexers (2 Torznab proxies)
 5. ✅ FlareSolverr proxy (both services)

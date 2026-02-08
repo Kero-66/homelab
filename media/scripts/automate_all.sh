@@ -32,7 +32,7 @@ bash "$SCRIPT_DIR/wait_and_configure_auth.sh"
 
 # Configure download clients
 echo ""
-echo "Step 3: Configuring download clients (qBittorrent, NZBGet)..."
+echo "Step 3: Configuring download clients (qBittorrent)..."
 bash "$SCRIPT_DIR/configure_download_clients.sh"
 
 # Seed Prowlarr indexers into database
@@ -93,7 +93,6 @@ echo "  ✓ Radarr:        http://localhost:7878"
 echo "  ✓ Lidarr:        http://localhost:8686"
 echo "  ✓ Prowlarr:      http://localhost:9696"
 echo "  ✓ qBittorrent:   http://localhost:8080"
-echo "  ✓ NZBGet:        http://localhost:6789"
 echo "  ✓ Bazarr:        http://localhost:6767"
 echo "  ✓ Jellyfin:      http://localhost:8096"
 echo "  ✓ Jellyseerr:    http://localhost:5055"

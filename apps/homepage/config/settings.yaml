@@ -1,15 +1,26 @@
 ---
-title: My Awesome Homepage
+title: Homelab
 layout:
   Media:
     style: row
-    columns: 4
+    columns: 3
+    Arr Apps:
+      style: column
+    Streaming:
+      style: column
+    Downloaders:
+      style: column
+  Calendar:
+    style: row
+  Monitoring:
+    style: row
+    columns: 1
+    Glances:
+      style: row
+      columns: 5
   Status:
     style: row
     columns: 2
     Maintenance:
       style: row
       columns: 2
-    Calendar:
-      style: row
-      columns: 1

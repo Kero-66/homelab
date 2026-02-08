@@ -8,13 +8,11 @@ apps/homepage/.credentials
 
 # Generated seed configs (created by setup_seed_configs.sh)
 media/.config/qbittorrent/qBittorrent.conf
-media/.config/nzbget/nzbget.conf
 media/.config/sonarr/config.xml
 media/.config/radarr/config.xml
 media/.config/lidarr/config.xml
 media/.config/prowlarr/config.xml
 media/.config/bazarr/config.yaml
-media/.config/huntarr/config.yml
 media/.config/cleanuparr/config.yml
 
 # Runtime service configurations (created by Docker on first run)
@@ -25,7 +23,6 @@ media/radarr/
 media/lidarr/
 media/prowlarr/
 media/bazarr/
-media/nzbget/
 media/qbittorrent/
 media/jellyfin/config/
 media/jellyfin/jellyseerr/
@@ -120,10 +117,6 @@ htmlcov/
 media/cleanuparr/cleanuparr.db*
 media/cleanuparr/events.db*
 media/cleanuparr/logs/
-# Huntarr
-media/huntarr/*.db*
-media/huntarr/logs/
-media/huntarr/backups/
 # Recyclarr
 media/recyclarr/storage/
 media/recyclarr/config/logs/
@@ -142,7 +135,6 @@ media/sync_output.txt
 
 # Do NOT commit real configuration with secrets (use .sample instead)
 media/cleanuparr/config.yml
-media/huntarr/config.yml
 media/recyclarr/config/recyclarr.yml
 .env.*
 docker-compose.override.yml
@@ -215,3 +207,20 @@ media/fileflows/Data/Config/*
 # Temp json dumps
 *_queue.json
 *_manual_import.json
+*_debug.json
+
+# Infisical
+.infisical.json
+security/infisical/infisical-db-data/
+security/infisical/infisical-redis-data/
+security/infisical/seed_secrets.sh
+
+# Test/scratch compose configs
+media/config.test.yaml
+
+# App runtime data (databases, cache, thumbnails) — only config should be committed
+apps/*/data/
+Commafeed/data/
+
+# Config backups with timestamps
+media/.config/qbittorrent/*.backup.*

@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Quick health check for networking stack
 BASE=http://localhost
-SERVICES=("/health" "/jackett" "/sonarr" "/radarr" "/nzbget" "/prowlarr" "/jellyfin" "/qbittorrent" "/homepage")
+SERVICES=("/health" "/jackett" "/sonarr" "/radarr" "/prowlarr" "/jellyfin" "/qbittorrent" "/homepage")
 
 echo "Checking networking services on ${BASE}"
 failed=0

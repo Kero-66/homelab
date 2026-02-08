@@ -27,7 +27,7 @@ Caddy (reverse proxy) 🔧
 
 - This compose includes a `caddy` service that is intended to be the reverse proxy for services in this stack (for example, AdGuard's web UI). For local testing we've disabled automatic HTTPS and bound Caddy to `localhost` only (HTTP).
 
-- `caddy` is attached to `servarrnetwork` so it can resolve and proxy to media services by name (e.g. `/jackett`, `/sonarr`, `/radarr`, `/nzbget`, `/prowlarr`).
+- `caddy` is attached to `servarrnetwork` so it can resolve and proxy to media services by name (e.g. `/jackett`, `/sonarr`, `/radarr`, `/prowlarr`).
 
 - If/when you want to expose services publicly, set `CADDY_EMAIL` and `CADDY_DOMAINS` in `.env` and update the `Caddyfile` accordingly.
 

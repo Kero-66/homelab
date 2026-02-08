@@ -3,7 +3,7 @@ services:
     image: 'henrygd/beszel:latest'
     container_name: 'beszel'
     restart: ${RESTART_POLICY:-unless-stopped}
-    mem_limit: 512m
+    mem_limit: 256m
     labels:
       - homepage.group=Monitoring
       - homepage.name=Beszel
@@ -17,7 +17,6 @@ services:
       - homepage.widget.systemId=ibcojulxpoa6st3
       - homepage.widget.version=2
     env_file:
-      - .config/.credentials
       - .env
     environment:
       - PUID=${PUID}
@@ -46,6 +45,7 @@ services:
     image: 'henrygd/beszel-agent:latest'
     container_name: 'beszel-agent'
     restart: ${RESTART_POLICY:-unless-stopped}
+    mem_limit: 128m
     network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -62,46 +62,13 @@ services:
       timeout: 10s
       retries: 3
 
-  netdata:
-    image: netdata/netdata:latest
-    container_name: netdata
-    hostname: ${HOSTNAME:-homelab}
-    restart: ${RESTART_POLICY:-unless-stopped}
-    labels:
-      - homepage.group=Monitoring
-      - homepage.name=Netdata
-      - homepage.icon=netdata.png
-      - homepage.href=http://localhost:19999/
-      - homepage.description=Real-time performance monitoring
-      - homepage.widget.type=netdata
-      - homepage.widget.url=http://netdata:19999
-    cap_add:
-      - SYS_PTRACE
-      - SYS_ADMIN
-    security_opt:
-      - apparmor:unconfined
-    volumes:
-      - ./netdata/netdata.conf:/etc/netdata/netdata.conf:ro
-      - ./netdata/lib:/var/lib/netdata
-      - ./netdata/cache:/var/cache/netdata
-      - /etc/passwd:/host/etc/passwd:ro
-      - /etc/group:/host/etc/group:ro
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /etc/os-release:/host/etc/os-release:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    env_file:
-      - .env
-    environment:
-      - TZ=${TZ}
-    networks:
-      servarrnetwork:
-        ipv4_address: ${IP_NETDATA:-172.39.0.30}
+
 
   dockupdater:
     image: dockupdater/dockupdater:latest
     container_name: dockupdater
     restart: ${RESTART_POLICY:-unless-stopped}
+    mem_limit: 256m
     command: ["--interval", "604800", "--cleanup"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:z
@@ -112,10 +79,33 @@ services:
       servarrnetwork:
         ipv4_address: ${IP_DOCKUPDATER:-172.39.0.32}
 
+  glances:
+    image: 'nicolargo/glances:latest-full'
+    container_name: 'glances'
+    restart: ${RESTART_POLICY:-unless-stopped}
+    mem_limit: 256m
+    environment:
+      - TZ=${TZ}
+      - GLANCES_OPT=-w
+    ports:
+      - ${GLANCES_PORT:-61208}:61208
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DATA_DIR:-/data}:/data:ro
+    networks:
+      servarrnetwork:
+        ipv4_address: ${IP_GLANCES:-172.39.0.34}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:61208/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   docker-socket-proxy:
     image: ghcr.io/tecnativa/docker-socket-proxy:latest
     container_name: docker-socket-proxy
     restart: ${RESTART_POLICY:-unless-stopped}
+    mem_limit: 128m
     environment:
       - CONTAINERS=1      # Allow access to viewing containers
       - SERVICES=1        # Allow access to viewing services (Docker Swarm)

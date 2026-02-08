@@ -29,9 +29,35 @@ http://beszel.localhost {
     }
 }
 
+# Infisical Secret Manager
+http://infisical.localhost {
+    reverse_proxy infisical-backend:8081 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+# RSS Reader (DanB)
+http://rss.localhost {
+    reverse_proxy rss:80
+}
+
+# CommaFeed RSS Reader
+http://commafeed.localhost {
+    reverse_proxy commafeed:8082
+}
+
 # Netdata real-time monitoring
 http://netdata.localhost {
     reverse_proxy netdata:19999 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+# Glances cross-platform system monitoring
+http://glances.localhost {
+    reverse_proxy glances:61208 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
@@ -80,16 +106,6 @@ http://localhost:80 {
     # Preserve the /sabnzbd prefix when proxying; SABnzbd is configured with url_base=/sabnzbd
     handle /sabnzbd/* {
         reverse_proxy sabnzbd:8080
-    }
-
-    @nzbget_exact {
-        path /nzbget
-    }
-    redir @nzbget_exact /nzbget/ 308
-
-    # NZBGet web UI does not have a UrlBase setting; keep strip-prefix behavior
-    handle_path /nzbget/* {
-        reverse_proxy nzbget:6789
     }
 
     @prowlarr_exact {
@@ -174,12 +190,32 @@ http://localhost:80 {
     handle_path /homepage/* {
         reverse_proxy homepage:3000
     }
+
+    # Cleanuparr
+    @cleanuparr_exact {
+        path /cleanuparr
+    }
+    redir @cleanuparr_exact /cleanuparr/ 308
+
+    handle_path /cleanuparr/* {
+        reverse_proxy cleanuparr:11011
+    }
+
+    # FileFlows
+    @fileflows_exact {
+        path /fileflows
+    }
+    redir @fileflows_exact /fileflows/ 308
+
+    handle_path /fileflows/* {
+        reverse_proxy fileflows:5000
+    }
+
     # Adjust or add services as needed
 
-    # Proxy root to AdGuard Home web UI (AdGuard serves on port 80 inside the container)
-    # Place this last so specific service paths above take precedence.
-    handle_path / {
-        reverse_proxy adguardhome:80
-    }
+    # AdGuard Home (disabled for now)
+    # handle_path / {
+    #     reverse_proxy adguardhome:3000
+    # }
 
 }

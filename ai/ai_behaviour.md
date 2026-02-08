@@ -17,12 +17,12 @@
 
 ### 3) Secrets
 
-- The AI must never populate real secrets. Create `.sample` files (e.g., `.env.sample`, `.credentials.sample`) and document where to put real values.
+- The AI must never populate real secrets. Use Infisical for secret storage and document required paths (for example, `/media`, `/monitoring`, `/homepage`).
   
 ### 6) Command logging
 
 - After every successful troubleshooting or API command, append a sanitized entry to `.github/TROUBLESHOOTING.md` with what worked, why, and any required env vars placeholders.
-- Keep service credentials only in the relevant gitignored credentials file (for example `media/.config/.credentials` or `apps/homepage/.env`); reference that location instead of duplicating secrets.
+- Infisical CLI requires a project ID for `infisical run`. Document `INFISICAL_PROJECT_ID` or `--projectId` in troubleshooting notes to avoid the “projectSlug or workspaceId” error.
 
 ### 4) Documentation & API First
 

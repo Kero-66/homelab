@@ -40,6 +40,7 @@ services:
     image: caddy:2
     container_name: caddy
     user: "${PUID:-1000}:${PGID:-1000}"
+    mem_limit: 128m
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}

@@ -15,7 +15,7 @@
 - ✅ Authentication configured
 - ✅ Root folder created (/data/shows)
 - ✅ Prowlarr sync enabled
-- ✅ Download clients configured (qBittorrent + NZBGet)
+- ✅ Download clients configured (qBittorrent)
 - ✅ Japanese Audio custom format (for anime)
 - ✅ Anime quality profile with Japanese preference
 - ✅ Existing anime series auto-configured
@@ -27,7 +27,7 @@
 - ✅ Authentication configured
 - ✅ Root folder created (/data/movies)
 - ✅ Prowlarr sync enabled
-- ✅ Download clients configured (qBittorrent + NZBGet)
+- ✅ Download clients configured (qBittorrent)
 - ✅ **NEW:** Japanese Audio custom format (for anime)
 - ✅ **NEW:** Anime quality profile with Japanese preference (+1000 score)
 - ✅ **NEW:** Anime auto-detection (Japanese language + Animation genre, known studios, keywords)
@@ -40,7 +40,7 @@
 - ✅ Authentication configured
 - ✅ Root folder created (/data/music)
 - ✅ Prowlarr sync enabled
-- ✅ Download clients configured (qBittorrent + NZBGet)
+- ✅ Download clients configured (qBittorrent)
 - **Script:** `wait_and_configure_auth.sh`
 
 ### 5. **qBittorrent** (100% automated)
@@ -49,15 +49,9 @@
 - ✅ Category structure created
 - **Script:** `configure_download_clients.sh`
 
-### 6. **NZBGet** (100% automated)
-- ✅ Authentication configured
-- ✅ Download paths configured
-- ✅ Categories configured (movies, tv, music)
-- **Script:** `configure_nzbget.sh`
-
-### 7. **Jellyfin** (100% automated)
+### 6. **Jellyfin** (100% automated)
 - ✅ Startup wizard completed
-- ✅ User account created (from .credentials)
+- ✅ User account created (from Infisical)
 - ✅ Library folders added (Movies, TV Shows)
 - ✅ Playback tested and working
 - **Script:** `jellyfin/configure_jellyfin.sh`
@@ -133,7 +127,8 @@
 ```bash
 # Start all services
 cd /home/kero66/repos/homelab/media
-docker compose up -d
+INFISICAL_PROJECT_ID=<PROJECT_ID> \
+infisical run --env dev --path /media --projectId <PROJECT_ID> -- docker compose up -d
 
 # Configure everything automatically (recommended)
 bash scripts/automate_all.sh
@@ -143,7 +138,7 @@ bash scripts/automate_all.sh
 ```
 Step 1: Wait for services to start
 Step 2: Configure Arr authentication + root folders
-Step 3: Configure download clients (qBittorrent/NZBGet)
+Step 3: Configure download clients (qBittorrent)
 Step 4: Configure Prowlarr (indexers + app sync)
 Step 5: Configure Sonarr anime (Japanese audio preference)
 Step 6: Configure Radarr anime (Japanese audio + auto-detection)
@@ -163,7 +158,7 @@ bash jellyfin/configure_jellystat.sh     # Then add server manually
 
 # Arr stack
 bash scripts/wait_and_configure_auth.sh      # All Arr apps auth + root folders
-bash scripts/configure_download_clients.sh   # qBittorrent/NZBGet to Arr apps
+bash scripts/configure_download_clients.sh   # qBittorrent to Arr apps
 bash scripts/configure_prowlarr.sh           # Indexers + app sync
 bash scripts/configure_sonarr_anime.sh       # Anime config for TV
 bash scripts/configure_radarr_anime.sh       # Anime config for movies

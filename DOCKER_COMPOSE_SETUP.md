@@ -12,23 +12,19 @@ Your homelab Docker Compose configuration has been successfully reorganized foll
 homelab/
 ├── .env                          # Global defaults (included in all stacks)
 │                                 # TZ, PUID, PGID, CONFIG_DIR, DATA_DIR, RESTART_POLICY
-├── .credentials                  # (Empty - for future global credentials if needed)
+├── .infisical.json               # Infisical project configuration
 ├── media/
 │   ├── compose.yaml
 │   ├── .env                       # Includes global defaults + media-specific config
-│   └── .credentials               # Media API keys and secrets
 ├── monitoring/
 │   ├── compose.yaml
 │   ├── .env                       # Includes global defaults + monitoring-specific config
-│   └── .credentials               # Monitoring passwords
 ├── networking/
 │   ├── compose.yaml
 │   ├── .env                       # Includes global defaults + networking-specific config
-│   └── .credentials               # Networking passwords
 └── apps/homepage/
     ├── compose.yaml
     ├── .env                       # Includes global defaults + homepage config
-    └── .credentials               # References all API keys from other stacks
 ```
 
 ## Key Principles
@@ -49,58 +45,108 @@ homelab/
   - A copy of global defaults (for standalone use)
   - Stack-specific configuration (ports, IPs, service URLs)
 - Can override global defaults if needed
-- **Only credentials are NOT in .env files**
 
-### 3. **Stack-Specific `.credentials` Files**
-- Secrets are kept separate from configuration
-- Each stack has only the credentials it needs:
-  - `media/.credentials` - API keys for *arr apps, download clients
-  - `monitoring/.credentials` - Beszel passwords
-  - `networking/.credentials` - AdGuard admin credentials
-  - `apps/homepage/.credentials` - All API keys from other stacks
+### 3. **Secret Management with Infisical**
+- All secrets (API keys, passwords, database credentials) are managed by **Infisical**.
+- Secrets are NOT stored in files.
+- The Infisical CLI injects secrets directly into the Docker Compose process at runtime.
+- **Unified Credential Source**: All secrets originate from the Infisical `homelab` project.
 
-### 4. **Homepage Special Case**
-- Homepage loads credentials from ALL stacks:
-  - `../../media/.credentials`
-  - `../../monitoring/.credentials`
-  - `../../networking/.credentials`
-- This allows the dashboard to access all services without duplication
+### 4. **Homepage Integration**
+- Homepage automatically receives all injected secrets.
+- No cross-referencing of `.credentials` files is needed.
 
 ## Security
 
-- ✅ All `.env` and `.credentials` files are in `.gitignore`
-- ✅ No secrets are committed to the repository
-- ✅ Each stack has least-privilege access (only its own credentials)
-- ✅ Global variables prevent duplication
-- ✅ Credentials can be easily rotated per-stack
+- ✅ No secrets are stored in the repository (even in gitignored files).
+- ✅ Centralized secret management with Infisical.
+- ✅ CLI injection prevents secrets from ever touching the disk in plaintext.
+- ✅ Supports environment-specific secrets and now loads them from the dev environment by default.
 
 ## Usage
 
-### Running a Stack
+### ⚠️ CRITICAL: Always Use Infisical
 
-Simply navigate to the stack directory and use normal docker compose commands:
+**Every** Docker Compose command that starts or restarts containers MUST be run through Infisical. Containers like Beszel, Netdata, and others require secrets (API keys, passwords) that are only available at runtime via Infisical injection.
+
+**NEVER run plain `docker compose` commands** for stacks that have secrets. If you do, containers will start without their required environment variables and will fail or malfunction.
+
+```bash
+# ❌ WRONG - Will fail (secrets not injected)
+cd /mnt/library/repos/homelab/monitoring
+docker compose up -d
+
+# ✅ CORRECT - Infisical injects secrets
+cd /mnt/library/repos/homelab/monitoring
+infisical run --env dev --path /monitoring -- docker compose up -d
+
+# ✅ CORRECT - Also works from root
+cd /mnt/library/repos/homelab
+infisical run --env dev --path /monitoring -- docker compose -f monitoring/compose.yaml up -d
+```
+
+### Running a Stack (with Infisical)
+
+Use the Infisical CLI to inject secrets. Because your login shell already exports `INFISICAL_PROJECT_ID`, you do not need to pass `--projectId`; the commands below will target the dev workspace automatically.
 
 ```bash
 # Media stack
-cd media
-docker compose up -d
+cd /mnt/library/repos/homelab
+infisical run --env dev --path /media -- docker compose -f media/compose.yaml --profile media up -d
 
 # Monitoring stack
-cd monitoring
-docker compose up -d
+cd /mnt/library/repos/homelab
+infisical run --env dev --path /monitoring -- docker compose -f monitoring/compose.yaml up -d
 
-# Networking stack
-cd networking
-docker compose up -d
-
-# Homepage
-cd apps/homepage
-docker compose up -d
+# Homepage (run after syncing secrets below)
+cd /mnt/library/repos/homelab
+infisical run --env dev --path /homepage -- docker compose -f apps/homepage/compose.yaml --profile homepage up -d
 ```
+
+Before starting the homepage profile, mirror the media/monitoring secrets under `/homepage` so it can inject every API key/credential. Run `security/infisical/sync_homepage_secrets.sh` via Infisical:
+
+```bash
+cd /mnt/library/repos/homelab
+infisical run --env dev --path /homepage -- bash security/infisical/sync_homepage_secrets.sh
+```
+
+> **Note**: Automated deployment scripts like `media/deploy.sh` will automatically detect Infisical and use it if available.
 
 No special flags or wrapper scripts needed! Everything is auto-loaded.
 
-### Viewing Configuration
+### Restarting Containers
+
+When restarting any container in a stack, **always use Infisical**:
+
+```bash
+# ✅ Correct way to restart
+infisical run --env dev --path /monitoring -- docker compose restart beszel
+
+# ✅ Or restart the entire stack
+infisical run --env dev --path /monitoring -- docker compose restart
+
+# ✅ Pull latest images and restart
+infisical run --env dev --path /monitoring -- docker compose pull && infisical run --env dev --path /monitoring -- docker compose up -d
+```
+
+### Common Commands
+
+```bash
+# View logs (Infisical not required for read-only operations)
+docker compose logs -f beszel
+
+# Check container status
+docker compose ps
+
+# Validate compose file
+docker compose config
+
+# View resolved configuration (secrets won't show)
+infisical run --env dev --path /monitoring -- docker compose config
+
+# Stop containers (Infisical not strictly required, but safe to use)
+infisical run --env dev --path /monitoring -- docker compose down
+```
 
 To see the resolved composition (after env interpolation):
 
@@ -113,10 +159,9 @@ docker compose config | less
 
 When docker compose loads variables for a stack:
 
-1. Stack's `.env` file (includes global defaults + overrides)
-2. Stack's `.credentials` file
-3. Other stacks' `.credentials` (for homepage only)
-4. Container environment variables (can further override)
+1. Process Environment (passed in by `infisical run`) - **HIGHEST PRECEDENCE**
+2. Stack's `.env` file (local defaults/static config)
+3. Container environment variables block in `compose.yaml`
 
 ## Maintenance
 
@@ -125,41 +170,39 @@ When docker compose loads variables for a stack:
 If you need to change `TZ`, `PUID`, `PGID`, `DATA_DIR`, etc.:
 
 1. Update `homelab/.env`
-2. Update the corresponding values in each stack's `.env`
+2. Update the corresponding values in each stack's `.env` (if mapped)
 3. Restart affected containers
-
-This ensures all stacks have consistent global settings.
 
 ### Adding New Credentials
 
-When adding a new service:
+When adding a new secret:
 
-1. Add its API key/password to the appropriate stack's `.credentials` file
-2. If homepage needs it, also add to `apps/homepage/.credentials`
-3. Reference in compose.yaml with `${VAR_NAME}`
+1. Add the secret to the **Infisical** "homelab" project via the Web UI (http://infisical.localhost) or CLI.
+2. Reference the secret in your `compose.yaml` using `${SECRET_NAME}`.
+3. Restart the stack using `infisical run --env dev -- docker compose up -d`.
 
-### Backing Up Credentials
+### Running Scripts
 
-All sensitive files are in `.gitignore`. To back up:
+Internal scripts that require API keys (like Sonarr/Radarr cleanup scripts) should be run via Infisical to ensure they have access to the secrets:
 
 ```bash
-tar czf homelab-credentials-backup.tar.gz \
-  .env \
-  media/.credentials \
-  monitoring/.credentials \
-  networking/.credentials \
-  apps/homepage/.credentials
+infisical run --env dev -- bash scripts/sonarr_trash_apply.sh
 ```
 
-Store securely (not in git).
+### Backing Up Secrets
 
-## Files Changed
+To back up all Infisical secrets to an encrypted or local file:
 
-- Created: `/homelab/.env` - Global configuration
-- Created: `/media/.credentials`, `/monitoring/.credentials`, `/networking/.credentials`, `/apps/homepage/.credentials`
-- Updated: All stack `.env` files to include global defaults
-- Updated: All `compose.yaml` files to properly load `.env` and `.credentials`
-- Updated: `.gitignore` to ignore credential files at stack level
+```bash
+infisical export --env dev > homelab-secrets-backup.env
+```
+
+## Status
+
+- ✅ No legacy `.credentials` files exist on disk.
+- ✅ Secrets are injected directly from memory into the container runtime.
+- ✅ Stacks are portable and require Infisical access to deploy.
+- ✅ All deployment scripts (`deploy.sh`) are Infisical-aware.
 
 ## Verification
 

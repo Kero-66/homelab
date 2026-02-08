@@ -114,7 +114,7 @@ bash scripts/automate_all.sh
 
 ### What Gets Automated
 1. ✅ Arr apps auth & root folders (Sonarr, Radarr, Lidarr)
-2. ✅ Download clients (qBittorrent, NZBGet)
+2. ✅ Download clients (qBittorrent)
 3. ✅ Prowlarr indexers (10 direct + FlareSolverr)
 4. ✅ Jackett indexers (3 Torznab proxies)
 5. ✅ Prowlarr app sync (indexes pushed to Sonarr, Radarr, etc.)

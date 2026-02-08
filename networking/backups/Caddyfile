@@ -44,16 +44,6 @@ http://localhost:80 {
     handle /radarr/* {
         reverse_proxy radarr:7878
     }
-    @nzbget_exact {
-        path /nzbget
-    }
-    redir @nzbget_exact /nzbget/ 308
-
-    # NZBGet web UI does not have a UrlBase setting; keep strip-prefix behavior
-    handle_path /nzbget/* {
-        reverse_proxy nzbget:6789
-    }
-
     @prowlarr_exact {
         path /prowlarr
     }

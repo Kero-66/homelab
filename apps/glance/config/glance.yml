@@ -1,0 +1,17 @@
+pages:
+  - name: Home
+    columns:
+      - size: small
+        widgets:
+          - type: weather
+            location: New York, US
+          - type: calendar
+          - type: clock
+            timezone: UTC
+      - size: full
+        widgets:
+          - type: rss
+            limit: 10
+            feeds:
+              - url: https://github.com/glanceapp/glance/commits/main.atom
+                title: Glance GitHub Commits

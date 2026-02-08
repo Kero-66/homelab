@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# This script generates seeded config files for qBittorrent, NZBGet, and arr apps
+# This script generates seeded config files for qBittorrent and arr apps
 # using values from media/.config/.credentials and media/.env (for DATA_DIR).
 # It writes into media/.config/* and can optionally copy into live config dirs.
 
@@ -30,7 +30,7 @@ if [[ -f "$ENV_FILE" ]]; then
   DATA_DIR=${DATA_DIR:-/data}
 fi
 
-mkdir -p "$CONFIG_DIR/qbittorrent" "$CONFIG_DIR/nzbget" "$CONFIG_DIR/sonarr" "$CONFIG_DIR/radarr" "$CONFIG_DIR/lidarr" "$CONFIG_DIR/prowlarr" "$CONFIG_DIR/bazarr" "$CONFIG_DIR/huntarr" "$CONFIG_DIR/cleanuparr"
+mkdir -p "$CONFIG_DIR/qbittorrent" "$CONFIG_DIR/sonarr" "$CONFIG_DIR/radarr" "$CONFIG_DIR/lidarr" "$CONFIG_DIR/prowlarr" "$CONFIG_DIR/bazarr" "$CONFIG_DIR/cleanuparr"
 
 # Generate PBKDF2 hash for qBittorrent password
 echo "Generating PBKDF2 hash for qBittorrent password..."
@@ -61,37 +61,6 @@ WebUI\\Port=${QBIT_WEBUI_PORT:-8080}
 WebUI\\Username=$USERNAME
 WebUI\\Password_PBKDF2=$QBIT_PASSWORD_HASH
 EOF
-
-# Generate NZBGet config with directories and creds
-# Note: NZBGet needs a full config file. We'll generate a complete one based on the template.
-cat > "$CONFIG_DIR/nzbget/nzbget.conf" <<'EOF'
-# NZBGet Minimal Configuration
-MainDir=/data/downloads/nzbget
-DestDir=/data/downloads/nzbget/completed
-InterDir=/data/downloads/nzbget/intermediate
-NzbDir=/data/downloads/nzbget/nzb
-QueueDir=/data/downloads/nzbget/queue
-TempDir=/data/downloads/nzbget/tmp
-ControlUsername=USERNAME_PLACEHOLDER
-ControlPassword=PASSWORD_PLACEHOLDER
-AppendCategoryDir=no
-DirectRename=yes
-ArticleCache=200
-WriteBuffer=1024
-ContinuePartial=yes
-LogFile=/config/nzbget.log
-WriteLog=append
-RotateLog=3
-ErrorTarget=both
-WarningTarget=both
-InfoTarget=both
-DetailTarget=log
-DebugTarget=log
-EOF
-
-# Replace placeholders with actual credentials
-sed -i "s/USERNAME_PLACEHOLDER/$USERNAME/g" "$CONFIG_DIR/nzbget/nzbget.conf"
-sed -i "s/PASSWORD_PLACEHOLDER/$PASSWORD/g" "$CONFIG_DIR/nzbget/nzbget.conf"
 
 # Generate config.xml for Arr apps with Forms authentication pre-configured
 # This skips the first-run authentication wizard and uses form-based login
@@ -132,7 +101,6 @@ ensure_api_key SONARR_API_KEY "$MEDIA_DIR/sonarr/config.xml"
 ensure_api_key RADARR_API_KEY "$MEDIA_DIR/radarr/config.xml"
 ensure_api_key LIDARR_API_KEY "$MEDIA_DIR/lidarr/config.xml"
 ensure_api_key PROWLARR_API_KEY "$MEDIA_DIR/prowlarr/config.xml"
-ensure_api_key HUNTARR_API_KEY "$MEDIA_DIR/huntarr/config.yml"
 ensure_api_key CLEANUPARR_API_KEY "$MEDIA_DIR/cleanuparr/config.yml"
 
 
@@ -226,16 +194,6 @@ auth:
   type: none
 EOF
 
-# Generate Huntarr sample config
-cat > "$CONFIG_DIR/huntarr/config.yml" <<EOF
-# Huntarr minimal config (seeded)
-bind_address: 0.0.0.0
-port: ${HUNTARR_PORT:-8001}
-api_key: ${HUNTARR_API_KEY}
-data_path: ${DATA_DIR:-/data}
-# Add additional Huntarr settings as needed
-EOF
-
 # Generate CleanupArr sample config
 cat > "$CONFIG_DIR/cleanuparr/config.yml" <<EOF
 # CleanupArr minimal config (seeded)
@@ -281,4 +239,4 @@ echo ""
 echo "To use these configs, run: bash init_configs.sh"
 echo "This will copy configs to service directories before first start."
 echo ""
-echo "qBittorrent and NZBGet also have optional read-only mounts in compose.yaml."
+echo "qBittorrent also has optional read-only mounts in compose.yaml."

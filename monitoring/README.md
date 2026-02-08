@@ -67,10 +67,57 @@ nano telegraf/telegraf.conf
 ```
 ### Launch the Stack
 
-In our project director we can launch the stack using the compose up command.
-```
+**⚠️ IMPORTANT: Always use Infisical**
+
+All compose commands must go through Infisical to inject secrets:
+
+```bash
+# ✅ Correct way
+infisical run --env dev --path /monitoring -- docker compose up -d
+
+# ❌ Wrong - secrets won't be injected
 docker compose up -d
 ```
+
+### Restarting
+
+When restarting any container, **always use Infisical**:
+
+```bash
+infisical run --env dev --path /monitoring -- docker compose restart
+infisical run --env dev --path /monitoring -- docker compose restart beszel
+```
+
+### Logs (Infisical not required)
+
+```bash
+docker compose logs -f
+```
+To make configuration changes, save the edits and restart via Infisical:
+```
+infisical run --env dev --path /monitoring -- docker compose restart
+```
+
+### Fixing the Beszel agent key
+
+The Beszel agent runs in `network_mode: host`, so it needs `BESZEL_AGENT_KEY` to talk to the hub. If it stays offline, ensure the secret lives under `/monitoring`:
+
+```
+infisical secrets get BESZEL_AGENT_KEY --env dev --path /monitoring
+```
+
+If `BESZEL_AGENT_KEY` is still at `/`, move it (and the other monitoring credentials) under `/monitoring` with:
+
+```
+infisical run --env dev --path /monitoring -- bash security/infisical/reorganize_secrets.sh
+```
+
+After the reorganizer completes, restart the monitoring stack so the bound agent picks up the key.
+
+```bash
+infisical run --env dev --path /monitoring -- docker compose restart
+```
+
 If you run into any issues the logs are you best friend. Heck, check em anyway.
 ```
 docker compose logs

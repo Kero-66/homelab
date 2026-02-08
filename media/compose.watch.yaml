@@ -11,9 +11,6 @@ watch:
     service: jackett
   - path: ./media
     action: rebuild
-    service: nzbget
-  - path: ./media
-    action: rebuild
     service: prowlarr
   - path: ./media
     action: rebuild

@@ -10,17 +10,12 @@ if [ "${RUN_PROWLARR_SEARCH:-0}" != "1" ]; then
   exit 0
 fi
 
-CRED_FILE="/mnt/library/repos/homelab/media/.config/.credentials"
-if [ -f "$CRED_FILE" ]; then
-  # shellcheck disable=SC1090
-  source "$CRED_FILE" || true
-fi
-
+# PROWLARR_API_KEY should be provided via environment (e.g., from Infisical)
 PROWLARR_API_KEY=${PROWLARR_API_KEY:-}
 BASE=${PROWLARR_BASE:-http://localhost/prowlarr/api/v1}
 
 if [ -z "$PROWLARR_API_KEY" ]; then
-  echo "PROWLARR_API_KEY not set. Please export it or place it in $CRED_FILE" >&2
+  echo "PROWLARR_API_KEY not set. Please export it or run via Infisical" >&2
   exit 1
 fi
 

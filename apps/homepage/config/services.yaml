@@ -1,3 +1,28 @@
+- RSS:
+    - CommaFeed:
+        icon: mdi-rss
+        href: http://commafeed.localhost/
+        description: RSS reader
+- Calendar:
+        - Release Schedule:
+            icon: mdi-calendar
+            widget:
+              type: calendar
+              view: agenda
+              maxEvents: 15
+              maxDays: 30
+              previousDays: 3
+              showTime: true
+              showDetails: true
+              integrations:
+                - type: sonarr
+                  service_group: Arr Apps
+                  service_name: Sonarr
+                  color: sky
+                - type: radarr
+                  service_group: Arr Apps
+                  service_name: Radarr
+                  color: orange
 - Status:
     - Maintenance:
         - Cleanuparr:
@@ -12,24 +37,41 @@
             widget:
               type: fileflows
               url: http://fileflows:5000
-
-    - Calendar:
-        - Release Schedule:
-            icon: mdi-calendar
-            widget:
-              type: calendar
-              view: agenda
-              maxEvents: 15
-              maxDays: 30
-              previousDays: 3
-              showTime: true
-              showDetails: true
-              integrations:
-                - type: sonarr
-                  service_group: Media
-                  service_name: Sonarr
-                  color: sky
-                - type: radarr
-                  service_group: Media
-                  service_name: Radarr
-                  color: orange
+- Monitoring:
+  - Glances:
+    - Glances CPU:
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: cpu
+    - Glances Memory:
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: memory
+    - Glances Network:
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: network:eth0
+    - Glances Disk /data:
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: fs:/data
+    - Glances Containers:
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: containers
+    - Glances Processes:
+        widget:
+          type: glances
+          url: http://glances:61208
+          version: 4
+          metric: process

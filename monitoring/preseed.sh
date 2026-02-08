@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load credentials from media stack if they exist
-CREDENTIALS_FILE="/mnt/library/repos/homelab/media/.config/.credentials"
-if [[ -f "$CREDENTIALS_FILE" ]]; then
-    USERNAME=$(grep "^HUNTARR_ADMIN_USER=" "$CREDENTIALS_FILE" | cut -d'=' -f2)
-    PASSWORD=$(grep "^HUNTARR_ADMIN_PASS=" "$CREDENTIALS_FILE" | cut -d'=' -f2)
-else
-    USERNAME="admin"
-    PASSWORD="homelab123PASSWORD"
-fi
+# Use credentials from environment (Infisical) or fallback
+USERNAME="${BESZEL_USER:-admin}"
+PASSWORD="${BESZEL_PASS:-homelab123PASSWORD}"
 
 # Ensure password is at least 8 characters for Beszel
 if [[ ${#PASSWORD} -lt 8 ]]; then

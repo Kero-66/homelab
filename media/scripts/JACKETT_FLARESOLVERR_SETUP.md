@@ -180,7 +180,7 @@ bash scripts/automate_all.sh
 
 This single command will:
 1. ✅ Configure all Arr apps (Sonarr, Radarr, Lidarr)
-2. ✅ Configure download clients (qBittorrent, NZBGet)
+2. ✅ Configure download clients (qBittorrent)
 3. ✅ **Seed 10 Prowlarr indexers into database**
 4. ✅ **Seed 3 Jackett-based indexers into database**
 5. ✅ Configure Prowlarr (FlareSolverr + app sync)

@@ -24,12 +24,12 @@ All notable changes to this project will be documented in this file.
 
 - **Download Client Configuration**: Enhanced IP address management
   - Updated `media/scripts/configure_download_clients.sh` to use environment variables
-  - Added support for `IP_QBITTORRENT` and `IP_NZBGET` environment variables
+  - Added support for `IP_QBITTORRENT` environment variables
   - Allows dynamic IP assignment instead of hardcoded values
 
 ### Changed
 - **Docker Compose**: Removed hardcoded `/etc/localtime` mounts
-  - Affects: nzbget, prowlarr, sonarr, radarr, lidarr, bazarr
+  - Affects: prowlarr, sonarr, radarr, lidarr, bazarr
   - Timezone now controlled exclusively via `TZ` environment variable
   - Improves reproducibility across different host systems
 
@@ -56,7 +56,7 @@ All notable changes to this project will be documented in this file.
 
 ### Migration Notes
 For existing deployments:
-1. Update `.env` to include `IP_QBITTORRENT` and `IP_NZBGET` if using environment-based IPs
+1. Update `.env` to include `IP_QBITTORRENT` if using environment-based IPs
 2. TVHeadend is optional; uncomment in compose.yaml if needed
 3. New Jellyfin plugins will be installed on next `media/jellyfin/install_plugins.sh` run
 4. Restart Jellyfin after plugin installation to load configurations

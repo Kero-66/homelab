@@ -13,7 +13,7 @@ set -e
 #
 # What gets backed up:
 #   - All *arr app configs (config.xml, databases)
-#   - Download client configs (qBittorrent, NZBGet)
+#   - Download client configs (qBittorrent)
 #   - Jellyfin configuration
 #   - Jellyseerr settings
 #   - Jellystat database (PostgreSQL dump)
@@ -127,7 +127,6 @@ backup_service "lidarr" "./lidarr"
 backup_service "prowlarr" "./prowlarr"
 backup_service "bazarr" "./bazarr"
 backup_service "qbittorrent" "./qbittorrent"
-backup_service "nzbget" "./nzbget"
 backup_service "jellyfin-config" "./jellyfin/config"
 backup_service "jellyseerr" "./jellyfin/jellyseerr"
 

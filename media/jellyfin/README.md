@@ -202,7 +202,7 @@ The `configure_jellyfin.sh` script automates the entire initial setup process in
 - Adding media libraries (TV Shows, Movies, Music)
 
 **Prerequisites:**
-- Credentials file must exist at `../. config/.credentials` with `USERNAME` and `PASSWORD` variables
+- Infisical must contain `USERNAME` and `PASSWORD` in `/media` and be injected at runtime
 - Jellyfin container must be running
 - Data directories must exist: `/data/shows`, `/data/movies`, `/data/music`
 
@@ -216,7 +216,7 @@ The script will:
 1. Wait for Jellyfin to be ready
 2. Configure server settings (language: en-US, country: AU)
 3. Get the default user created by the container
-4. Update it with your credentials from `.credentials`
+4. Update it with your credentials from Infisical
 5. Complete the startup wizard
 6. Authenticate and obtain an access token
 7. Add three media libraries automatically

@@ -2,9 +2,14 @@
 # Dry-run helper: show exact Sonarr API changes that would import TRaSH CFs
 set -euo pipefail
 
-CRED=media/.config/.credentials
-SONARR_API=$(grep -E '^SONARR_API_KEY=' "$CRED" | cut -d= -f2-)
-SONARR_URL=$(grep -E '^SONARR_URL=' "$CRED" | cut -d= -f2- || echo "http://localhost/sonarr")
+SONARR_API="${SONARR_API_KEY:-}"
+SONARR_URL="${SONARR_URL:-http://localhost/sonarr}"
+
+if [[ -z "$SONARR_API" ]]; then
+  echo "Error: SONARR_API_KEY not found in environment."
+  echo "Usage: infisical run -- bash $0"
+  exit 1
+fi
 
 echo "Dry-run: will NOT POST anything. Reviewing local CF files and building example curl commands."
 echo "Sonarr URL: $SONARR_URL"

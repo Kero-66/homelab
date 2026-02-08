@@ -8,12 +8,10 @@ This repository implements a subset of the [TRaSH Guides](https://trash-guides.i
 
 TRaSH guides provide **Custom Formats (CF)** and **Scoring** systems. Instead of just "1080p is better than 720p", this system lets us score specific release groups, codecs, or features (e.g., `10bit`, `Dual Audio`, `x265`).
 
-### Relationship with Huntarr
+### How scoring is applied
 
 - **TRaSH (The Brain)**: Defines *what* is a good file and *how much better* one file is compared to another.
-- **Huntarr (The Motor)**: Triggers the *when* (periodic searches). Huntarr asks Sonarr/Radarr if there are any "upgrades" available based on the scores defined by the TRaSH profiles.
-
-**Together, they ensure your library is always upgrading to the best possible version without manual intervention.**
+- **Automation**: Periodic searches and upgrades are handled by the Arr apps based on the TRaSH-defined scores.
 
 ---
 

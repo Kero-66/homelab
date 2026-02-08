@@ -1,7 +1,7 @@
 
 # Usenet Provider Setup — Easynews
 
-This guide helps you configure **Easynews** in your download clients (**SABnzbd** and **NZBGet**).
+This guide helps you configure **Easynews** in **SABnzbd**.
 
 ---
 
@@ -34,38 +34,10 @@ Use these details for the primary server in either application:
 
 ---
 
-## 3. Configuration in NZBGet
-
-1. Open NZBGet Web UI (default: [http://localhost:6789](http://localhost:6789)).
-2. Go to **Settings** -> **NEWS SERVERS**.
-3. Fill in **Server1**:
-   - **Active:** `Yes`
-   - **Name:** `Easynews`
-   - **Host:** `news.easynews.com`
-   - **Port:** `563`
-   - **User:** Your username.
-   - **Pass:** Your password.
-   - **Encryption:** `Yes`
-4. Click **Test Connection** at the bottom.
-5. Click **Save Changes**.
-
----
-
-## Comparison: SABnzbd vs NZBGet
-
-| Feature       | SABnzbd                             | NZBGet                           |
-|---------------|-------------------------------------|----------------------------------|
-| **Interface** | Modern, Web-based                   | Classic, Detailed                |
-| **Language**  | Python                              | C++ (Faster on low-end hardware) |
-| **Features**  | Excellent deobfuscation, easy setup | Highly scriptable, lightweight |
-| **Parsing**   | Very reliable                       | Extremely fast                   |
-
----
-
 ## Automation Setup
 
 Don't forget to connect your download client to **Sonarr** and **Radarr**:
 
 1. Go to **Settings** -> **Download Clients** in Sonarr/Radarr.
-2. Add **SABnzbd** or **NZBGet**.
+2. Add **SABnzbd**.
 3. Use the IP address specified in your `.env` (e.g., `172.39.0.13` for SABnzbd).

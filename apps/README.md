@@ -176,16 +176,6 @@ This is a web version of the popular qBittorrent peer-to-peer file sharing clien
 
 **Resources:** [Github](https://github.com/qbittorrent/qBittorrent) | [Website](https://www.qbittorrent.org/)
 
-### NZBGet
-
-![](https://github.com/TechHutTV/homelab/blob/main/apps/images/17_nzbget-newsletter-client.png)
-
-This is a Usenet client written in C++. It works very well and out of any that I’ve used it seems to give the least amount of issues. This can pull files, fix them in some cases if the health is low, rename and move files.
-
-https://nzbget.net/
-**Resources:** [Github](https://github.com/nzbgetcom/nzbget) | [Website](https://radarr.video/)
-
-
 ## Files and Images
 
 ### Nextcloud
@@ -333,7 +323,6 @@ Media Management
 
 Download Clients
 - (alt to qBittorrent)
-- (alt to NZBGet)
 
 Files and Images
 - [Owncloud](https://owncloud.com/), [Pydio](https://github.com/pydio) (alts to Nextcloud)

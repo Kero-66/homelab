@@ -44,7 +44,7 @@ def run(staging_dir: Path, media_dir: Path):
         shutil.copy2(src_env, target / '.env')
 
     # Copy each service's config.xml only (avoid sockets / volumes)
-    services = ['sonarr', 'radarr', 'lidarr', 'prowlarr', 'bazarr', 'qbittorrent', 'nzbget', 'jellyfin']
+    services = ['sonarr', 'radarr', 'lidarr', 'prowlarr', 'bazarr', 'qbittorrent', 'jellyfin']
     for svc in services:
         src = media_dir / svc / 'config.xml'
         if src.exists():
@@ -76,7 +76,7 @@ def run(staging_dir: Path, media_dir: Path):
         print("  (no .config generated)")
         return proc.returncode
 
-    for service in ['sonarr', 'radarr', 'lidarr', 'prowlarr', 'bazarr', 'qbittorrent', 'nzbget']:
+    for service in ['sonarr', 'radarr', 'lidarr', 'prowlarr', 'bazarr', 'qbittorrent']:
         p = cfg / service / 'config.xml'
         if p.exists():
             print(f"  - {service}: {p} (size={p.stat().st_size})")

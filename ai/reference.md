@@ -1,19 +1,12 @@
 # External references used by Copilot
 
-Sources consulted when investigating NZBGet and public NNTP providers:
+Sources consulted for external service configuration and APIs.
 
-- Eternal September (news.eternal-september.org) — public/text-only NNTP server (registration required).
-  - https://eternal-september.org/
-
-- Usenet (Wikipedia) — general background and provider list references (Astraweb, Easynews, Giganews, Supernews).
-  - https://en.wikipedia.org/wiki/Usenet
-
-- AIOE (public NNTP project) — historical/public text NNTP resource (site fetch attempted).
-  - https://aioe.org/
-
-Notes:
-- Eternal-September explicitly states it provides text-only newsgroups (no binaries). This is relevant when configuring NZBGet (which downloads binaries) — text-only servers cannot satisfy binary NZB downloads.
-- For reliable binary downloads you typically need a commercial Usenet provider (trial accounts are often available).
+## Infisical CLI & Docker usage (2026-01-17)
+- https://github.com/infisical/infisical/blob/main/docs/documentation/getting-started/cli.mdx
+- https://github.com/infisical/infisical/blob/main/docs/documentation/getting-started/docker.mdx
+- https://github.com/infisical/infisical/blob/main/docs/integrations/platforms/docker-pass-envs.mdx
+- Notes: `infisical run` injects secrets into the process environment; alternative is `infisical export --format=dotenv` piped to Docker `--env-file` (single-line values only).
 
 ## Prowlarr API docs (recorded)
 

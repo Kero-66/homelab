@@ -41,13 +41,13 @@ If you use DrunkenSlug or NZBIndex with Prowlarr, please review:
 
 - [media/prowlarr/DRUNKENSLUG.md](prowlarr/DRUNKENSLUG.md) — Full API reference, safe setup, and quota/terms summary
 - [media/prowlarr/NZBINDEX.md](prowlarr/NZBINDEX.md) — Important note: NZBIndex API is no longer public
-- [media/docs/USENET_SETUP.md](docs/USENET_SETUP.md) — How to setup Newshosting in SABnzbd and NZBGet
+- [media/docs/USENET_SETUP.md](docs/USENET_SETUP.md) — How to setup Newshosting in SABnzbd
 - [media/prowlarr/fetch_caps.sh](prowlarr/fetch_caps.sh) — Script to safely fetch categories (does not use API quota)
 - [TRaSH Guide: Prowlarr Setup with Limited API](https://trash-guides.info/Prowlarr/prowlarr-setup-limited-api/)
 
 **Key points:**
 
-- Never commit your DrunkenSlug API key; use `.env` files
+- Never commit your DrunkenSlug API key; store it in Infisical under `/media` and inject it at runtime
 - Respect all API and download quotas (see your DrunkenSlug profile)
 - Scraping or excessive requests will result in a ban
 - Always use the `?t=caps` endpoint for category discovery (no quota used)
@@ -98,10 +98,6 @@ We provide a simple CLI tool inspired by [YAMS](https://yams.media/) for easy ma
     * [Gluetun Proxmox LXC Setup](#gluetun-proxmox-fix)
     * [Reduce Gluetun Ram Usage](#reduce-gluetun-ram-usage)
   - [Download Clients](#download-clients)
-    * [NZBGet](#nzbget)
-      + [NZBGet Login Credentials](#nzbget-login-credentials)
-      + [Download Directories Mapping](#nzbget-download-directories)
-      + [Fix "directory does not appear" error in Sonarr/Radarr](#fix-directory-does-not-appear-to-exist-inside-the-container-error)
     * [qBittorrent](#qbittorrent)
       + [qBittorrent Login Credentials](#qbittorrent-login-credentials)
       + [Download Directories Mapping](#qbittorrent-download-directories)
@@ -137,12 +133,6 @@ data
 │   │   ├── completed
 │   │   ├── incomplete
 │   │   └── torrents
-│   └── nzbget
-│       ├── completed
-│       ├── intermediate
-│       ├── nzb
-│       ├── queue
-│       └── tmp
 ├── movies
 ├── music
 ├── shows
@@ -150,7 +140,7 @@ data
 ```
 Here is a easy command to create the download directory scheme. Run within the `/data` directory.
 ```bash
-mkdir -p downloads/qbittorrent/{completed,incomplete,torrents} && mkdir -p downloads/nzbget/{completed,intermediate,nzb,queue,tmp}
+mkdir -p downloads/qbittorrent/{completed,incomplete,torrents}
 ```
 
 ### Network Share
@@ -206,71 +196,56 @@ wget https://github.com/TechHutTV/homelab/raw/refs/heads/main/media/compose.yaml
 Most of our editing is going to be done in the `.env` file. Here you change your `UID` and `GID`, timezone, and add all your VPN keys and info. You can also make edits to the `compose.yaml` file such as the mount point locations, for example, if you are using something other than `/data:/data` or even changing the docker network IP addresses for your services.
 
 ### Automated Configuration Setup (Optional)
-To reduce manual configuration, you can use the provided seed config scripts:
+To reduce manual configuration, all secrets are managed via **Infisical**.
 
-1. **Generate seed configs with your credentials:**
+1. **Bootstrap Infisical:**
    ```bash
-   # Copy credentials template and set your values
-   cp .config/.credentials.template .config/.credentials
-   nano .config/.credentials  # Set USERNAME and PASSWORD
-   
-   # Generate all seed configs
-   bash setup_seed_configs.sh
-   ```
-
-2. **Initialize configs and start services:**
-   ```bash
-   # Copy configs to service directories
-   bash init_configs.sh
-   
-   # Start all services
+   # Start the Infisical stack
+   cd security/infisical
    docker compose up -d
    
-   # Configure NZBGet credentials and paths
-   bash configure_nzbget.sh
+   # Setup admin and project
+   bash preseed.sh
+   ```
+
+2. **Seed secrets and start services:**
+   ```bash
+   # Seed existing credentials into Infisical
+   bash security/infisical/seed_secrets.sh
    
-   # Configure Prowlarr with FlareSolverr proxy (for Cloudflare-protected indexers)
-   bash configure_prowlarr.sh
-   
-   # Connect Prowlarr to Sonarr/Radarr/Lidarr (syncs indexers automatically)
-   bash configure_prowlarr_apps.sh
-   
-   # Configure download clients (qBittorrent and NZBGet)
-   bash configure_download_clients.sh
-   
-   # Add root folders via API (wait for services to be ready)
-   bash add_root_folders.sh
+  # Deploy the media stack using Infisical injection
+  # (Infisical requires a project ID for `infisical run`)
+  INFISICAL_PROJECT_ID=<PROJECT_ID> ./deploy.sh --full
    ```
 
 3. **One-time qBittorrent setup:**
-   - Access qBittorrent at `localhost:8080` (or your configured port)
+   - Access qBittorrent at `localhost:8080/qbittorrent/`
    - Go to **Tools** → **Options** → **Web UI**
-   - Set your **Username** and **Password** from `.credentials`
+   - Set your **Username** and **Password** (matches unified credentials in Infisical)
    - **Uncheck** "Bypass authentication for clients in whitelisted IP subnets"
    - Click **Save**
    
-   > **Note:** qBittorrent's password cannot be fully automated due to its internal PBKDF2 hashing. This is a one-time setup per deployment.
+   > **Note:** qBittorrent's password cannot be fully automated due to internal hashing. This is a one-time setup.
 
 4. **Access Arr apps:**
-   - Navigate to Sonarr/Radarr/Lidarr/Prowlarr
+   - Navigate to any service (e.g., http://localhost/sonarr)
    - Browser will prompt for Basic authentication
-   - Enter credentials from `.credentials` file
-   - Root folders are already configured automatically!
+   - Enter unified credentials from Infisical
+   - Services are pre-configured automatically!
 
 **What gets automated:**
-- ✅ Download directories and paths pre-configured
+- ✅ Secrets managed securely in Infisical (no plaintext .credentials files)
+- ✅ Runtime injection via `infisical run`
 - ✅ Authentication configured on all Arr apps (Basic auth)
 - ✅ Root folders added automatically via API
-- ✅ API keys randomly generated
-- ✅ NZBGet credentials and paths configured automatically
-- ✅ Prowlarr configured with FlareSolverr proxy (for indexers without VPN)
+- ✅ API keys randomly generated and stored in Infisical
+- ✅ Prowlarr configured with FlareSolverr proxy
 - ✅ Prowlarr apps (Sonarr/Radarr/Lidarr) connected automatically
-- ✅ **Indexers automatically added** (Nyaa, AniDex, ThePirateBay, TorrentGalaxy, 1337x, etc.)
-- ✅ **Anime indexers configured** (DMHY, BakaBT, Anirena)
-- ✅ **Jackett Torznab feeds synced to Prowlarr**
+- ✅ **Indexers automatically added**
+- ✅ **Anime indexers configured**
 - ⚠️  qBittorrent password requires one-time WebUI setup
 
-**Skip automation?** You can still configure everything manually via each app's WebUI as described in the sections below.
+**Skip automation?** You can still configure everything manually via each app's WebUI. Note that manually edited env vars will be overridden by Infisical if the CLI is active.
 
 ### Indexer Automation (New!)
 
@@ -337,7 +312,7 @@ bash configure_jellyfin.sh
 
 **What gets automated:**
 - ✅ Server configuration (language, country, metadata preferences)
-- ✅ Admin user creation with credentials from `.credentials`
+- ✅ Admin user creation with credentials from Infisical
 - ✅ Startup wizard completion
 - ✅ Media library creation (TV Shows, Movies, Music) at `/data/shows`, `/data/movies`, `/data/music`
 - ✅ Authentication and access token generation
@@ -392,7 +367,6 @@ bash configure_jellystat.sh
 
 This will:
 - Pre-configure qBittorrent with download paths and hashed WebUI password
-- Pre-configure NZBGet with download paths and credentials  
 - Pre-configure Arr apps (Sonarr/Radarr/Lidarr) to skip authentication wizard
 - Set authentication to "Disabled for Local Addresses" on all Arr apps
 
@@ -450,7 +424,7 @@ Once your containers are up and running, you can test your connection is correct
 ```bash
 docker run --rm --network=container:gluetun alpine:3.18 sh -c "apk add wget && wget -qO- https://ipinfo.io"
 ```
-If you'd like to test Gluetun connectivity from a container using the service jump into the `docker compose exec` console and run the `wget` command below. Tested with `nzbget`, `qbittorrent`, and `prowlarr` containers. Ensure you open the ports through the the `gluetun` container.
+If you'd like to test Gluetun connectivity from a container using the service jump into the `docker compose exec` console and run the `wget` command below. Tested with `qbittorrent` and `prowlarr` containers. Ensure you open the ports through the the `gluetun` container.
 ```bash
 docker exec -it container_name bash
 wget -qO- https://ipinfo.io
@@ -509,25 +483,6 @@ You can do this by adding the following to your docker `compose.yaml` file under
 This may not be an issue as [DNS over HTTPS in Go to replace Unbound](https://github.com/qdm12/gluetun/issues/137) is implemented, but it's worth the mention.
 
 ## Download Clients
-
-### NZBGet
-
-#### NZBGet Login Credentials 
-The default credentials for NZBGet are a username of `nzbget` and a password of `tegbzn6789`. It's strongly recommended to change these default credentials for security reasons. This can be done under _Settings > SECURITY_, then change the ControlUsername and ControlPassword.
-
-#### NZBGet Download Directories
-If following the `/data:/data` directory scheme and used the command to setup the download directories open the qBittorent Web UI and do under _Settings > PATHS_ and change the paths.
-
-_MainDir:_ `/data/downloads/nzbget`
-
-_DestDir:_ `${MainDir}/completed`
-
-_InterDir:_ `${MainDir}/intermediate`
-
-And keep everything else as is.
-
-#### Fix directory does not appear to exist inside the container error
-This error may appear within Sonarr and Radarr. Once NZBGet is setup go to settings and under **INCOMING NZBS** change the **AppendCategoryDir** to **No**. This will prevent some potential mapping issues and save on unnecessary directories.
 
 ### qBittorrent
 

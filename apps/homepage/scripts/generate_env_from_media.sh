@@ -163,7 +163,6 @@ copy_from_file "JELLYSEERR_API_KEY" "$CRED_FILE"
 copy_from_file "JACKETT_PASS" "$CRED_FILE"
 copy_from_file "JACKETT_API_KEY" "$CRED_FILE"
 copy_from_file "JELLYSTAT_API_KEY" "$CRED_FILE"
-copy_from_file "HUNTARR_API_KEY" "$CRED_FILE"
 copy_from_file "CLEANUPARR_API_KEY" "$CRED_FILE"
 
 # IP Addresses from media/.env
@@ -182,14 +181,10 @@ if [[ -f "$CRED_FILE" ]]; then
   
   QBIT_USER=$(grep -E '^QBITTORRENT_USER=' "$CRED_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
   QBIT_PASS=$(grep -E '^QBITTORRENT_PASS=' "$CRED_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
-  NZB_USER=$(grep -E '^NZBGET_USER=' "$CRED_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
-  NZB_PASS=$(grep -E '^NZBGET_PASS=' "$CRED_FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'" || true)
 fi
 
 write_kv "QBITTORRENT_USER" "${QBIT_USER:-$GENERIC_USERNAME}"
 write_kv "QBITTORRENT_PASS" "${QBIT_PASS:-$GENERIC_PASSWORD}"
-write_kv "NZBGET_USER" "${NZB_USER:-$GENERIC_USERNAME}"
-write_kv "NZBGET_PASS" "${NZB_PASS:-$GENERIC_PASSWORD}"
 
 # Write out or update the resulting env: preserve existing values in apps/homepage/.env by replacing specific keys
 if [[ ! -f "$OUT_ENV" ]]; then

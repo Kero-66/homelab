@@ -2,10 +2,6 @@ x-common: &homepage-common
   # Shared settings for homepage; env files listed with the shared file first so local vars override
   env_file:
     - .env
-    - ../../media/.credentials
-    - ../../monitoring/.credentials
-    - ../../networking/.credentials
-    - .credentials
   restart: "${RESTART_POLICY}"
   profiles: ["homepage", "all"]
 
@@ -14,6 +10,7 @@ services:
     <<: *homepage-common
     image: "${HOMEPAGE_IMAGE:-ghcr.io/gethomepage/homepage:latest}"
     container_name: homepage
+    mem_limit: 256m
     ports:
       - "${HOMEPAGE_PORT:-3000}:${HOMEPAGE_CONTAINER_PORT:-3000}"
     volumes:
@@ -29,13 +26,9 @@ services:
       - HOMEPAGE_VAR_JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
       - HOMEPAGE_VAR_JELLYSEERR_API_KEY=${JELLYSEERR_API_KEY}
       - HOMEPAGE_VAR_JELLYSTAT_API_KEY=${JELLYSTAT_API_KEY}
-      - HOMEPAGE_VAR_LIDARR_API_KEY=${LIDARR_API_KEY}
-      - HOMEPAGE_VAR_HUNTARR_API_KEY=${HUNTARR_API_KEY}
       - HOMEPAGE_VAR_CLEANUPARR_API_KEY=${CLEANUPARR_API_KEY}
       - HOMEPAGE_VAR_QBITTORRENT_USER=${QBITTORRENT_USER}
       - HOMEPAGE_VAR_QBITTORRENT_PASS=${QBITTORRENT_PASS}
-      - HOMEPAGE_VAR_NZBGET_USER=${NZBGET_USER}
-      - HOMEPAGE_VAR_NZBGET_PASS=${NZBGET_PASS}
       # Monitoring Stack Credentials
       - HOMEPAGE_VAR_BESZEL_USER=${BESZEL_USER}
       - HOMEPAGE_VAR_BESZEL_PASS=${BESZEL_PASS}
@@ -43,9 +36,7 @@ services:
       - HOMEPAGE_VAR_IP_QBITTORRENT=${IP_QBITTORRENT}
       - HOMEPAGE_VAR_IP_SONARR=${IP_SONARR}
       - HOMEPAGE_VAR_IP_RADARR=${IP_RADARR}
-      - HOMEPAGE_VAR_IP_LIDARR=${IP_LIDARR}
       - HOMEPAGE_VAR_IP_BAZARR=${IP_BAZARR}
-      - HOMEPAGE_VAR_IP_NZBGET=${IP_NZBGET}
       - HOMEPAGE_VAR_IP_PROWLARR=${IP_PROWLARR}
       - HOMEPAGE_VAR_IP_FLARESOLVERR=${IP_FLARESOLVERR}
     healthcheck:

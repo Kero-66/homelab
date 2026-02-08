@@ -49,7 +49,7 @@ All services are running and configured:
 2. Go to **Settings** (icon, top right) → **Plugins** → **Catalog** (tab)
 3. Search **"Bookshelf"** → Click result → **"Install"**
 4. After install, go to **Settings** → **Plugins** → **Bookshelf** (click name)
-5. Paste Comic Vine API key from your `.config/.credentials` file (`MYLAR_COMICVINE_API`)
+5. Paste Comic Vine API key from Infisical `/media` (`MYLAR_COMICVINE_API`)
 6. Click **"Save"**
 7. Add library: **Settings** → **Libraries** → **"+"**
    - **Name:** Books

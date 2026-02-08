@@ -18,7 +18,7 @@ The anime configuration is **fully automated** as part of the media stack initia
 
 ## Database Seeding Strategy
 
-Unlike static config files (qBittorrent, NZBGet, etc.), Sonarr and Radarr's custom formats and quality profiles are stored in their **SQLite databases** (`sonarr.db`/`radarr.db`), which don't exist until the services first start.
+Unlike static config files (qBittorrent, etc.), Sonarr and Radarr's custom formats and quality profiles are stored in their **SQLite databases** (`sonarr.db`/`radarr.db`), which don't exist until the services first start.
 
 Therefore, anime configuration uses this approach:
 
