@@ -1,0 +1,21 @@
+# Jellyfin stack secrets - rendered by Infisical Agent
+# DO NOT EDIT - this file is auto-generated every 5 minutes
+# Source: Infisical project, dev environment, /media path
+#
+# These variable names map directly to what the containers expect.
+# Postgres expects: POSTGRES_USER, POSTGRES_PASSWORD
+# Jellystat expects: POSTGRES_USER, POSTGRES_PASSWORD, JWT_SECRET
+#
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "JELLYSTAT_DB_USER" }}
+POSTGRES_USER={{ .Value }}
+{{- end }}
+{{- if eq .Key "JELLYSTAT_DB_PASS" }}
+POSTGRES_PASSWORD={{ .Value }}
+{{- end }}
+{{- if eq .Key "JELLYSTAT_JWT_SECRET" }}
+JWT_SECRET={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}
