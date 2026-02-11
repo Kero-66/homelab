@@ -201,9 +201,9 @@ Expected output:
 SONARR_API_KEY=...
 ```
 
-### Step 3a: Verify Configuration Migration
+### Step 4a: One More Configuration Check
 
-The deployment script automatically copied all your existing configurations. Verify:
+Now that configs are migrated and .env files exist, do one final check:
 
 ```bash
 # Check Sonarr config migrated (should see database files, config.xml, etc.)

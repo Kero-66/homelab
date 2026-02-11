@@ -32,7 +32,7 @@ services:
       - NET_ADMIN
       - SYS_MODULE
     env_file:
-      - /output/tailscale/.env
+      - /mnt/Fast/docker/tailscale/.env
     environment:
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
@@ -41,7 +41,7 @@ services:
       # Optional: Enable as exit node (routes all traffic through this device)
       # - TS_EXTRA_ARGS=--advertise-routes=192.168.20.0/24 --advertise-exit-node --accept-routes
     volumes:
-      - /config/tailscale:/var/lib/tailscale
+      - /mnt/Fast/docker/tailscale:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
     # Manual start until auth key is configured
     # profiles: ["tailscale"]

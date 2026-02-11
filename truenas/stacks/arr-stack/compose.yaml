@@ -53,7 +53,7 @@ services:
     container_name: prowlarr
     restart: unless-stopped
     env_file:
-      - /output/arr-stack/.env
+      - /mnt/Fast/docker/arr-stack/.env
     environment:
       - PUID=1000
       - PGID=1000
@@ -62,7 +62,7 @@ services:
       - 1.1.1.1
       - 8.8.8.8
     volumes:
-      - /config/prowlarr:/config
+      - /mnt/Fast/docker/prowlarr:/config
     ports:
       - "9696:9696"
     depends_on:
@@ -83,15 +83,15 @@ services:
     container_name: sonarr
     restart: unless-stopped
     env_file:
-      - /output/arr-stack/.env
+      - /mnt/Fast/docker/arr-stack/.env
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      - /config/sonarr:/config
-      - /data/media:/data/media
-      - /data/downloads:/data/downloads
+      - /mnt/Fast/docker/sonarr:/config
+      - /mnt/Data/media:/data/media
+      - /mnt/Data/downloads:/data/downloads
     ports:
       - "8989:8989"
     depends_on:
@@ -108,15 +108,15 @@ services:
     container_name: radarr
     restart: unless-stopped
     env_file:
-      - /output/arr-stack/.env
+      - /mnt/Fast/docker/arr-stack/.env
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      - /config/radarr:/config
-      - /data/media:/data/media
-      - /data/downloads:/data/downloads
+      - /mnt/Fast/docker/radarr:/config
+      - /mnt/Data/media:/data/media
+      - /mnt/Data/downloads:/data/downloads
     ports:
       - "7878:7878"
     depends_on:
@@ -133,14 +133,14 @@ services:
     container_name: bazarr
     restart: unless-stopped
     env_file:
-      - /output/arr-stack/.env
+      - /mnt/Fast/docker/arr-stack/.env
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      - /config/bazarr:/config
-      - /data/media:/data/media
+      - /mnt/Fast/docker/bazarr:/config
+      - /mnt/Data/media:/data/media
     ports:
       - "6767:6767"
     depends_on:
@@ -166,7 +166,7 @@ services:
       - TZ=Australia/Brisbane
       - CRON_SCHEDULE=@daily
     volumes:
-      - /config/recyclarr/config:/config
+      - /mnt/Fast/docker/recyclarr/config:/config
     depends_on:
       - sonarr
       - radarr
@@ -185,8 +185,8 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      - /config/cleanuparr:/config
-      - /data/media:/data/media
+      - /mnt/Fast/docker/cleanuparr:/config
+      - /mnt/Data/media:/data/media
     ports:
       - "11011:11011"
     depends_on:

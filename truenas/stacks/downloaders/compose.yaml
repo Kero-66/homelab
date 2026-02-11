@@ -28,15 +28,15 @@ services:
     container_name: qbittorrent
     restart: unless-stopped
     env_file:
-      - /output/downloaders/.env
+      - /mnt/Fast/docker/downloaders/.env
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
       - WEBUI_PORT=8080
     volumes:
-      - /config/qbittorrent:/config
-      - /data/downloads:/data/downloads
+      - /mnt/Fast/docker/qbittorrent:/config
+      - /mnt/Data/downloads:/data/downloads
     ports:
       - "8080:8080"
       - "6881:6881/tcp"
@@ -63,14 +63,14 @@ services:
     container_name: sabnzbd
     restart: unless-stopped
     env_file:
-      - /output/downloaders/.env
+      - /mnt/Fast/docker/downloaders/.env
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      - /config/sabnzbd:/config
-      - /data/downloads:/data/downloads
+      - /mnt/Fast/docker/sabnzbd:/config
+      - /mnt/Data/downloads:/data/downloads
     ports:
       - "8085:8080"
     healthcheck:
