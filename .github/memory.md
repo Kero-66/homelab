@@ -1,5 +1,16 @@
 claude# Homelab Project Memory
 
+## GPU Passthrough Configuration
+
+**CRITICAL:** Read `.github/GPU_PASSTHROUGH_CONTEXT.md` before any GPU/VM work!
+
+- **Hardware:** AMD system with RX 9070 (desktop) + integrated GPU (for VMs)
+- **Current State:** Configuration applied 2026-02-10, awaiting reboot
+- **VFIO Config:** Integrated GPU (1002:13c0) bound to vfio-pci for VM passthrough
+- **Desktop GPU:** RX 9070 (1002:7550) stays on amdgpu driver - DO NOT TOUCH
+- **Backups:** `/etc/modprobe.d/vfio.conf.backup` and `/etc/default/grub.backup`
+- **Recovery:** Documented in GPU_PASSTHROUGH_CONTEXT.md
+
 ## Agent Instructions
 
 ### Mission

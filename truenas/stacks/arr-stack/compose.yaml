@@ -1,0 +1,200 @@
+# =============================================================================
+# Arr Stack - Docker Compose Configuration for TrueNAS Scale
+# =============================================================================
+# Complete media management stack with *arr apps and supporting services.
+#
+# Services:
+#   - Sonarr (TV series)
+#   - Radarr (Movies)
+#   - Prowlarr (Indexer manager)
+#   - Bazarr (Subtitles)
+#   - Recyclarr (TRaSH Guides automation)
+#   - FlareSolverr (Cloudflare bypass)
+#   - Cleanuparr (Queue cleanup automation)
+#
+# Prerequisites:
+#   - Infisical Agent running (renders secrets to /output/arr-stack/.env)
+#   - Media mount: /mnt/Data/media mapped to /data/media
+#   - Download mount: /mnt/Data/downloads mapped to /data/downloads
+#   - Config mount: /mnt/Fast/docker/arr-stack mapped to /config
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Indexer Management & Cloudflare Bypass
+  # ===========================================================================
+  
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ports:
+      - "8191:8191"
+    healthcheck:
+      test: curl -sf http://localhost:8191/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    env_file:
+      - /output/arr-stack/.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    volumes:
+      - /config/prowlarr:/config
+    ports:
+      - "9696:9696"
+    depends_on:
+      - flaresolverr
+    healthcheck:
+      test: curl -sf http://localhost:9696/ping || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ===========================================================================
+  # Content Management (*arr apps)
+  # ===========================================================================
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    env_file:
+      - /output/arr-stack/.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      - /config/sonarr:/config
+      - /data/media:/data/media
+      - /data/downloads:/data/downloads
+    ports:
+      - "8989:8989"
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: curl -sf http://localhost:8989/ping || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    env_file:
+      - /output/arr-stack/.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      - /config/radarr:/config
+      - /data/media:/data/media
+      - /data/downloads:/data/downloads
+    ports:
+      - "7878:7878"
+    depends_on:
+      - prowlarr
+    healthcheck:
+      test: curl -sf http://localhost:7878/ping || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    env_file:
+      - /output/arr-stack/.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      - /config/bazarr:/config
+      - /data/media:/data/media
+    ports:
+      - "6767:6767"
+    depends_on:
+      - sonarr
+      - radarr
+    healthcheck:
+      test: curl -sf http://localhost:6767/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ===========================================================================
+  # Automation & Maintenance
+  # ===========================================================================
+
+  recyclarr:
+    image: recyclarr/recyclarr:latest
+    container_name: recyclarr
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      - TZ=Australia/Brisbane
+      - CRON_SCHEDULE=@daily
+    volumes:
+      - /config/recyclarr/config:/config
+    depends_on:
+      - sonarr
+      - radarr
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep recyclarr || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr:latest
+    container_name: cleanuparr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      - /config/cleanuparr:/config
+      - /data/media:/data/media
+    ports:
+      - "11011:11011"
+    depends_on:
+      - sonarr
+      - radarr
+    healthcheck:
+      test: curl -sf http://localhost:11011/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

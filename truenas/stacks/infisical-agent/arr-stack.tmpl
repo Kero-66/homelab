@@ -1,0 +1,51 @@
+# Arr stack secrets - rendered by Infisical Agent
+# DO NOT EDIT - this file is auto-generated every 5 minutes
+# Source: Infisical project, dev environment, /media path
+#
+# Services: Sonarr, Radarr, Prowlarr, Bazarr, Recyclarr, FlareSolverr, Cleanuparr
+# Each service only gets the credentials it needs (principle of least privilege)
+
+# === Sonarr ===
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "SONARR_API_KEY" }}
+SONARR_API_KEY={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# === Radarr ===
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "RADARR_API_KEY" }}
+RADARR_API_KEY={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# === Prowlarr ===
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "PROWLARR_API_KEY" }}
+PROWLARR_API_KEY={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# === Bazarr ===
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "BAZARR_API_KEY" }}
+BAZARR_API_KEY={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+# === Recyclarr (uses Sonarr/Radarr API keys via config files) ===
+# No additional secrets needed - accesses Sonarr/Radarr via their API keys in recyclarr.yml
+
+# === FlareSolverr ===
+# No secrets needed - public service for CAPTCHA solving
+
+# === Cleanuparr ===
+# No secrets needed - reads Sonarr/Radarr configs to determine what to clean

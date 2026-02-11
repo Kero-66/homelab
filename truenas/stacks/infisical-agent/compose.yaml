@@ -1,0 +1,31 @@
+# =============================================================================
+# Infisical Agent - TrueNAS Scale
+# =============================================================================
+# Fetches secrets from Infisical and writes .env files for other stacks.
+# Runs as a separate TrueNAS Custom App, independent of any stack.
+#
+# Setup (one-time, from your workstation):
+#   1. Create a Machine Identity in Infisical dashboard
+#   2. Run: bash truenas/scripts/setup_agent.sh
+#   3. Deploy this as a TrueNAS Custom App
+#
+# TrueNAS Custom App setup:
+#   Apps → Discover → Custom App → YAML:
+#     include:
+#       - /mnt/Fast/docker/infisical-agent/compose.yaml
+#     services: {}
+#
+# =============================================================================
+
+services:
+  infisical-agent:
+    image: infisical/cli:latest
+    container_name: infisical-agent
+    restart: unless-stopped
+    command: agent --config /config/agent-config.yaml
+    volumes:
+      # Agent config and templates (on Fast pool)
+      - /mnt/Fast/docker/infisical-agent/config:/config:ro
+      # Output directory - agent writes .env files here
+      - /mnt/Fast/docker:/output
+    # No ports needed - agent only makes outbound HTTPS calls to Infisical

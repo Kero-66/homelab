@@ -1,0 +1,109 @@
+# =============================================================================
+# Downloader Stack - Docker Compose Configuration for TrueNAS Scale
+# =============================================================================
+# Download clients for torrents and usenet.
+#
+# Services:
+#   - qBittorrent (Torrent client)
+#   - SABnzbd (Usenet client)
+#
+# Prerequisites:
+#   - Infisical Agent running (renders secrets to /output/downloaders/.env)
+#   - Download mount: /mnt/Data/downloads mapped to /data/downloads
+#   - Config mount: /mnt/Fast/docker/downloaders mapped to /config
+#
+# Notes:
+#   - VPN integration (gluetun) is commented out - requires separate assessment
+#   - Both clients configured for /data/downloads/{complete,incomplete,torrents}
+#
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # Torrent Client
+  # ===========================================================================
+  
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    env_file:
+      - /output/downloaders/.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+      - WEBUI_PORT=8080
+    volumes:
+      - /config/qbittorrent:/config
+      - /data/downloads:/data/downloads
+    ports:
+      - "8080:8080"
+      - "6881:6881/tcp"
+      - "6881:6881/udp"
+    # VPN integration (commented out - configure gluetun separately if needed)
+    # depends_on:
+    #   gluetun:
+    #     condition: service_healthy
+    #     restart: true
+    # network_mode: service:gluetun
+    healthcheck:
+      test: curl -sf http://localhost:8080 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ===========================================================================
+  # Usenet Client
+  # ===========================================================================
+  
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    restart: unless-stopped
+    env_file:
+      - /output/downloaders/.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      - /config/sabnzbd:/config
+      - /data/downloads:/data/downloads
+    ports:
+      - "8085:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8080/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ===========================================================================
+  # VPN Gateway (Optional - requires configuration)
+  # ===========================================================================
+  # 
+  # Uncomment and configure if VPN is required for downloaders.
+  # See: https://github.com/qdm12/gluetun
+  #
+  # gluetun:
+  #   image: qmcgaw/gluetun
+  #   container_name: gluetun
+  #   restart: unless-stopped
+  #   cap_add:
+  #     - NET_ADMIN
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Australia/Brisbane
+  #     # Provider config goes here (AirVPN, NordVPN, etc.)
+  #     # - VPN_SERVICE_PROVIDER=custom
+  #     # - VPN_TYPE=openvpn
+  #   volumes:
+  #     - /config/gluetun:/gluetun
+  #   healthcheck:
+  #     test: ["CMD", "ping", "-c", "1", "1.1.1.1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3

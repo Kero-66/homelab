@@ -46,6 +46,14 @@
 - **Warnings:** Ignore Recyclarr warnings about "missing profile definitions" for template-default names (e.g., "Remux-1080p - Anime") to maintain official template compatibility.
 - **Naming:** Use `WEBDL-1080p` and `WEBDL-2160p` style naming for quality targets in Recyclarr mapping.
 
+## GPU Passthrough - CRITICAL CONTEXT
+- **ALWAYS read `/mnt/library/repos/homelab/.github/GPU_PASSTHROUGH_CONTEXT.md` FIRST before any GPU/VM work**
+- User has experienced multiple desktop crashes during GPU passthrough setup
+- RX 9070 (03:00.0) = Desktop GPU = NEVER touch = Must stay on amdgpu driver
+- Integrated GPU (12:00.0) = VM passthrough target = Should be on vfio-pci driver
+- Configuration was completed 2026-02-10, awaiting reboot verification
+- Recovery procedures documented if system crashes
+
 ## Out-of-scope — ask a human before touching
 - Secrets, credentials, API keys, tokens, or anything that would live in config_backups/. 
 - Large or risky infra changes (core proxy rewrites, service removals, new ports) that could cause downtime, unless an explicit owner approves.

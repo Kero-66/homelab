@@ -49,6 +49,39 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 20 | harden_docker_networking | Review and reduce network_mode: host usage, evaluate privileged containers, implement proper network isolation | AI | 2026-01-15 | open | proxy/compose.yaml, surveillance/compose.yaml, automations/compose.yml
 
+---
+
+## TrueNAS Jellyfin Migration (2026-02-11)
+
+21 | truenas_jellyfin_infisical_setup | ✅ COMPLETED: Infisical Agent configured on TrueNAS with Machine Identity and Universal Auth | GitHub Copilot | 2026-02-11 | completed | truenas/scripts/setup_agent.sh, truenas/stacks/infisical-agent/
+
+22 | truenas_docker_ipv6_fix | ✅ COMPLETED: Resolved Docker image pull timeouts by removing IPv6 pools (home network lacks IPv6 routing) | GitHub Copilot | 2026-02-11 | completed | truenas/SESSION_2026-02-11_SUMMARY.md, .github/TROUBLESHOOTING.md
+
+23 | truenas_jellyfin_api_limitation | ✅ DOCUMENTED: Custom Apps cannot be created via API in TrueNAS 25.10.1; must use Web UI. Created DEPLOYMENT_GUIDE.md with step-by-step UI instructions | GitHub Copilot | 2026-02-11 | completed | truenas/DEPLOYMENT_GUIDE.md
+
+24 | truenas_custom_app_deployment | 🔄 IN PROGRESS: Manually create infisical-agent and jellyfin Custom Apps via TrueNAS Web UI (documented in DEPLOYMENT_GUIDE.md) | GitHub Copilot | 2026-02-11 | open | truenas/DEPLOYMENT_GUIDE.md, truenas/stacks/
+
+25 | truenas_jellyfin_restore | ⏳ BLOCKED on #24: Restore Jellystat database after jellyfin app is running | GitHub Copilot | 2026-02-11 | open | truenas/DEPLOYMENT_GUIDE.md, truenas/stacks/jellyfin/
+
+26 | media_transfer_monitoring | ⏳ IN BACKGROUND: Monitor rsync media transfer completion (movies + 1.9TB shows). Check ~/truenas_media_transfer.log | GitHub Copilot | 2026-02-11 | in-progress | truenas/scripts/transfer_media.sh
+
+27 | truenas_arr_stack_assessment | ✅ COMPLETED: Arr stack migration prepared. Created compose.yaml with Sonarr, Radarr, Prowlarr, Bazarr, Recyclarr, FlareSolverr, Cleanuparr. Templates created for least-privilege secrets | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/arr-stack/, truenas/ARR_DEPLOYMENT.md
+
+28 | truenas_downloader_assessment | ✅ COMPLETED: Downloader stack migration prepared. Created compose.yaml for qBittorrent and SABnzbd. VPN (gluetun) integration documented but deferred for separate assessment | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/downloaders/, truenas/ARR_DEPLOYMENT.md
+
+29 | truenas_supporting_services_assessment | ✅ COMPLETED: Supporting services included in arr-stack (FlareSolverr, Recyclarr, Cleanuparr). FileFlows deferred (requires hardware acceleration assessment) | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/arr-stack/compose.yaml
+
+30 | truenas_migration_strategy | ✅ DECIDED: Full migration strategy chosen for arr + downloaders. Phased rollout: Tailscale → Arr Stack → Downloaders. Rollback plan documented. Testing checklist included | GitHub Copilot | 2026-02-11 | completed | truenas/ARR_DEPLOYMENT.md
+
+31 | truenas_infisical_templates | ✅ COMPLETED: Created 3 Infisical Agent templates: arr-stack.tmpl (API keys only), downloaders.tmpl (credentials), tailscale.tmpl (auth key). Updated agent-config.yaml | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/infisical-agent/{arr-stack.tmpl,downloaders.tmpl,tailscale.tmpl}
+
+32 | truenas_vpn_integration | 📋 DEFERRED: VPN (gluetun) integration for downloaders documented but not deployed. Can be added later if needed. Compose includes commented template | GitHub Copilot | 2026-02-11 | open | truenas/stacks/downloaders/compose.yaml
+
+33 | truenas_tailscale_setup | ✅ COMPLETED: Tailscale compose and template created. Configured as subnet router for 192.168.20.0/24. Deployment guide includes auth key generation and subnet approval | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/tailscale/, truenas/ARR_DEPLOYMENT.md
+
+34 | truenas_arr_deployment | ⏳ READY: Execute arr stack deployment. Run deploy_new_stacks.sh, restart agent, deploy apps via Web UI. Follow ARR_DEPLOYMENT.md guide | GitHub Copilot | 2026-02-11 | open | truenas/scripts/deploy_new_stacks.sh
+
+
 21 | add_centralized_logging | Implement centralized logging solution (ELK stack or similar) for all homelab services | AI | 2026-01-15 | open | monitoring/, */compose.yaml
 
 22 | implement_health_checks | Add comprehensive health checks to all services missing them, create monitoring dashboard | AI | 2026-01-15 | open | */compose.yaml, monitoring/

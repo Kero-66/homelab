@@ -1,0 +1,50 @@
+# =============================================================================
+# Infisical Agent Configuration
+# =============================================================================
+# This file is mounted into the agent container at /config/agent-config.yaml
+# It defines how the agent authenticates and what secrets to render.
+#
+# Deployed to: /mnt/Fast/docker/infisical-agent/config/agent-config.yaml
+# =============================================================================
+
+infisical:
+  address: "http://192.168.20.66:8081"
+
+auth:
+  type: "universal-auth"
+  config:
+    # These files are created by setup_agent.sh (one-time setup)
+    client-id: "/config/client-id"
+    client-secret: "/config/client-secret"
+    # Remove client-secret from disk after first read for extra security
+    remove_client_secret_on_read: false
+
+sinks:
+  - type: "file"
+    config:
+      path: "/config/access-token"
+
+templates:
+  # Jellyfin stack secrets
+  - source-path: /config/jellyfin.tmpl
+    destination-path: /output/jellyfin/.env
+    config:
+      polling-interval: 5m
+
+  # Arr stack secrets (Sonarr, Radarr, Prowlarr, Bazarr, Recyclarr, FlareSolverr, Cleanuparr)
+  - source-path: /config/arr-stack.tmpl
+    destination-path: /output/arr-stack/.env
+    config:
+      polling-interval: 5m
+
+  # Downloader secrets (qBittorrent, SABnzbd)
+  - source-path: /config/downloaders.tmpl
+    destination-path: /output/downloaders/.env
+    config:
+      polling-interval: 5m
+
+  # Tailscale secrets (subnet router)
+  - source-path: /config/tailscale.tmpl
+    destination-path: /output/tailscale/.env
+    config:
+      polling-interval: 5m

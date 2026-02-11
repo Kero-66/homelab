@@ -1,0 +1,121 @@
+# =============================================================================
+# Jellyfin Stack - TrueNAS Scale
+# =============================================================================
+# Jellyfin media server + Jellyseerr requests + Jellystat analytics
+#
+# Storage layout:
+#   Configs → /mnt/Fast/docker/jellyfin/    (NVMe mirror - fast I/O)
+#   Media   → /mnt/Data/media/              (HDD mirror - bulk storage)
+#   DB      → /mnt/Fast/databases/jellystat/ (NVMe - database performance)
+#
+# Secrets:
+#   Managed by Infisical Agent → writes .env to /mnt/Fast/docker/jellyfin/.env
+#   See ../infisical-agent/ for agent setup.
+#
+# TrueNAS Custom App setup:
+#   Apps → Discover → Custom App → YAML:
+#     include:
+#       - /mnt/Fast/docker/jellyfin/compose.yaml
+#     services: {}
+#
+# =============================================================================
+
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    mem_limit: 2g
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      # Config on Fast pool (NVMe)
+      - /mnt/Fast/docker/jellyfin/config:/config
+      # Media on Data pool (HDD)
+      - /mnt/Data/media:/data/media
+    # Hardware acceleration - Beelink Mini S Pro has Intel QuickSync
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 8096:8096
+      - 7359:7359/udp    # Client discovery
+      - 1900:1900/udp    # DLNA
+    healthcheck:
+      test: curl -sf http://localhost:8096/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      # Config on Fast pool (NVMe)
+      - /mnt/Fast/docker/jellyseerr/config:/app/config
+    ports:
+      - 5055:5055
+    depends_on:
+      jellyfin:
+        condition: service_healthy
+    healthcheck:
+      test: wget -q --spider http://localhost:5055/api/v1/status || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  jellystat-db:
+    image: postgres:15
+    container_name: jellystat-db
+    restart: unless-stopped
+    mem_limit: 256m
+    # POSTGRES_USER and POSTGRES_PASSWORD come from env_file
+    # (written by Infisical Agent)
+    env_file:
+      - /mnt/Fast/docker/jellyfin/.env
+    volumes:
+      # Database on Fast pool (NVMe - critical for DB performance)
+      - /mnt/Fast/databases/jellystat/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  jellystat:
+    image: cyfershepard/jellystat:latest
+    container_name: jellystat
+    restart: unless-stopped
+    mem_limit: 256m
+    # POSTGRES_USER, POSTGRES_PASSWORD, JWT_SECRET come from env_file
+    # (written by Infisical Agent)
+    env_file:
+      - /mnt/Fast/docker/jellyfin/.env
+    environment:
+      - POSTGRES_IP=jellystat-db
+      - POSTGRES_PORT=5432
+      - TZ=Australia/Brisbane
+    volumes:
+      # Backup data on Fast pool
+      - /mnt/Fast/docker/jellyfin/jellystat-backup:/app/backend/backup-data
+    ports:
+      - 3002:3000
+    depends_on:
+      jellystat-db:
+        condition: service_healthy
+    healthcheck:
+      test: wget -q --spider http://localhost:3000 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

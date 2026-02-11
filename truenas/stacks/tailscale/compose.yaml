@@ -1,0 +1,82 @@
+# =============================================================================
+# Tailscale - Docker Compose Configuration for TrueNAS Scale
+# =============================================================================
+# Secure remote access via Tailscale VPN mesh network.
+#
+# Purpose:
+#   - Provides secure remote access to TrueNAS and all services
+#   - Acts as subnet router to expose entire homelab (192.168.20.0/24)
+#   - Enables access from anywhere without port forwarding
+#
+# Prerequisites:
+#   - Tailscale account (free tier available)
+#   - Auth key from Tailscale admin console
+#     Generate at: https://login.tailscale.com/admin/settings/keys
+#   - Store auth key in Infisical at /TrueNAS/TAILSCALE_AUTHKEY
+#
+# Configuration:
+#   - Runs in host network mode for full network access
+#   - Advertises homelab subnet (192.168.20.0/24)
+#   - Persists state to /mnt/Fast/docker/tailscale
+#
+# =============================================================================
+
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    restart: unless-stopped
+    hostname: truenas
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    env_file:
+      - /output/tailscale/.env
+    environment:
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      # Advertise homelab subnet to other Tailscale devices
+      - TS_EXTRA_ARGS=--advertise-routes=192.168.20.0/24 --accept-routes
+      # Optional: Enable as exit node (routes all traffic through this device)
+      # - TS_EXTRA_ARGS=--advertise-routes=192.168.20.0/24 --advertise-exit-node --accept-routes
+    volumes:
+      - /config/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    # Manual start until auth key is configured
+    # profiles: ["tailscale"]
+
+# =============================================================================
+# Setup Instructions
+# =============================================================================
+#
+# 1. Generate Tailscale auth key:
+#    - Go to: https://login.tailscale.com/admin/settings/keys
+#    - Create new key with these settings:
+#      ✓ Reusable (so container can restart)
+#      ✓ Ephemeral (optional - device removed when offline)
+#      ✓ Pre-approved (auto-joins network)
+#    - Copy the auth key (starts with 'tskey-auth-...')
+#
+# 2. Store auth key in Infisical:
+#    infisical secrets set TAILSCALE_AUTHKEY <YOUR_KEY> \
+#      --env dev --path /TrueNAS
+#
+# 3. Update Infisical Agent template to include Tailscale:
+#    - Add TAILSCALE_AUTHKEY to truenas.tmpl or create tailscale.tmpl
+#
+# 4. Deploy container via TrueNAS Web UI:
+#    - Apps → Discover → Custom App
+#    - Name: tailscale
+#    - Paste this compose config
+#
+# 5. Approve subnet routes (one-time):
+#    - Go to: https://login.tailscale.com/admin/machines
+#    - Find 'truenas' device
+#    - Under 'Subnet routes', click 'Approve' for 192.168.20.0/24
+#
+# 6. Test connectivity:
+#    - From another Tailscale device: ping <truenas-tailscale-ip>
+#    - Access services: http://<truenas-tailscale-ip>:8096 (Jellyfin)
+#
+# =============================================================================
