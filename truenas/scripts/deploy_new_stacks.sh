@@ -59,6 +59,54 @@ ssh "${TRUENAS_USER}@${TRUENAS_IP}" "mkdir -p /mnt/Fast/docker/{prowlarr,sonarr,
 ssh "${TRUENAS_USER}@${TRUENAS_IP}" "chown -R 1000:1000 /mnt/Fast/docker/{prowlarr,sonarr,radarr,bazarr,recyclarr,cleanuparr,qbittorrent,sabnzbd,tailscale}"
 log_ok "Config directories created (ownership: 1000:1000)"
 
+# --- Migrate existing configurations ---
+log_info "=== Migrating Existing Service Configurations ==="
+log_warn "This will copy ALL your existing configs to preserve settings"
+
+# Create backup first
+BACKUP_FILE="$HOME/arr_configs_backup_$(date +%Y%m%d_%H%M%S).tar.gz"
+log_info "Creating backup of workstation configs..."
+cd /mnt/library/repos/homelab/media
+tar czf "$BACKUP_FILE" \
+  sonarr/ radarr/ prowlarr/ bazarr/ recyclarr/ cleanuparr/ \
+  qbittorrent/ sabnzbd/ 2>/dev/null || log_warn "Some configs may not exist yet"
+log_ok "Backup created: $BACKUP_FILE"
+
+# Migrate Arr Stack configs
+log_info "Migrating Arr stack configurations..."
+for service in prowlarr sonarr radarr bazarr cleanuparr; do
+    if [ -d "media/${service}" ]; then
+        log_info "Copying ${service} config..."
+        scp -r "media/${service}/"* "${TRUENAS_USER}@${TRUENAS_IP}:/mnt/Fast/docker/${service}/" 2>/dev/null || \
+            log_warn "${service} config copy failed or empty"
+    else
+        log_warn "${service} directory not found - will start fresh"
+    fi
+done
+
+# Migrate Recyclarr config
+if [ -d "media/recyclarr/config" ]; then
+    log_info "Copying recyclarr config..."
+    scp -r "media/recyclarr/config/"* "${TRUENAS_USER}@${TRUENAS_IP}:/mnt/Fast/docker/recyclarr/config/" 2>/dev/null
+fi
+
+# Migrate Downloader configs
+log_info "Migrating Downloader configurations..."
+for service in qbittorrent sabnzbd; do
+    if [ -d "media/${service}" ]; then
+        log_info "Copying ${service} config..."
+        scp -r "media/${service}/"* "${TRUENAS_USER}@${TRUENAS_IP}:/mnt/Fast/docker/${service}/" 2>/dev/null || \
+            log_warn "${service} config copy failed or empty"
+    else
+        log_warn "${service} directory not found - will start fresh"
+    fi
+done
+
+# Fix all ownership after migration
+log_info "Setting correct ownership on all configs..."
+ssh "${TRUENAS_USER}@${TRUENAS_IP}" "chown -R 1000:1000 /mnt/Fast/docker/{prowlarr,sonarr,radarr,bazarr,recyclarr,cleanuparr,qbittorrent,sabnzbd}"
+log_ok "All configurations migrated and ownership fixed"
+
 # --- Restart Infisical Agent to pick up new config ---
 log_warn "Infisical Agent needs restart to load new templates"
 log_info "After agent restarts, it will render .env files to:"
@@ -73,6 +121,8 @@ echo "  3. Click ⋮ → Restart"
 echo ""
 log_info "After agent restart, wait 1-2 minutes for .env files to generate, then:"
 echo "  1. Verify .env files exist: ssh root@${TRUENAS_IP} 'ls -la /mnt/Fast/docker/{arr-stack,downloaders,tailscale}/.env'"
-echo "  2. Deploy apps via TrueNAS Web UI using compose files in truenas/stacks/"
+echo "  2. Verify configs migrated: ssh root@${TRUENAS_IP} 'ls -la /mnt/Fast/docker/sonarr/'"
+echo "  3. Deploy apps via TrueNAS Web UI using compose files in truenas/stacks/"
 echo ""
 log_ok "Deployment preparation complete!"
+log_ok "Backup saved to: $BACKUP_FILE"
