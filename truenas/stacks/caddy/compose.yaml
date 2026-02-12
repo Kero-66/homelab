@@ -1,0 +1,67 @@
+# =============================================================================
+# Caddy Reverse Proxy - TrueNAS Edition
+# =============================================================================
+# Reverse proxy for all homelab services with automatic HTTPS
+#
+# Storage layout:
+#   Config     → /mnt/Fast/docker/caddy/Caddyfile     (NVMe - Caddy config)
+#   Data       → /mnt/Fast/docker/caddy/data/         (NVMe - certificates)
+#   Config cache → /mnt/Fast/docker/caddy/config/     (NVMe - Caddy cache)
+#
+# DNS Integration:
+#   - Requires AdGuard Home running with local DNS entries
+#   - Example: jellyfin.home → 192.168.20.22
+#   - Caddy listens on :80 and :443, proxies to correct service
+#
+# Network Access:
+#   - Joins arr-stack and jellyfin networks to proxy to services
+#   - Services accessed via container names (jellyfin, sonarr, etc.)
+#
+# Secrets: None (Caddyfile is not secret)
+#
+# First-time Setup:
+#   1. Deploy this app
+#   2. Configure AdGuard Home DNS entries
+#   3. Access services via http://<service>.home
+#   4. Later: Enable HTTPS by setting up Let's Encrypt
+#
+# =============================================================================
+
+services:
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    user: "1000:1000"
+    mem_limit: 128m
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      # Caddyfile configuration
+      - /mnt/Fast/docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificate storage (for HTTPS)
+      - /mnt/Fast/docker/caddy/data:/data
+      # Caddy config cache
+      - /mnt/Fast/docker/caddy/config:/config
+    ports:
+      - "80:80"       # HTTP
+      - "443:443"     # HTTPS
+      - "443:443/udp" # HTTP/3
+    networks:
+      - default
+      - ix-jellyfin_default
+      - ix-arr-stack_default
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:2019/config/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  ix-jellyfin_default:
+    external: true
+  ix-arr-stack_default:
+    external: true

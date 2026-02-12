@@ -48,3 +48,9 @@ templates:
     destination-path: /output/tailscale/.env
     config:
       polling-interval: 5m
+
+  # Homepage dashboard secrets (API keys for all services)
+  - source-path: /config/homepage.tmpl
+    destination-path: /output/homepage/.env
+    config:
+      polling-interval: 5m

@@ -1,0 +1,69 @@
+# =============================================================================
+# AdGuard Home - DNS Server with Ad Blocking
+# =============================================================================
+# Network-wide ad blocking and custom DNS for homelab services
+#
+# Storage layout:
+#   Config → /mnt/Fast/docker/adguard-home/conf/     (NVMe - AdGuardHome.yaml)
+#   Data   → /mnt/Fast/docker/adguard-home/work/     (NVMe - queries, stats, filters)
+#
+# Initial Setup:
+#   1. Deploy this app via TrueNAS Web UI
+#   2. Access http://192.168.20.22:3080 for first-time setup wizard
+#   3. Set admin username and password
+#   4. Configure upstream DNS servers (1.1.1.1, 8.8.8.8)
+#   5. Add local DNS rewrites:
+#      - homepage.home → 192.168.20.22
+#      - jellyfin.home → 192.168.20.22
+#      - sonarr.home → 192.168.20.22
+#      - radarr.home → 192.168.20.22
+#      (etc for all services)
+#   6. Update router DHCP to use 192.168.20.22 as primary DNS
+#   7. Set fallback DNS to 1.1.1.1 or 8.8.8.8
+#
+# Secrets:
+#   Admin password set during first-time setup (not managed by Infisical)
+#
+# Port Conflicts:
+#   - Port 53 (DNS) may conflict if TrueNAS is running its own DNS
+#   - If conflict, use different port or disable TrueNAS DNS service
+#
+# =============================================================================
+
+services:
+  adguard-home:
+    image: adguard/adguardhome:latest
+    container_name: adguard-home
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      # Config directory (AdGuardHome.yaml)
+      - /mnt/Fast/docker/adguard-home/conf:/opt/adguardhome/conf
+      # Work directory (queries, stats, filters)
+      - /mnt/Fast/docker/adguard-home/work:/opt/adguardhome/work
+    ports:
+      # DNS ports - CRITICAL for DNS functionality
+      - "53:53/tcp"
+      - "53:53/udp"
+      # Web UI (initial setup and administration)
+      - "3080:3000/tcp"
+      # Optional: DNS-over-HTTPS
+      - "443:443/tcp"
+      # Optional: DNS-over-TLS
+      - "853:853/tcp"
+      # Optional: DNS-over-QUIC
+      - "784:784/udp"
+      - "853:853/udp"
+      - "8853:8853/udp"
+      # Optional: DNSCrypt
+      - "5443:5443/tcp"
+      - "5443:5443/udp"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

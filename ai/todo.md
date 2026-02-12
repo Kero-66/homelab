@@ -51,56 +51,89 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 ---
 
+## TrueNAS Migration Session (2026-02-11) - CRITICAL ISSUES
+
+21 | RESOLVED: jellyfin_library_paths | Jellyfin libraries working correctly. Mount `/mnt/Data/media:/data` maps shows to `/data/shows` and movies to `/data/movies`. 41 TV shows and 11 movies detected. Compose paths corrected to match actual TrueNAS datasets. | AI | 2026-02-11 | completed | truenas/stacks/jellyfin/compose.yaml
+
+22 | RESOLVED: jellystat_db_synced | Jellystat database has data via Jellyfin sync: 211 playback activities, 73 library items, 6 libraries. Historical workstation data not migrated but current sync is working. | AI | 2026-02-11 | completed | /mnt/Fast/databases/jellystat/postgres
+
+23 | cleanup_workstation_services | Optional: Stop and cleanup remaining containers on workstation (192.168.20.66) and verify cold spare status | AI | 2026-02-11 | open | /mnt/library/repos/homelab/media/
+
+---
+
 ## TrueNAS Jellyfin Migration (2026-02-11)
 
-21 | truenas_jellyfin_infisical_setup | ✅ COMPLETED: Infisical Agent configured on TrueNAS with Machine Identity and Universal Auth | GitHub Copilot | 2026-02-11 | completed | truenas/scripts/setup_agent.sh, truenas/stacks/infisical-agent/
+35 | truenas_jellyfin_infisical_setup | ✅ COMPLETED: Infisical Agent configured on TrueNAS with Machine Identity and Universal Auth | GitHub Copilot | 2026-02-11 | completed | truenas/scripts/setup_agent.sh, truenas/stacks/infisical-agent/
 
-22 | truenas_docker_ipv6_fix | ✅ COMPLETED: Resolved Docker image pull timeouts by removing IPv6 pools (home network lacks IPv6 routing) | GitHub Copilot | 2026-02-11 | completed | truenas/SESSION_2026-02-11_SUMMARY.md, .github/TROUBLESHOOTING.md
+36 | truenas_docker_ipv6_fix | ✅ COMPLETED: Resolved Docker image pull timeouts by removing IPv6 pools (home network lacks IPv6 routing) | GitHub Copilot | 2026-02-11 | completed | truenas/SESSION_2026-02-11_SUMMARY.md, .github/TROUBLESHOOTING.md
 
-23 | truenas_jellyfin_api_limitation | ✅ DOCUMENTED: Custom Apps cannot be created via API in TrueNAS 25.10.1; must use Web UI. Created DEPLOYMENT_GUIDE.md with step-by-step UI instructions | GitHub Copilot | 2026-02-11 | completed | truenas/DEPLOYMENT_GUIDE.md
+37 | truenas_jellyfin_api_limitation | ✅ DOCUMENTED: Custom Apps cannot be created via API in TrueNAS 25.10.1; must use Web UI. Created DEPLOYMENT_GUIDE.md with step-by-step UI instructions | GitHub Copilot | 2026-02-11 | completed | truenas/DEPLOYMENT_GUIDE.md
 
-24 | truenas_custom_app_deployment | 🔄 IN PROGRESS: Manually create infisical-agent and jellyfin Custom Apps via TrueNAS Web UI (documented in DEPLOYMENT_GUIDE.md) | GitHub Copilot | 2026-02-11 | open | truenas/DEPLOYMENT_GUIDE.md, truenas/stacks/
+38 | truenas_custom_app_deployment | ✅ COMPLETED: All Custom Apps deployed via TrueNAS Web UI (infisical-agent, jellyfin, arr-stack, downloaders) | GitHub Copilot | 2026-02-11 | completed | truenas/DEPLOYMENT_GUIDE.md, truenas/stacks/
 
-25 | truenas_jellyfin_restore | ⏳ BLOCKED on #24: Restore Jellystat database after jellyfin app is running | GitHub Copilot | 2026-02-11 | open | truenas/DEPLOYMENT_GUIDE.md, truenas/stacks/jellyfin/
+39 | truenas_jellystat_restore | ✅ COMPLETED: Jellystat synced from Jellyfin (211 activities, 73 items). Historical workstation data not migrated. | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/jellyfin/
 
-26 | media_transfer_monitoring | ⏳ IN BACKGROUND: Monitor rsync media transfer completion (movies + 1.9TB shows). Check ~/truenas_media_transfer.log | GitHub Copilot | 2026-02-11 | in-progress | truenas/scripts/transfer_media.sh
+40 | media_transfer_monitoring | ✅ COMPLETED: Media transfer done. 43 shows, 18 movies, anime, music present on /mnt/Data/media/ | GitHub Copilot | 2026-02-11 | completed | truenas/scripts/transfer_media.sh
 
-27 | truenas_arr_stack_assessment | ✅ COMPLETED: Arr stack migration prepared. Created compose.yaml with Sonarr, Radarr, Prowlarr, Bazarr, Recyclarr, FlareSolverr, Cleanuparr. Templates created for least-privilege secrets | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/arr-stack/, truenas/ARR_DEPLOYMENT.md
+41 | truenas_arr_stack_assessment | ✅ COMPLETED: Arr stack migration prepared. Created compose.yaml with Sonarr, Radarr, Prowlarr, Bazarr, Recyclarr, FlareSolverr, Cleanuparr. Templates created for least-privilege secrets | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/arr-stack/, truenas/ARR_DEPLOYMENT.md
 
-28 | truenas_downloader_assessment | ✅ COMPLETED: Downloader stack migration prepared. Created compose.yaml for qBittorrent and SABnzbd. VPN (gluetun) integration documented but deferred for separate assessment | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/downloaders/, truenas/ARR_DEPLOYMENT.md
+42 | truenas_downloader_assessment | ✅ COMPLETED: Downloader stack migration prepared. Created compose.yaml for qBittorrent and SABnzbd. VPN (gluetun) integration documented but deferred for separate assessment | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/downloaders/, truenas/ARR_DEPLOYMENT.md
 
-29 | truenas_supporting_services_assessment | ✅ COMPLETED: Supporting services included in arr-stack (FlareSolverr, Recyclarr, Cleanuparr). FileFlows deferred (requires hardware acceleration assessment) | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/arr-stack/compose.yaml
+43 | truenas_supporting_services_assessment | ✅ COMPLETED: Supporting services included in arr-stack (FlareSolverr, Recyclarr, Cleanuparr). FileFlows deferred (requires hardware acceleration assessment) | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/arr-stack/compose.yaml
 
-30 | truenas_migration_strategy | ✅ DECIDED: Full migration strategy chosen for arr + downloaders. Phased rollout: Tailscale → Arr Stack → Downloaders. Rollback plan documented. Testing checklist included | GitHub Copilot | 2026-02-11 | completed | truenas/ARR_DEPLOYMENT.md
+44 | truenas_migration_strategy | ✅ DECIDED: Full migration strategy chosen for arr + downloaders. Phased rollout: Tailscale → Arr Stack → Downloaders. Rollback plan documented. Testing checklist included | GitHub Copilot | 2026-02-11 | completed | truenas/ARR_DEPLOYMENT.md
 
-31 | truenas_infisical_templates | ✅ COMPLETED: Created 3 Infisical Agent templates: arr-stack.tmpl (API keys only), downloaders.tmpl (credentials), tailscale.tmpl (auth key). Updated agent-config.yaml | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/infisical-agent/{arr-stack.tmpl,downloaders.tmpl,tailscale.tmpl}
+45 | truenas_infisical_templates | ✅ COMPLETED: Created 3 Infisical Agent templates: arr-stack.tmpl (API keys only), downloaders.tmpl (credentials), tailscale.tmpl (auth key). Updated agent-config.yaml | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/infisical-agent/{arr-stack.tmpl,downloaders.tmpl,tailscale.tmpl}
 
-32 | truenas_vpn_integration | 📋 DEFERRED: VPN (gluetun) integration for downloaders documented but not deployed. Can be added later if needed. Compose includes commented template | GitHub Copilot | 2026-02-11 | open | truenas/stacks/downloaders/compose.yaml
+46 | truenas_vpn_integration | DEFERRED: VPN (gluetun) integration for downloaders documented but not deployed. Can be added later if needed. Compose includes commented template | GitHub Copilot | 2026-02-11 | open | truenas/stacks/downloaders/compose.yaml
 
-33 | truenas_tailscale_setup | ✅ COMPLETED: Tailscale compose and template created. Configured as subnet router for 192.168.20.0/24. Deployment guide includes auth key generation and subnet approval | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/tailscale/, truenas/ARR_DEPLOYMENT.md
+47 | truenas_tailscale_setup | ✅ COMPLETED: Tailscale compose and template created. Configured as subnet router for 192.168.20.0/24. Deployment guide includes auth key generation and subnet approval | GitHub Copilot | 2026-02-11 | completed | truenas/stacks/tailscale/, truenas/ARR_DEPLOYMENT.md
 
-34 | truenas_arr_deployment | ⏳ READY: Execute arr stack deployment. Run deploy_new_stacks.sh, restart agent, deploy apps via Web UI. Follow ARR_DEPLOYMENT.md guide | GitHub Copilot | 2026-02-11 | open | truenas/scripts/deploy_new_stacks.sh
+48 | truenas_arr_deployment | ✅ COMPLETED: All arr stack and downloader services deployed and healthy on TrueNAS. Download client hosts updated to container names. | GitHub Copilot | 2026-02-11 | completed | truenas/scripts/deploy_new_stacks.sh
 
+49 | truenas_compose_paths_fixed | ✅ COMPLETED: Corrected all compose file paths from /mnt/truenas_docker/ and /mnt/wd_media/homelab-data/ to actual TrueNAS dataset paths /mnt/Fast/docker/ and /mnt/Data/ | Claude | 2026-02-12 | completed | truenas/stacks/*/compose.yaml
 
-21 | add_centralized_logging | Implement centralized logging solution (ELK stack or similar) for all homelab services | AI | 2026-01-15 | open | monitoring/, */compose.yaml
+50 | truenas_download_dirs_created | ✅ COMPLETED: Created missing qBittorrent download directories and recycle bin on TrueNAS. Resolved Sonarr/Radarr RemotePathMappingCheck and RecyclingBinCheck errors. | Claude | 2026-02-12 | completed | /mnt/Data/downloads/qbittorrent/, /mnt/Data/media/.recycle
 
-22 | implement_health_checks | Add comprehensive health checks to all services missing them, create monitoring dashboard | AI | 2026-01-15 | open | */compose.yaml, monitoring/
+51 | truenas_homepage_remote_access | Configure Homepage to access TrueNAS containers (192.168.20.22) instead of localhost. Caddy reverse proxy or direct IP configuration needed. | Claude | 2026-02-12 | open | apps/homepage/, networking/
 
-23 | create_backup_verification | Verify backup scripts cover all persistent data, add automated backup testing and off-site strategy | AI | 2026-01-15 | open | backup_*.sh, */README.md
+52 | truenas_tailscale_external_access | Set up Tailscale for external access to Jellyfin and other services. Generate auth key, deploy container, configure subnet routing. | Claude | 2026-02-12 | open | truenas/stacks/tailscale/, truenas/ARR_DEPLOYMENT.md
 
-24 | add_deployment_automation | Create deployment scripts with rollback capability and configuration drift detection | AI | 2026-01-15 | open | scripts/, */README.md
+53 | claude_memory_review | Review and consolidate .claude/memory files to properly reference .github and ai/ folder content. Ensure consistency and remove duplication. | Claude | 2026-02-12 | open | ~/.claude/projects/-mnt-library-repos-homelab/memory/, .github/, ai/
 
-25 | document_service_dependencies | Create comprehensive documentation of service interdependencies, startup order, and network topology | AI | 2026-01-15 | open | docs/, README.md
+54 | truenas_docs_review | Review truenas/ directory structure and documentation for correctness, clarity, and organization. Consolidate or restructure as needed. | Claude | 2026-02-12 | open | truenas/
 
-26 | fix_hardcoded_ips | Replace hardcoded IPs with environment variables or service discovery (automations, proxy configs) | AI | 2026-01-15 | open | automations/compose.yml, proxy/compose.yaml
+55 | update_troubleshooting_docs | Document tonight's successful fixes: Prowlarr URLs, Jellystat health check, compose file updates, recycle bin permissions. | Claude | 2026-02-12 | completed | .github/TROUBLESHOOTING.md, ai/reference.md
 
-27 | bazarr_sync | Configure Bazarr to prioritize subtitle languages and providers, aligning with Anime/Standard logic | AI | 2026-01-15 | open | media/bazarr/config/config.yaml
+56 | CRITICAL_migrate_infisical | Migrate Infisical server from workstation (192.168.20.66:8081) to TrueNAS. Infisical Agent on TrueNAS currently can't reach server (connection refused). All services depending on secrets will fail without this. | Claude | 2026-02-12 | open | security/infisical/, truenas/stacks/infisical-agent/
 
-28 | fileflows_optimization | Review and consolidate FileFlows sandbox scripts and optimize for hardware acceleration | AI | 2026-01-15 | open | media/fileflows/
+57 | standardize_kero66_password | Update kero66 password to be consistent across all services (TrueNAS, Infisical, AdGuard, etc.) for password manager storage. Currently using different passwords. | User | 2026-02-12 | open | Various services
 
-29 | prowlarr_tagging | Define Prowlarr indexer tags to align with Recyclarr's Anime/Standard profiles | AI | 2026-01-15 | open | prowlarr/
-30 | caddy_optional_proxies | Add Caddy routes for optional media services (FileFlows, Cleanuparr) so they are reachable whenever enabled instead of being blocked by the current proxy | GitHub Copilot | 2026-01-15 | open | networking/.config/caddy/Caddyfile, media/compose.yaml
-31 | prowlarr_stats_visualization | Review and set up Exportarr + Prometheus + Grafana for Prowlarr indexer stats visualization | User | 2026-01-18 | open | monitoring/
-32 | organizr_dashboard | Review and potentially set up Organizr for *arr apps dashboard | User | 2026-01-18 | open | apps/
-33 | monitoring_observability_logs | Review and improve monitoring/observability/logs setup (Netdata, Beszel, centralized logging) | User | 2026-01-18 | open | monitoring/, networking/
+58 | fix_workstation_docker | Docker appears to be broken on workstation (192.168.20.66). Investigate and fix, or complete full migration to TrueNAS so workstation can be shut down. | User | 2026-02-12 | open | Workstation troubleshooting
+
+---
+
+## Architecture & Improvements (2026-01-15)
+
+51 | add_centralized_logging | Implement centralized logging solution (ELK stack or similar) for all homelab services | AI | 2026-01-15 | open | monitoring/, */compose.yaml
+
+52 | implement_health_checks | Add comprehensive health checks to all services missing them, create monitoring dashboard | AI | 2026-01-15 | open | */compose.yaml, monitoring/
+
+53 | create_backup_verification | Verify backup scripts cover all persistent data, add automated backup testing and off-site strategy | AI | 2026-01-15 | open | backup_*.sh, */README.md
+
+54 | add_deployment_automation | Create deployment scripts with rollback capability and configuration drift detection | AI | 2026-01-15 | open | scripts/, */README.md
+
+55 | document_service_dependencies | Create comprehensive documentation of service interdependencies, startup order, and network topology | AI | 2026-01-15 | open | docs/, README.md
+
+56 | fix_hardcoded_ips | Replace hardcoded IPs with environment variables or service discovery (automations, proxy configs) | AI | 2026-01-15 | open | automations/compose.yml, proxy/compose.yaml
+
+57 | bazarr_sync | Configure Bazarr to prioritize subtitle languages and providers, aligning with Anime/Standard logic | AI | 2026-01-15 | open | media/bazarr/config/config.yaml
+
+58 | fileflows_optimization | Review and consolidate FileFlows sandbox scripts and optimize for hardware acceleration | AI | 2026-01-15 | open | media/fileflows/
+
+59 | prowlarr_tagging | Define Prowlarr indexer tags to align with Recyclarr's Anime/Standard profiles | AI | 2026-01-15 | open | prowlarr/
+60 | caddy_optional_proxies | Add Caddy routes for optional media services (FileFlows, Cleanuparr) so they are reachable whenever enabled instead of being blocked by the current proxy | GitHub Copilot | 2026-01-15 | open | networking/.config/caddy/Caddyfile, media/compose.yaml
+61 | prowlarr_stats_visualization | Review and set up Exportarr + Prometheus + Grafana for Prowlarr indexer stats visualization | User | 2026-01-18 | open | monitoring/
+62 | organizr_dashboard | Review and potentially set up Organizr for *arr apps dashboard | User | 2026-01-18 | open | apps/
+63 | monitoring_observability_logs | Review and improve monitoring/observability/logs setup (Netdata, Beszel, centralized logging) | User | 2026-01-18 | open | monitoring/, networking/
 

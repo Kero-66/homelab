@@ -8,13 +8,14 @@
 #   - SABnzbd (Usenet client)
 #
 # Prerequisites:
-#   - Infisical Agent running (renders secrets to /output/downloaders/.env)
+#   - Infisical Agent running (renders secrets to /mnt/Fast/docker/downloaders/.env)
 #   - Download mount: /mnt/Data/downloads mapped to /data/downloads
-#   - Config mount: /mnt/Fast/docker/downloaders mapped to /config
+#   - Config mount: /mnt/Fast/docker/<service> mapped to /config
 #
 # Notes:
 #   - VPN integration (gluetun) is commented out - requires separate assessment
 #   - Both clients configured for /data/downloads/{complete,incomplete,torrents}
+#   - Connected to arr-stack_default network for inter-container communication
 #
 # =============================================================================
 
@@ -41,12 +42,9 @@ services:
       - "8080:8080"
       - "6881:6881/tcp"
       - "6881:6881/udp"
-    # VPN integration (commented out - configure gluetun separately if needed)
-    # depends_on:
-    #   gluetun:
-    #     condition: service_healthy
-    #     restart: true
-    # network_mode: service:gluetun
+    networks:
+      - default
+      - ix-arr-stack_default
     healthcheck:
       test: curl -sf http://localhost:8080 || exit 1
       interval: 30s
@@ -73,6 +71,9 @@ services:
       - /mnt/Data/downloads:/data/downloads
     ports:
       - "8085:8080"
+    networks:
+      - default
+      - ix-arr-stack_default
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:8080/ > /dev/null || exit 1"]
       interval: 30s
@@ -107,3 +108,7 @@ services:
   #     interval: 30s
   #     timeout: 10s
   #     retries: 3
+
+networks:
+  ix-arr-stack_default:
+    external: true

@@ -13,10 +13,10 @@
 #   - Cleanuparr (Queue cleanup automation)
 #
 # Prerequisites:
-#   - Infisical Agent running (renders secrets to /output/arr-stack/.env)
-#   - Media mount: /mnt/Data/media mapped to /data/media
+#   - Infisical Agent running (renders secrets to /mnt/Fast/docker/arr-stack/.env)
+#   - Media mount: /mnt/Data/media mapped to /data
 #   - Download mount: /mnt/Data/downloads mapped to /data/downloads
-#   - Config mount: /mnt/Fast/docker/arr-stack mapped to /config
+#   - Config mount: /mnt/Fast/docker/<service> mapped to /config
 #
 # =============================================================================
 
@@ -90,7 +90,7 @@ services:
       - TZ=Australia/Brisbane
     volumes:
       - /mnt/Fast/docker/sonarr:/config
-      - /mnt/Data/media:/data/media
+      - /mnt/Data/media:/data
       - /mnt/Data/downloads:/data/downloads
     ports:
       - "8989:8989"
@@ -115,7 +115,7 @@ services:
       - TZ=Australia/Brisbane
     volumes:
       - /mnt/Fast/docker/radarr:/config
-      - /mnt/Data/media:/data/media
+      - /mnt/Data/media:/data
       - /mnt/Data/downloads:/data/downloads
     ports:
       - "7878:7878"
@@ -140,7 +140,7 @@ services:
       - TZ=Australia/Brisbane
     volumes:
       - /mnt/Fast/docker/bazarr:/config
-      - /mnt/Data/media:/data/media
+      - /mnt/Data/media:/data
     ports:
       - "6767:6767"
     depends_on:
@@ -186,7 +186,7 @@ services:
       - TZ=Australia/Brisbane
     volumes:
       - /mnt/Fast/docker/cleanuparr:/config
-      - /mnt/Data/media:/data/media
+      - /mnt/Data/media:/data
     ports:
       - "11011:11011"
     depends_on:

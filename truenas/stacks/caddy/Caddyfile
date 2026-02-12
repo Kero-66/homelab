@@ -1,0 +1,84 @@
+# Caddyfile for TrueNAS Homelab
+# This configuration uses custom domain names (e.g., .home) for local services
+# Requires AdGuard Home DNS with local DNS entries pointing to 192.168.20.22
+#
+# All .home domains should resolve to 192.168.20.22 in AdGuard Home local DNS
+
+# Global options
+{
+	# Enable admin API for health checks
+	admin :2019
+}
+
+# Homepage Dashboard
+http://homepage.home {
+	reverse_proxy homepage:3000
+}
+
+# Jellyfin Media Server
+http://jellyfin.home {
+	reverse_proxy jellyfin:8096
+}
+
+# Jellyseerr Media Requests
+http://jellyseerr.home {
+	reverse_proxy jellyseerr:5055
+}
+
+# Jellystat Analytics
+http://jellystat.home {
+	reverse_proxy jellystat:3000
+}
+
+# Sonarr (TV Shows) - note the /sonarr URL base
+http://sonarr.home {
+	reverse_proxy sonarr:8989
+}
+
+# Radarr (Movies) - note the /radarr URL base
+http://radarr.home {
+	reverse_proxy radarr:7878
+}
+
+# Prowlarr (Indexers)
+http://prowlarr.home {
+	reverse_proxy prowlarr:9696
+}
+
+# Bazarr (Subtitles) - note the /bazarr URL base
+http://bazarr.home {
+	reverse_proxy bazarr:6767
+}
+
+# qBittorrent (Torrents)
+http://qbittorrent.home {
+	reverse_proxy qbittorrent:8080
+}
+
+# SABnzbd (Usenet)
+http://sabnzbd.home {
+	reverse_proxy sabnzbd:8085
+}
+
+# AdGuard Home (DNS Admin)
+http://adguard.home {
+	reverse_proxy adguard-home:3000
+}
+
+# Cleanuparr (Queue Cleaner)
+http://cleanuparr.home {
+	reverse_proxy cleanuparr:11011
+}
+
+# FlareSolverr (CAPTCHA Solver)
+http://flaresolverr.home {
+	reverse_proxy flaresolverr:8191
+}
+
+# Recyclarr (TRaSH Guides Sync)
+# No web UI - API only
+
+# TrueNAS (Admin Interface) - redirect to HTTPS
+http://truenas.home {
+	redir https://192.168.20.22{uri} permanent
+}

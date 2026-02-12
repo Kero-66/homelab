@@ -1,0 +1,54 @@
+# =============================================================================
+# Homepage Dashboard - TrueNAS Edition
+# =============================================================================
+# Unified dashboard for all homelab services
+#
+# Storage layout:
+#   Config → /mnt/Fast/docker/homepage/config/    (NVMe - Homepage config files)
+#   .env   → /mnt/Fast/docker/homepage/.env       (NVMe - API keys from Infisical)
+#
+# Secrets:
+#   Managed by Infisical Agent → writes .env to /mnt/Fast/docker/homepage/.env
+#   Template: truenas/stacks/infisical-agent/homepage.tmpl
+#   Source: Infisical /media path (same as arr-stack)
+#
+# Network Access:
+#   - Joins arr-stack and jellyfin networks to access service APIs
+#   - Accesses services via container names (sonarr, radarr, etc.)
+#
+# =============================================================================
+
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+      - NODE_ENV=production
+    env_file:
+      - /mnt/Fast/docker/homepage/.env
+    volumes:
+      # Homepage configuration
+      - /mnt/Fast/docker/homepage/config:/app/config
+    ports:
+      - "3000:3000"
+    networks:
+      - default
+      - ix-arr-stack_default
+      - ix-jellyfin_default
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  ix-arr-stack_default:
+    external: true
+  ix-jellyfin_default:
+    external: true

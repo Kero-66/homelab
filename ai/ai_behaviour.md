@@ -30,6 +30,24 @@
 - Use the API for service status reviews and configuration changes whenever possible to ensure consistency and avoid schema corruption.
 - Record canonical API endpoints and Swagger URLs in `ai/reference.md` once discovered.
 
+### 7) Service Migrations - Research Before Action
+
+- **CRITICAL**: Before migrating ANY service to TrueNAS or creating new configurations, the AI MUST:
+  1. Check for existing compose files in the repo (`apps/`, `networking/`, `media/`, `truenas/stacks/`)
+  2. Review `docker inspect <service>` output on workstation to understand current mounts
+  3. Examine completed migrations in `ai/todo.md` and `truenas/scripts/` for patterns
+  4. Read `truenas/MIGRATION_CHECKLIST.md` and follow ALL steps
+  5. Never create configs from scratch if existing setup can be migrated
+- **Path Conventions**:
+  - Workstation uses relative paths (`.config/`, `config/`)
+  - TrueNAS uses absolute paths: `/mnt/Fast/docker/<service>/` for ALL data
+  - Compose files in repo are REFERENCE - deployment uses TrueNAS Web UI
+- **Documentation Requirements**:
+  - Create migration script in `truenas/scripts/migrate_<stack>.sh` following existing patterns
+  - Update `~/.claude/memory/MEMORY.md` with lessons learned
+  - Add working commands to `.github/TROUBLESHOOTING.md`
+  - Mark tasks complete in `ai/todo.md` with file references
+
 ### 5) Tone & behaviour
 
 - Be concise and direct. Avoid apologies or unnecessary flattery.

@@ -1,0 +1,50 @@
+# Homepage dashboard secrets - rendered by Infisical Agent
+# DO NOT EDIT - this file is auto-generated every 5 minutes
+# Source: Infisical project, dev environment, /media path
+#
+# Homepage uses HOMEPAGE_VAR_* prefixed variables for API integrations.
+# These must match the keys stored in Infisical for arr-stack services.
+#
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "SONARR_API_KEY" }}
+HOMEPAGE_VAR_SONARR_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "RADARR_API_KEY" }}
+HOMEPAGE_VAR_RADARR_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "PROWLARR_API_KEY" }}
+HOMEPAGE_VAR_PROWLARR_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "BAZARR_API_KEY" }}
+HOMEPAGE_VAR_BAZARR_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "SABNZBD_API_KEY" }}
+HOMEPAGE_VAR_SABNZBD_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "JELLYFIN_API_KEY" }}
+HOMEPAGE_VAR_JELLYFIN_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "JELLYSEERR_API_KEY" }}
+HOMEPAGE_VAR_JELLYSEERR_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "JELLYSTAT_API_KEY" }}
+HOMEPAGE_VAR_JELLYSTAT_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "CLEANUPARR_API_KEY" }}
+HOMEPAGE_VAR_CLEANUPARR_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "QBITTORRENT_USER" }}
+HOMEPAGE_VAR_QBITTORRENT_USER={{ .Value }}
+{{- end }}
+{{- if eq .Key "QBITTORRENT_PASS" }}
+HOMEPAGE_VAR_QBITTORRENT_PASS={{ .Value }}
+{{- end }}
+{{- if eq .Key "BESZEL_USER" }}
+HOMEPAGE_VAR_BESZEL_USER={{ .Value }}
+{{- end }}
+{{- if eq .Key "BESZEL_PASS" }}
+HOMEPAGE_VAR_BESZEL_PASS={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}

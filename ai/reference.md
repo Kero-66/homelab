@@ -74,5 +74,27 @@ Recording rationale:
 ## Beszel Hub & Agent (2026-01-09)
 - **Documentation**: [https://beszel.dev/](https://beszel.dev/)
 - **Auto-Provisioning**: Use `USER_EMAIL` and `USER_PASSWORD` env vars for the Hub to bypass the setup screen.
-- **Agent Communication**: In a Docker bridge network, set `extra_hosts` with `host.docker.internal:host-gateway` on the Hub to allow it to reach the Agent running in `network_mode: host`. 
+- **Agent Communication**: In a Docker bridge network, set `extra_hosts` with `host.docker.internal:host-gateway` on the Hub to allow it to reach the Agent running in `network_mode: host`.
 - **Registration**: System records can be managed via PocketBase API at `/api/collections/systems/records`.
+
+## TrueNAS Scale Custom App Management (2026-02-12)
+- **Documentation**:
+  - [Custom App Screens | TrueNAS Documentation Hub](https://www.truenas.com/docs/scale/25.10/scaleuireference/apps/installcustomappscreens/)
+  - [Installing Custom Apps | TrueNAS Apps Market](https://apps.truenas.com/managing-apps/installing-custom-apps/)
+  - [API Reference | TrueNAS Documentation Hub](https://www.truenas.com/docs/scale/api/)
+- **Community Tools**:
+  - [truenas-scale-custom-app-control](https://github.com/meyayl/truenas-scale-custom-app-control) - Wrapper for app management API
+- **Compose File Location**: Custom Apps store rendered compose files at:
+  - `/mnt/.ix-apps/app_configs/<APP_NAME>/versions/<VERSION>/templates/rendered/docker-compose.yaml`
+- **Update Method**: Can be updated directly via SSH + docker compose:
+  ```bash
+  # Upload updated compose
+  scp compose.yaml root@TRUENAS:/mnt/.ix-apps/app_configs/APP/versions/1.0.0/templates/rendered/docker-compose.yaml
+
+  # Recreate containers (uses TrueNAS project name: ix-APP_NAME)
+  ssh root@TRUENAS 'docker compose -p ix-APP_NAME -f /path/to/compose.yaml up -d'
+  ```
+- **Notes**:
+  - TrueNAS 25.10 does not support `app.create` via API for Custom Apps (Web UI required for initial deployment)
+  - midclt tool can query apps: `midclt call app.query`, `midclt call app.get_instance APP_NAME`
+  - Docker networks created by TrueNAS use `ix-APP_NAME_default` naming convention

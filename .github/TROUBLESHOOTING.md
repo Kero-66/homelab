@@ -323,6 +323,195 @@ tail -f ~/truenas_media_transfer.log
 ps aux | grep rsync | grep -v grep
 ```
 
+## TrueNAS Custom App Updates (2026-02-12 Discovery)
+
+### Background
+TrueNAS 25.10 Custom Apps can be updated without Web UI by directly editing compose files and recreating containers via SSH.
+
+### Compose File Location
+Custom App compose files are stored at:
+```
+/mnt/.ix-apps/app_configs/<APP_NAME>/versions/<VERSION>/templates/rendered/docker-compose.yaml
+```
+
+Example:
+```bash
+# Jellyfin app compose location
+/mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml
+```
+
+### Update Process
+
+**Step 1: Update compose file on TrueNAS**
+```bash
+# Upload updated compose from repo
+scp truenas/stacks/jellyfin/compose.yaml \
+  root@192.168.20.22:/mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml
+```
+
+**Step 2: Recreate affected containers**
+```bash
+# Recreate specific service (uses TrueNAS project name)
+ssh root@192.168.20.22 'docker compose -p ix-jellyfin \
+  -f /mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml \
+  up -d jellystat'
+
+# Or recreate all services in app
+ssh root@192.168.20.22 'docker compose -p ix-jellyfin \
+  -f /mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml \
+  up -d'
+```
+
+**Step 3: Verify deployment**
+```bash
+# Check container status
+ssh root@192.168.20.22 'docker ps | grep jellyfin'
+
+# Check health status
+ssh root@192.168.20.22 'docker inspect jellystat | jq -r ".[0].State.Health.Status"'
+```
+
+### Important Notes
+- **Project name**: TrueNAS uses `ix-<APP_NAME>` as the docker compose project name
+- **Networks**: Containers use `ix-<APP_NAME>_default` network, already created by TrueNAS
+- **No need to stop**: `docker compose up -d` will recreate changed containers automatically
+- **Preserves data**: Volume mounts remain unchanged, data persists across recreation
+
+### Common Use Cases
+
+**Fix health check (curl vs wget)**
+```yaml
+# Bad - container may not have curl
+healthcheck:
+  test: curl -sf http://localhost:3000/health || exit 1
+
+# Good - use wget or CMD-SHELL array format
+healthcheck:
+  test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+```
+
+**Update service image version**
+```yaml
+# Change in compose file
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:10.8.13  # was :latest
+
+# Apply
+ssh root@192.168.20.22 'docker compose -p ix-jellyfin -f /path/to/compose.yaml pull jellyfin'
+ssh root@192.168.20.22 'docker compose -p ix-jellyfin -f /path/to/compose.yaml up -d jellyfin'
+```
+
+## Prowlarr Application Connection Fixes (2026-02-12)
+
+### Problem
+After TrueNAS migration, Prowlarr couldn't sync with Sonarr/Radarr due to old workstation Docker network IPs in database.
+
+### Root Cause
+Prowlarr database stores application connection URLs with IP addresses that changed during migration:
+- Old: `http://172.39.0.3:8989` (workstation network)
+- New: `http://sonarr:8989/sonarr` (TrueNAS network + URL base)
+
+### Solution: Update via Database (when API unavailable)
+
+**Before attempting database edits**, check Prowlarr API:
+```bash
+# Check Prowlarr API documentation
+curl -s "http://192.168.20.22:9696/docs" | head -20
+
+# List applications via API
+curl -s "http://192.168.20.22:9696/api/v1/applications" \
+  -H "X-Api-Key: <PROWLARR_API_KEY>" | jq '.'
+```
+
+**If API doesn't support updates, use database:**
+```bash
+# Stop Prowlarr
+ssh root@192.168.20.22 'docker stop prowlarr'
+
+# Update Sonarr connection (include URL base if configured)
+ssh root@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
+UPDATE Applications
+SET Settings = replace(Settings, '\"baseUrl\": \"http://172.39.0.3:8989\"', '\"baseUrl\": \"http://sonarr:8989/sonarr\"')
+WHERE Name = 'Sonarr';
+\""
+
+# Update Radarr connection (include URL base if configured)
+ssh root@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
+UPDATE Applications
+SET Settings = replace(Settings, '\"baseUrl\": \"http://172.39.0.4:7878\"', '\"baseUrl\": \"http://radarr:7878/radarr\"')
+WHERE Name = 'Radarr';
+\""
+
+# Verify changes
+ssh root@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
+SELECT Name, json_extract(Settings, '$.baseUrl') FROM Applications;
+\""
+
+# Start Prowlarr
+ssh root@192.168.20.22 'docker start prowlarr'
+
+# Test connectivity from Prowlarr container
+ssh root@192.168.20.22 'docker exec prowlarr curl -sf http://sonarr:8989/sonarr/api/v3/system/status -H "X-Api-Key: <SONARR_API_KEY>" | jq .appName'
+```
+
+### Important: Check URL Bases First
+```bash
+# Verify Sonarr/Radarr have URL bases configured
+ssh root@192.168.20.22 'grep -i "urlbase" /mnt/Fast/docker/sonarr/config.xml'
+# Output: <UrlBase>/sonarr</UrlBase>
+
+ssh root@192.168.20.22 'grep -i "urlbase" /mnt/Fast/docker/radarr/config.xml'
+# Output: <UrlBase>/radarr</UrlBase>
+
+# If URL base is set, include it in Prowlarr's baseUrl
+# If NOT set, use just: http://sonarr:8989 (no /sonarr suffix)
+```
+
+## Sonarr/Radarr Health Check Fixes (2026-02-12)
+
+### Trigger Manual Health Checks
+```bash
+# Force health check refresh (cached results may be stale)
+curl -s -X POST "http://192.168.20.22:8989/sonarr/api/v3/command" \
+  -H "X-Api-Key: <SONARR_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "CheckHealth"}'
+
+curl -s -X POST "http://192.168.20.22:7878/radarr/api/v3/command" \
+  -H "X-Api-Key: <RADARR_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "CheckHealth"}'
+
+# Wait a few seconds, then check results
+sleep 5
+curl -s "http://192.168.20.22:8989/sonarr/api/v3/health" \
+  -H "X-Api-Key: <SONARR_API_KEY>" | jq '.[] | select(.type == "error")'
+```
+
+### Fix Recycle Bin Permissions
+```bash
+# Problem: Sonarr/Radarr run as UID 1000, but .recycle owned by root
+# Error: "Unable to write to configured recycling bin folder: /data/.recycle"
+
+# Check ownership
+ssh root@192.168.20.22 'ls -la /mnt/Data/media/ | grep recycle'
+# drwxr-xr-x 27 root   root   27 Feb 12 00:59 .recycle  # BAD
+
+# Fix ownership
+ssh root@192.168.20.22 'chown -R 1000:1000 /mnt/Data/media/.recycle'
+
+# Verify
+ssh root@192.168.20.22 'ls -la /mnt/Data/media/ | grep recycle'
+# drwxr-xr-x 27 kero66 kero66 27 Feb 12 00:59 .recycle  # GOOD
+
+# Trigger health check to clear error
+curl -s -X POST "http://192.168.20.22:8989/sonarr/api/v3/command" \
+  -H "X-Api-Key: <SONARR_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "CheckHealth"}' > /dev/null
+```
+
 ## Want this in a PR?
 - Adds this file to `.github/`
 - Adds a short README note pointing to it
