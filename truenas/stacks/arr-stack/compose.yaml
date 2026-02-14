@@ -58,6 +58,15 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Arr Apps
+      - homepage.name=Prowlarr
+      - homepage.icon=prowlarr.png
+      - homepage.href=http://prowlarr.home
+      - homepage.description=Indexer manager
+      - homepage.widget.type=prowlarr
+      - homepage.widget.url=http://prowlarr:9696
+      - homepage.widget.key=${PROWLARR_API_KEY}
     dns:
       - 1.1.1.1
       - 8.8.8.8
@@ -88,6 +97,15 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Arr Apps
+      - homepage.name=Sonarr
+      - homepage.icon=sonarr.png
+      - homepage.href=http://sonarr.home
+      - homepage.description=TV series management
+      - homepage.widget.type=sonarr
+      - homepage.widget.url=http://sonarr:8989
+      - homepage.widget.key=${SONARR_API_KEY}
     volumes:
       - /mnt/Fast/docker/sonarr:/config
       - /mnt/Data/media:/data
@@ -113,6 +131,15 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Arr Apps
+      - homepage.name=Radarr
+      - homepage.icon=radarr.png
+      - homepage.href=http://radarr.home
+      - homepage.description=Movie management
+      - homepage.widget.type=radarr
+      - homepage.widget.url=http://radarr:7878
+      - homepage.widget.key=${RADARR_API_KEY}
     volumes:
       - /mnt/Fast/docker/radarr:/config
       - /mnt/Data/media:/data
@@ -138,6 +165,15 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Arr Apps
+      - homepage.name=Bazarr
+      - homepage.icon=bazarr.png
+      - homepage.href=http://bazarr.home
+      - homepage.description=Subtitle management
+      - homepage.widget.type=bazarr
+      - homepage.widget.url=http://bazarr:6767
+      - homepage.widget.key=${BAZARR_API_KEY}
     volumes:
       - /mnt/Fast/docker/bazarr:/config
       - /mnt/Data/media:/data

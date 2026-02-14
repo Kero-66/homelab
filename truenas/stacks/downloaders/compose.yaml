@@ -35,6 +35,16 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
       - WEBUI_PORT=8080
+    labels:
+      - homepage.group=Downloaders
+      - homepage.name=qBittorrent
+      - homepage.icon=qbittorrent.png
+      - homepage.href=http://qbittorrent.home
+      - homepage.description=Torrent client
+      - homepage.widget.type=qbittorrent
+      - homepage.widget.url=http://qbittorrent:8080
+      - homepage.widget.username=${QBITTORRENT_USER}
+      - homepage.widget.password=${QBITTORRENT_PASS}
     volumes:
       - /mnt/Fast/docker/qbittorrent:/config
       - /mnt/Data/downloads:/data/downloads
@@ -66,6 +76,15 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Downloaders
+      - homepage.name=SABnzbd
+      - homepage.icon=sabnzbd.png
+      - homepage.href=http://sabnzbd.home
+      - homepage.description=Usenet downloader
+      - homepage.widget.type=sabnzbd
+      - homepage.widget.url=http://sabnzbd:8080
+      - homepage.widget.key=${SABNZBD_API_KEY}
     volumes:
       - /mnt/Fast/docker/sabnzbd:/config
       - /mnt/Data/downloads:/data/downloads

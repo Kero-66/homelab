@@ -24,6 +24,15 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Media
+      - homepage.name=Jellyfin
+      - homepage.icon=jellyfin.png
+      - homepage.href=http://jellyfin.home
+      - homepage.description=Media server
+      - homepage.widget.type=jellyfin
+      - homepage.widget.url=http://jellyfin:8096
+      - homepage.widget.key=${JELLYFIN_API_KEY}
     volumes:
       # Config on NVMe pool
       - /mnt/Fast/docker/jellyfin/config:/config
@@ -51,6 +60,15 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
       - LOG_LEVEL=debug
+    labels:
+      - homepage.group=Media
+      - homepage.name=Jellyseerr
+      - homepage.icon=jellyseerr.png
+      - homepage.href=http://jellyseerr.home
+      - homepage.description=Media requests
+      - homepage.widget.type=jellyseerr
+      - homepage.widget.url=http://jellyseerr:5055
+      - homepage.widget.key=${JELLYSEERR_API_KEY}
     volumes:
       - /mnt/Fast/docker/jellyseerr/config:/app/config
     ports:
@@ -102,6 +120,12 @@ services:
       - POSTGRES_IP=jellystat-db
       - POSTGRES_PORT=5432
       - POSTGRES_DB=jfstat
+    labels:
+      - homepage.group=Media
+      - homepage.name=Jellystat
+      - homepage.icon=jellystat.png
+      - homepage.href=http://jellystat.home
+      - homepage.description=Jellyfin analytics
     volumes:
       - /mnt/Fast/docker/jellyfin/jellystat-backup:/app/backend/backup-data
     ports:

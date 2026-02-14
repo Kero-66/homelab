@@ -79,6 +79,6 @@ http://flaresolverr.home {
 # No web UI - API only
 
 # TrueNAS (Admin Interface) - redirect to HTTPS
-http://truenas.home {
+truenas.home {
 	redir https://192.168.20.22{uri} permanent
 }

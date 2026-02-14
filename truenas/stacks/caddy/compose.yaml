@@ -46,9 +46,9 @@ services:
       # Caddy config cache
       - /mnt/Fast/docker/caddy/config:/config
     ports:
-      - "80:80"       # HTTP
-      - "443:443"     # HTTPS
-      - "443:443/udp" # HTTP/3
+      - "80:80"         # HTTP
+      - "443:443"       # HTTPS
+      - "443:443/udp"   # HTTP/3
     networks:
       - default
       - ix-jellyfin_default
