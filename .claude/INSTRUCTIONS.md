@@ -8,13 +8,13 @@
 3. **Read:** This file - Quick facts and patterns
 
 ## Quick Reference
-- **TrueNAS**: 192.168.20.22 (SSH as kero66)
-- **Workstation**: 192.168.20.66 (Fedora, cold spare)
+- **TrueNAS**: 192.168.20.22 (SSH as kero66) - **Version 25.10.1**
+- **Workstation**: 192.168.20.66 (Fedora, cold spare) - SSH keys at `~/.ssh/id_ed25519*`
 - **Pools**: `/mnt/Fast` (NVMe), `/mnt/Data` (HDD)
 - **Configs**: `/mnt/Fast/docker/<service>/`
 - **Media**: `/mnt/Data/media/{shows,movies,anime,music,tv,downloads}`
 - **Downloads**: `/mnt/Data/downloads/{qbittorrent,sabnzbd,complete,incomplete}`
-- **Dockhand**: http://192.168.20.22:30328/ (credentials in Infisical)
+- **Dockhand**: http://192.168.20.22:30328/ (credentials in Infisical, API not well documented - use UI)
 
 ## Key Architecture Decisions
 - **Security**: API-first approach, Infisical for infrastructure secrets, Bitwarden for personal passwords
@@ -26,14 +26,16 @@
 - **DNS**: Router DHCP sends only 192.168.20.22 (AdGuard Home), no fallback (single point of failure accepted)
 
 ## Common Gotchas
+- **ALWAYS check response type before piping to jq** - API endpoints may return HTML, not JSON
+- **TrueNAS version**: 25.10.1 - don't discuss old versions (24.04/24.10) unless relevant
 - Use `jq` not `python3 -m json.tool`
 - SSH piped commands fail on TrueNAS → use separate steps
 - Sonarr/Radarr cache health checks → trigger `CheckHealth` command via API
 - qBittorrent doesn't create dirs at startup, only on first download
 - `ix-*` networks are TrueNAS built-in, separate from compose networks
 - **TrueNAS access**: Use kero66 user, NOT root. truenas_admin is break-glass only (can elevate to root if needed)
-- **Infisical CLI**: Use `infisical secrets get <NAME> --env dev --path /TrueNAS --plain`
-- **Always verify response type before piping to jq** - many endpoints return HTML, not JSON
+- **Infisical CLI pattern**: `infisical secrets get <NAME> --env dev --path /TrueNAS --plain 2>/dev/null`
+- **Infisical environments**: Production secrets in `--env prod`, NOT default `dev`
 
 ## Critical Patterns
 - **ALWAYS check existing setup** before creating files (see truenas/DEPLOYMENT_GUIDE.md)
@@ -57,8 +59,10 @@
 - See `ai/DOCUMENTATION_STRUCTURE.md` for full workflow
 
 ## AI Agent Behavior
+- **DO THE WORK, don't ask user** - Set up SSH access, install tools, troubleshoot issues yourself
 - **Research first, guess never** - Use existing patterns from codebase, check documentation
 - **Verify before piping** - Check response types before using jq or other text processing
 - **Follow established patterns** - Search codebase for existing examples (e.g., infisical usage)
 - **Update documentation** - Keep `ai/SESSION_NOTES.md` current with decisions and blockers
 - **Agent-agnostic** - All documentation should work for Claude, Copilot, or any AI tool
+- **No passwords in output** - Use variables, redirect stderr, don't echo secrets
