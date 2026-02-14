@@ -161,3 +161,11 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 73 | dns_resolution_systemd_resolved | ✅ COMPLETED: Fixed .home domain resolution by removing secondary DNS (1.1.1.1) from router DHCP. systemd-resolved was preferring Cloudflare over AdGuard Home. Documented in TROUBLESHOOTING.md and SESSION_NOTES.md. Trade-off: Single point of failure (consider HA AdGuard setup). | Claude | 2026-02-14 | completed | Router DHCP config, .github/TROUBLESHOOTING.md, ai/SESSION_NOTES.md
 
+74 | documentation_user_standardization | ✅ COMPLETED: Audited and updated 81 instances across truenas/ documentation to use kero66@192.168.20.22 instead of root@192.168.20.22. Principle: kero66 (UID 1000) for daily ops, truenas_admin is break-glass only. Updated MEMORY.md with security principles. | Claude | 2026-02-14 | completed | truenas/*.md, ~/.claude/memory/MEMORY.md
+
+75 | homepage_auto_discovery_labels | ✅ COMPLETED: Added homepage.* Docker labels to 9 services across arr-stack, downloaders, and jellyfin stacks. Labels include homepage.group, homepage.name, homepage.icon, homepage.href, homepage.description, homepage.widget.* for auto-discovery. Committed to git. | Claude | 2026-02-14 | completed | truenas/stacks/{arr-stack,downloaders,jellyfin}/compose.yaml
+
+76 | agent_agnostic_documentation | ✅ COMPLETED: Created .claude/INSTRUCTIONS.md in repository for agent-agnostic AI documentation. Contains quick reference, patterns, gotchas, architecture decisions. Version controlled and accessible to any AI agent (Claude, Copilot, etc.). Replaces reliance on global ~/.claude/memory directory. | Claude | 2026-02-14 | completed | .claude/INSTRUCTIONS.md
+
+77 | dockhand_gitops_setup | 🔄 IN PROGRESS: Setting up Dockhand GitOps workflow for Homepage stack. Authentication working (cookie-based, credentials in Infisical at /TrueNAS path). GitOps configuration pending (likely via web UI at http://192.168.20.22:30328/). See truenas/DOCKHAND_GITOPS_GUIDE.md for procedures. Next: Configure git repo connection and auto-sync. | Claude | 2026-02-14 | in_progress | truenas/DOCKHAND_GITOPS_GUIDE.md, truenas/stacks/homepage/compose.yaml
+
