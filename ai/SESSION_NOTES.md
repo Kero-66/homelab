@@ -7,20 +7,26 @@ This file captures active session context, decisions, and in-progress research t
 ### 🚀 HANDOFF TO NEXT AGENT
 **What's Ready**:
 - ✅ Homepage labels added to all services (committed to git)
-- ✅ Dockhand authentication working (see code snippet below)
+- ✅ Dockhand authentication working (credentials in Infisical)
+- ✅ SSH deploy keys generated and stored in Infisical
+- ✅ Deploy key added to GitHub (read-only access)
+- ✅ Deploy key configured in Dockhand UI
+- ✅ DOCKHAND_GITOPS_GUIDE.md updated with simpler approach (no symlinks)
 - ✅ `.claude/INSTRUCTIONS.md` created (agent-agnostic documentation)
 - ✅ DNS resolution fixed (AdGuard Home only)
 - ✅ Documentation cleaned up (kero66 vs root)
 
 **What's Pending**:
-- ⏸️ Dockhand GitOps configuration (likely via web UI at http://192.168.20.22:30328/)
-- ⏸️ Homepage stack deployment testing
+- ⏸️ Configure git repository in Dockhand UI (Settings → Git Integration)
+- ⏸️ Create Homepage stack from git in Dockhand
+- ⏸️ Test GitOps auto-deployment workflow
 - ⏸️ Original task: Tailscale migration (deferred for Dockhand focus)
 
 **Quick Start for Next Agent**:
 1. Read `.claude/INSTRUCTIONS.md` for patterns and gotchas
-2. Access Dockhand: http://192.168.20.22:30328/ (credentials in Infisical)
-3. Configure GitOps for Homepage stack following `truenas/DOCKHAND_GITOPS_GUIDE.md`
+2. Access Dockhand: http://192.168.20.22:30328/ (credentials in Infisical `/TrueNAS`)
+3. Follow updated `truenas/DOCKHAND_GITOPS_GUIDE.md` (simplified - no symlinks)
+4. Point Dockhand directly at: `truenas/stacks/homepage/compose.yaml`
 
 ### Context
 **Pivot**: Shifted from Tailscale migration to Dockhand GitOps implementation for managing TrueNAS containers.
@@ -129,29 +135,64 @@ D) **Keep host mode** - Accept the trade-off if alternatives don't work
 - `.claude/INSTRUCTIONS.md` - Main AI agent instructions (in repo, version controlled)
 **Completed**: 2026-02-14
 
-### Dockhand GitOps Setup (PARTIALLY COMPLETE)
+### Dockhand GitOps Setup (IN PROGRESS - UPDATED 2026-02-14)
 **Goal**: Configure Dockhand for GitOps management of Homepage stack
-**Progress**:
-- Created DOCKHAND_GITOPS_GUIDE.md with complete setup procedures
-- Accessed Dockhand API at http://192.168.20.22:30328/
-- Found API endpoints: /api/health (working), /api/stacks (empty)
-- Successfully authenticated to Dockhand API using cookie-based auth
-- Infisical pattern: `infisical secrets get <NAME> --env dev --path /TrueNAS --plain`
-- Dockhand credentials: DOCKHAND_USER and DOCKHAND_USER_PASSWORD in Infisical /TrueNAS path
-**Authentication Working**:
+
+**Completed This Session**:
+- ✅ SSH deploy keys generated and stored in Infisical
+  - Private key: `/TrueNAS/DOCKHAND_GITHUB_DEPLOY_KEY_PRIVATE`
+  - Public key: `/TrueNAS/DOCKHAND_GITHUB_DEPLOY_KEY_PUBLIC`
+  - Keys removed from local system after storing in Infisical
+  - Public key added to GitHub (read-only access)
+  - Private key configured in Dockhand UI
+- ✅ **Architecture Decision**: Simplified approach - NO `deployments/` directory
+  - Dockhand points directly at `truenas/stacks/<stack>/compose.yaml`
+  - No symlinks needed (avoids cross-platform issues, reduces complexity)
+  - Single source of truth for compose files
+  - Existing `truenas/stacks/` structure used as-is
+- ✅ DOCKHAND_GITOPS_GUIDE.md completely rewritten
+  - Removed symlink/deployments approach
+  - Updated all examples to use Homepage
+  - Documented simpler configuration
+  - Added Quick Reference section
+
+**Key Decision - Direct Path Structure (2026-02-14)**:
+```
+REJECTED APPROACH (overly complex):
+homelab/
+├── deployments/truenas/homepage/
+│   └── docker-compose.yaml → ../../../truenas/stacks/homepage/compose.yaml (symlink)
+└── truenas/stacks/homepage/compose.yaml
+
+APPROVED APPROACH (simple & clean):
+homelab/
+└── truenas/stacks/homepage/compose.yaml  ← Dockhand points here directly
+```
+
+**Rationale for Simpler Approach**:
+1. Dockhand accepts any git path - no mandatory structure
+2. Symlinks add complexity without benefit
+3. Windows compatibility issues with git symlinks
+4. Single source of truth is easier to maintain
+5. No duplicate directory structure to manage
+
+**Authentication Patterns Established**:
 ```bash
+# Dockhand credentials
 DOCKHAND_USER=$(infisical secrets get DOCKHAND_USER --env dev --path /TrueNAS --plain 2>/dev/null)
 DOCKHAND_PASSWORD=$(infisical secrets get DOCKHAND_USER_PASSWORD --env dev --path /TrueNAS --plain 2>/dev/null)
-curl -X POST http://192.168.20.22:30328/api/auth/login -H "Content-Type: application/json" \
-  -d "{\"username\":\"$DOCKHAND_USER\",\"password\":\"$DOCKHAND_PASSWORD\"}"
-# Returns session cookie: dockhand_session=<token>
+
+# Deploy key retrieval
+infisical secrets get DOCKHAND_GITHUB_DEPLOY_KEY_PRIVATE --env dev --path /TrueNAS --plain
 ```
+
 **Still Pending**:
-- Configure GitOps settings in Dockhand (likely via web UI, not pure API)
-- Set up git repository connection for Homepage stack
-- Test GitOps auto-deployment workflow
-**AI Performance Issues**: Multiple failures with jq (piping HTML to jq), not following established patterns, guessing instead of researching existing code
-**Status**: Auth working, GitOps configuration pending - 2026-02-14
+- Configure git repository in Dockhand UI (Settings → Git Integration)
+- Create Homepage stack pointing to `truenas/stacks/homepage`
+- Test GitOps auto-deployment workflow with test commit
+- Verify Infisical Agent .env files work with GitOps deployments
+
+**Status**: Ready for UI configuration - all prerequisites complete
 
 ---
 
