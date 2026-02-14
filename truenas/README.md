@@ -11,7 +11,7 @@ Complete guide for setting up TrueNAS Scale on your Beelink Mini S Pro, configur
 **System:** TrueNAS Scale 25.10.1 at 192.168.20.22 (HTTPS)
 
 ### Completed ✅
-- ✅ SSH key-based auth configured (kero66 → root@192.168.20.22)
+- ✅ SSH key-based auth configured (kero66@192.168.20.22)
 - ✅ SMB shares mounted on workstation (/mnt/truenas_media)
 - ✅ Infisical Agent configuration deployed to `/mnt/Fast/docker/`
 - ✅ Infisical Agent template syntax fixed and tested

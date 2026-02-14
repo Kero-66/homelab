@@ -18,7 +18,7 @@ This guide covers migrating the frontend stack (Homepage, Caddy, AdGuard Home) f
 ## Prerequisites
 
 - [ ] TrueNAS accessible at 192.168.20.22
-- [ ] SSH access configured (`ssh root@192.168.20.22`)
+- [ ] SSH access configured (`ssh kero66@192.168.20.22`)
 - [ ] Infisical Agent running on TrueNAS
 - [ ] Arr stack and downloaders already migrated
 - [ ] Review `truenas/MIGRATION_CHECKLIST.md`
@@ -45,11 +45,11 @@ bash truenas/scripts/migrate_frontend_stack.sh
 ```bash
 # Upload Homepage template
 scp truenas/stacks/infisical-agent/homepage.tmpl \
-  root@192.168.20.22:/mnt/Fast/docker/infisical-agent/config/
+  kero66@192.168.20.22:/mnt/Fast/docker/infisical-agent/config/
 
 # Upload updated agent config
 scp truenas/stacks/infisical-agent/agent-config.yaml \
-  root@192.168.20.22:/mnt/Fast/docker/infisical-agent/config/
+  kero66@192.168.20.22:/mnt/Fast/docker/infisical-agent/config/
 ```
 
 ### Step 3: Restart Infisical Agent
@@ -61,7 +61,7 @@ Via TrueNAS Web UI:
 
 **Verify .env generated:**
 ```bash
-ssh root@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env | head -5'
+ssh kero66@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env | head -5'
 ```
 
 Should show: `HOMEPAGE_VAR_SONARR_API_KEY=...`
@@ -71,7 +71,7 @@ Should show: `HOMEPAGE_VAR_SONARR_API_KEY=...`
 ```bash
 # Upload updated Caddyfile
 scp truenas/stacks/caddy/Caddyfile \
-  root@192.168.20.22:/mnt/Fast/docker/caddy/
+  kero66@192.168.20.22:/mnt/Fast/docker/caddy/
 ```
 
 ## Phase 2: Deploy Services
@@ -101,7 +101,7 @@ scp truenas/stacks/caddy/Caddyfile \
 
 **Verify Caddy started:**
 ```bash
-ssh root@192.168.20.22 'docker logs caddy --tail 20'
+ssh kero66@192.168.20.22 'docker logs caddy --tail 20'
 ```
 
 ### Deploy Homepage
@@ -114,7 +114,7 @@ ssh root@192.168.20.22 'docker logs caddy --tail 20'
 
 **Verify Homepage started:**
 ```bash
-ssh root@192.168.20.22 'docker ps | grep homepage'
+ssh kero66@192.168.20.22 'docker ps | grep homepage'
 curl http://192.168.20.22:3000/
 ```
 
@@ -212,16 +212,16 @@ firefox http://adguard.home
 **If widgets fail:**
 ```bash
 # Check Homepage logs
-ssh root@192.168.20.22 'docker logs homepage --tail 50'
+ssh kero66@192.168.20.22 'docker logs homepage --tail 50'
 
 # Check API keys are loaded
-ssh root@192.168.20.22 'docker exec homepage env | grep HOMEPAGE_VAR'
+ssh kero66@192.168.20.22 'docker exec homepage env | grep HOMEPAGE_VAR'
 ```
 
 ### Verify All Containers Healthy
 
 ```bash
-ssh root@192.168.20.22 'docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(homepage|caddy|adguard)"'
+ssh kero66@192.168.20.22 'docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(homepage|caddy|adguard)"'
 ```
 
 All should show `Up X minutes (healthy)`.
@@ -255,7 +255,7 @@ Or update locally and re-migrate.
 
 **Check AdGuard is running:**
 ```bash
-ssh root@192.168.20.22 'docker ps | grep adguard'
+ssh kero66@192.168.20.22 'docker ps | grep adguard'
 ```
 
 **Test DNS from workstation:**
@@ -274,38 +274,38 @@ cat /etc/resolv.conf
 
 **Check Caddyfile loaded:**
 ```bash
-ssh root@192.168.20.22 'docker exec caddy cat /etc/caddy/Caddyfile | head -20'
+ssh kero66@192.168.20.22 'docker exec caddy cat /etc/caddy/Caddyfile | head -20'
 ```
 
 **Check Caddy logs:**
 ```bash
-ssh root@192.168.20.22 'docker logs caddy --tail 50'
+ssh kero66@192.168.20.22 'docker logs caddy --tail 50'
 ```
 
 **Verify Caddy can reach services:**
 ```bash
-ssh root@192.168.20.22 'docker exec caddy wget -O- http://jellyfin:8096/health'
+ssh kero66@192.168.20.22 'docker exec caddy wget -O- http://jellyfin:8096/health'
 ```
 
 ### Homepage API Keys Missing
 
 **Check Infisical Agent rendered .env:**
 ```bash
-ssh root@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env'
+ssh kero66@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env'
 ```
 
 Should contain `HOMEPAGE_VAR_*` variables.
 
 **If empty, check Infisical Agent logs:**
 ```bash
-ssh root@192.168.20.22 'docker logs infisical-agent --tail 50'
+ssh kero66@192.168.20.22 'docker logs infisical-agent --tail 50'
 ```
 
 **Manually restart agent:**
 ```bash
-ssh root@192.168.20.22 'docker restart infisical-agent'
+ssh kero66@192.168.20.22 'docker restart infisical-agent'
 sleep 30
-ssh root@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env'
+ssh kero66@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env'
 ```
 
 ### Port 53 Conflict (AdGuard DNS)
@@ -352,7 +352,7 @@ If migration fails:
 
 ```bash
 # Stop services on TrueNAS
-ssh root@192.168.20.22 'docker stop homepage caddy adguard-home'
+ssh kero66@192.168.20.22 'docker stop homepage caddy adguard-home'
 
 # Restore backup on workstation
 cd /mnt/library/repos/homelab

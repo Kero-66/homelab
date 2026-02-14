@@ -105,11 +105,11 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 55 | update_troubleshooting_docs | Document tonight's successful fixes: Prowlarr URLs, Jellystat health check, compose file updates, recycle bin permissions. | Claude | 2026-02-12 | completed | .github/TROUBLESHOOTING.md, ai/reference.md
 
-56 | CRITICAL_migrate_infisical | Migrate Infisical server from workstation (192.168.20.66:8081) to TrueNAS. Infisical Agent on TrueNAS currently can't reach server (connection refused). All services depending on secrets will fail without this. | Claude | 2026-02-12 | open | security/infisical/, truenas/stacks/infisical-agent/
+56 | migrate_infisical_to_truenas | Migrate Infisical server from workstation (192.168.20.66:8081) to TrueNAS for centralized deployment. Current connection restored but should migrate for consistency. | Claude | 2026-02-12 | open | security/infisical/, truenas/stacks/infisical-agent/
 
 57 | standardize_kero66_password | Update kero66 password to be consistent across all services (TrueNAS, Infisical, AdGuard, etc.) for password manager storage. Currently using different passwords. | User | 2026-02-12 | open | Various services
 
-58 | fix_workstation_docker | Docker appears to be broken on workstation (192.168.20.66). Investigate and fix, or complete full migration to TrueNAS so workstation can be shut down. | User | 2026-02-12 | open | Workstation troubleshooting
+58 | fix_workstation_docker | ✅ COMPLETED: Docker was failing due to orphaned dockerd process (PID 54487). Killed stale process, restarted Docker service. Infisical stack now running and accessible from TrueNAS. | User | 2026-02-12 | completed | Workstation troubleshooting
 
 ---
 
@@ -136,4 +136,28 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 61 | prowlarr_stats_visualization | Review and set up Exportarr + Prometheus + Grafana for Prowlarr indexer stats visualization | User | 2026-01-18 | open | monitoring/
 62 | organizr_dashboard | Review and potentially set up Organizr for *arr apps dashboard | User | 2026-01-18 | open | apps/
 63 | monitoring_observability_logs | Review and improve monitoring/observability/logs setup (Netdata, Beszel, centralized logging) | User | 2026-01-18 | open | monitoring/, networking/
+
+---
+
+## Session 2026-02-14: Documentation & Tailscale Architecture
+
+64 | claude_memory_restructure | ✅ COMPLETED: Restructured .claude/memory/MEMORY.md to be concise (< 200 lines) and link to detailed docs. Created ai/DOCUMENTATION_STRUCTURE.md with full guidelines. | Claude | 2026-02-14 | completed | ~/.claude/memory/MEMORY.md, ai/DOCUMENTATION_STRUCTURE.md
+
+65 | tailscale_caddy_research | Research Caddy-based approach for Tailscale (user watched videos recommending this). Add as Option E to TAILSCALE_HOST_MODE_ALTERNATIVES.md | Claude | 2026-02-14 | open | truenas/TAILSCALE_HOST_MODE_ALTERNATIVES.md
+
+66 | truenas_gitops_evaluation | Evaluate GitOps approach with dockhand for TrueNAS deployments instead of direct SSH. Document pros/cons, migration path, and recommendation. | Claude | 2026-02-14 | open | truenas/, .github/
+
+67 | truenas_directory_review | ✅ COMPLETED: Archived old session files (2026-02-11) and initial setup status files (STATUS.md, SETUP_COMPLETE.md, DISCOVERY_COMPLETE.md, AUTH_STATUS.md) to sessions/archive/. Core documentation remains clean. | Claude | 2026-02-14 | completed | truenas/sessions/archive/
+
+68 | caddy_https_restore | ✅ COMPLETED: Restored ports 443/tcp and 443/udp to Caddy compose.yaml. HTTPS warnings should be resolved after redeployment. | Claude | 2026-02-14 | completed | truenas/stacks/caddy/compose.yaml
+
+69 | session_continuity_system | ✅ COMPLETED: Created ai/SESSION_NOTES.md for cross-session continuity. Documented Tailscale host mode research and current blockers. | Claude | 2026-02-14 | completed | ai/SESSION_NOTES.md
+
+70 | todo_workflow_guidelines | Document when to use TaskCreate (ephemeral) vs ai/todo.md (persistent). Guidelines created in ai/DOCUMENTATION_STRUCTURE.md. Ensure consistent usage going forward. | Claude | 2026-02-14 | completed | ai/DOCUMENTATION_STRUCTURE.md
+
+71 | claude_interface_investigation | Investigated difference between Claude Code CLI (terminal) vs Extension (chat panel). User switching to VSCode chat panel to test MCP server access and VSCode integration. | Claude | 2026-02-14 | completed | ai/SESSION_NOTES.md
+
+72 | test_vscode_chat_panel_mcp | Test if Claude Code VSCode chat panel can access VSCode MCP servers (Context7, Pylance, Upstash). Compare with Copilot Chat capabilities. | User | 2026-02-14 | in_progress | ~/.config/Code/User/extensions/anthropic.claude-code-*
+
+73 | dns_resolution_systemd_resolved | ✅ COMPLETED: Fixed .home domain resolution by removing secondary DNS (1.1.1.1) from router DHCP. systemd-resolved was preferring Cloudflare over AdGuard Home. Documented in TROUBLESHOOTING.md and SESSION_NOTES.md. Trade-off: Single point of failure (consider HA AdGuard setup). | Claude | 2026-02-14 | completed | Router DHCP config, .github/TROUBLESHOOTING.md, ai/SESSION_NOTES.md
 

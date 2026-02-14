@@ -258,31 +258,31 @@ ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -C "kero66@fedora"
 
 # Add public key to TrueNAS root user via API (done once)
 # Then test:
-ssh root@192.168.20.22 "hostname"  # Should return: truenas
+ssh kero66@192.168.20.22 "hostname"  # Should return: truenas
 ```
 
 ### File Transfer via SCP
 ```bash
 # Upload single file
-scp /local/file.yaml root@192.168.20.22:/mnt/Fast/docker/app/file.yaml
+scp /local/file.yaml kero66@192.168.20.22:/mnt/Fast/docker/app/file.yaml
 
 # Upload directory recursively
-scp -r /local/dir root@192.168.20.22:/mnt/Fast/docker/app/
+scp -r /local/dir kero66@192.168.20.22:/mnt/Fast/docker/app/
 ```
 
 ### Remote Command Execution
 ```bash
 # Check dataset contents
-ssh root@192.168.20.22 "ls -la /mnt/Fast/docker/jellyfin/"
+ssh kero66@192.168.20.22 "ls -la /mnt/Fast/docker/jellyfin/"
 
 # Check disk usage
-ssh root@192.168.20.22 "du -sh /mnt/Data/media/*"
+ssh kero66@192.168.20.22 "du -sh /mnt/Data/media/*"
 
 # Count files
-ssh root@192.168.20.22 "find /mnt/Data/media/movies -type f | wc -l"
+ssh kero66@192.168.20.22 "find /mnt/Data/media/movies -type f | wc -l"
 
 # Check running apps/containers
-ssh root@192.168.20.22 "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+ssh kero66@192.168.20.22 "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
 ```
 
 ### SMB Mount from Fedora Workstation
@@ -346,18 +346,18 @@ Example:
 ```bash
 # Upload updated compose from repo
 scp truenas/stacks/jellyfin/compose.yaml \
-  root@192.168.20.22:/mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml
+  kero66@192.168.20.22:/mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml
 ```
 
 **Step 2: Recreate affected containers**
 ```bash
 # Recreate specific service (uses TrueNAS project name)
-ssh root@192.168.20.22 'docker compose -p ix-jellyfin \
+ssh kero66@192.168.20.22 'docker compose -p ix-jellyfin \
   -f /mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml \
   up -d jellystat'
 
 # Or recreate all services in app
-ssh root@192.168.20.22 'docker compose -p ix-jellyfin \
+ssh kero66@192.168.20.22 'docker compose -p ix-jellyfin \
   -f /mnt/.ix-apps/app_configs/jellyfin/versions/1.0.0/templates/rendered/docker-compose.yaml \
   up -d'
 ```
@@ -365,10 +365,10 @@ ssh root@192.168.20.22 'docker compose -p ix-jellyfin \
 **Step 3: Verify deployment**
 ```bash
 # Check container status
-ssh root@192.168.20.22 'docker ps | grep jellyfin'
+ssh kero66@192.168.20.22 'docker ps | grep jellyfin'
 
 # Check health status
-ssh root@192.168.20.22 'docker inspect jellystat | jq -r ".[0].State.Health.Status"'
+ssh kero66@192.168.20.22 'docker inspect jellystat | jq -r ".[0].State.Health.Status"'
 ```
 
 ### Important Notes
@@ -398,8 +398,8 @@ services:
     image: lscr.io/linuxserver/jellyfin:10.8.13  # was :latest
 
 # Apply
-ssh root@192.168.20.22 'docker compose -p ix-jellyfin -f /path/to/compose.yaml pull jellyfin'
-ssh root@192.168.20.22 'docker compose -p ix-jellyfin -f /path/to/compose.yaml up -d jellyfin'
+ssh kero66@192.168.20.22 'docker compose -p ix-jellyfin -f /path/to/compose.yaml pull jellyfin'
+ssh kero66@192.168.20.22 'docker compose -p ix-jellyfin -f /path/to/compose.yaml up -d jellyfin'
 ```
 
 ## Prowlarr Application Connection Fixes (2026-02-12)
@@ -427,41 +427,41 @@ curl -s "http://192.168.20.22:9696/api/v1/applications" \
 **If API doesn't support updates, use database:**
 ```bash
 # Stop Prowlarr
-ssh root@192.168.20.22 'docker stop prowlarr'
+ssh kero66@192.168.20.22 'docker stop prowlarr'
 
 # Update Sonarr connection (include URL base if configured)
-ssh root@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
+ssh kero66@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
 UPDATE Applications
 SET Settings = replace(Settings, '\"baseUrl\": \"http://172.39.0.3:8989\"', '\"baseUrl\": \"http://sonarr:8989/sonarr\"')
 WHERE Name = 'Sonarr';
 \""
 
 # Update Radarr connection (include URL base if configured)
-ssh root@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
+ssh kero66@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
 UPDATE Applications
 SET Settings = replace(Settings, '\"baseUrl\": \"http://172.39.0.4:7878\"', '\"baseUrl\": \"http://radarr:7878/radarr\"')
 WHERE Name = 'Radarr';
 \""
 
 # Verify changes
-ssh root@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
+ssh kero66@192.168.20.22 "sqlite3 /mnt/Fast/docker/prowlarr/prowlarr.db \"
 SELECT Name, json_extract(Settings, '$.baseUrl') FROM Applications;
 \""
 
 # Start Prowlarr
-ssh root@192.168.20.22 'docker start prowlarr'
+ssh kero66@192.168.20.22 'docker start prowlarr'
 
 # Test connectivity from Prowlarr container
-ssh root@192.168.20.22 'docker exec prowlarr curl -sf http://sonarr:8989/sonarr/api/v3/system/status -H "X-Api-Key: <SONARR_API_KEY>" | jq .appName'
+ssh kero66@192.168.20.22 'docker exec prowlarr curl -sf http://sonarr:8989/sonarr/api/v3/system/status -H "X-Api-Key: <SONARR_API_KEY>" | jq .appName'
 ```
 
 ### Important: Check URL Bases First
 ```bash
 # Verify Sonarr/Radarr have URL bases configured
-ssh root@192.168.20.22 'grep -i "urlbase" /mnt/Fast/docker/sonarr/config.xml'
+ssh kero66@192.168.20.22 'grep -i "urlbase" /mnt/Fast/docker/sonarr/config.xml'
 # Output: <UrlBase>/sonarr</UrlBase>
 
-ssh root@192.168.20.22 'grep -i "urlbase" /mnt/Fast/docker/radarr/config.xml'
+ssh kero66@192.168.20.22 'grep -i "urlbase" /mnt/Fast/docker/radarr/config.xml'
 # Output: <UrlBase>/radarr</UrlBase>
 
 # If URL base is set, include it in Prowlarr's baseUrl
@@ -495,14 +495,14 @@ curl -s "http://192.168.20.22:8989/sonarr/api/v3/health" \
 # Error: "Unable to write to configured recycling bin folder: /data/.recycle"
 
 # Check ownership
-ssh root@192.168.20.22 'ls -la /mnt/Data/media/ | grep recycle'
+ssh kero66@192.168.20.22 'ls -la /mnt/Data/media/ | grep recycle'
 # drwxr-xr-x 27 root   root   27 Feb 12 00:59 .recycle  # BAD
 
 # Fix ownership
-ssh root@192.168.20.22 'chown -R 1000:1000 /mnt/Data/media/.recycle'
+ssh kero66@192.168.20.22 'chown -R 1000:1000 /mnt/Data/media/.recycle'
 
 # Verify
-ssh root@192.168.20.22 'ls -la /mnt/Data/media/ | grep recycle'
+ssh kero66@192.168.20.22 'ls -la /mnt/Data/media/ | grep recycle'
 # drwxr-xr-x 27 kero66 kero66 27 Feb 12 00:59 .recycle  # GOOD
 
 # Trigger health check to clear error
@@ -511,6 +511,108 @@ curl -s -X POST "http://192.168.20.22:8989/sonarr/api/v3/command" \
   -H "Content-Type: application/json" \
   -d '{"name": "CheckHealth"}' > /dev/null
 ```
+
+### Fix Docker Daemon Startup Failure (Orphaned Process)
+
+```bash
+# Problem: Docker won't start, logs show "process with PID XXXX is still running"
+# Symptom: systemd shows "failed to start daemon, ensure docker is not running or delete /var/run/docker.pid"
+
+# Check if PID in error message is actually running
+ps aux | grep <PID>
+
+# If orphaned dockerd process exists, kill it
+sudo kill <PID>
+
+# Start Docker service
+sudo systemctl start docker
+
+# Verify Docker is running
+sudo systemctl status docker
+
+# Check if dependent containers started (e.g., Infisical)
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# If Infisical Agent on TrueNAS was affected, restart it
+ssh kero66@192.168.20.22 'docker restart infisical-agent'
+
+# Wait 30 seconds for secrets to render, then verify
+sleep 30
+ssh kero66@192.168.20.22 'ls -lh /mnt/Fast/docker/arr-stack/.env /mnt/Fast/docker/downloaders/.env /mnt/Fast/docker/jellyfin/.env'
+```
+
+### DNS Resolution Issue - systemd-resolved Preferring Fallback DNS
+
+**Problem**: Linux clients can't resolve `.home` domains (e.g., `jellyfin.home`) even though AdGuard Home is configured.
+
+**Symptom**:
+```bash
+resolvectl query jellyfin.home
+# jellyfin.home: Name 'jellyfin.home' not found
+
+resolvectl status wlp9s0
+# Current DNS Server: 1.1.1.1  <-- Using Cloudflare instead of AdGuard Home
+# DNS Servers: 192.168.20.22 1.1.1.1
+```
+
+**Root Cause**:
+- systemd-resolved treats multiple DNS servers as alternatives, not primary/fallback
+- When both `192.168.20.22` (AdGuard Home) and `1.1.1.1` (Cloudflare) are configured, systemd-resolved may choose Cloudflare
+- Cloudflare doesn't know about internal `.home` domains
+
+**Solution 1** (Recommended - Router DHCP Change):
+```bash
+# Remove secondary DNS (1.1.1.1) from router DHCP configuration
+# Configure router to only send: 192.168.20.22
+
+# After DHCP change, renew lease on client:
+sudo nmcli connection down "<WiFi-Name>"
+sudo nmcli connection up "<WiFi-Name>"
+
+# Verify only AdGuard Home is configured:
+resolvectl status | grep "DNS Servers"
+# DNS Servers: 192.168.20.22  <-- Only one server
+
+# Test resolution:
+resolvectl query jellyfin.home
+# jellyfin.home: 192.168.20.22  <-- Success!
+```
+
+**Solution 2** (Per-Client Fix - Linux Only):
+```bash
+# Configure routing domain to force .home queries to AdGuard Home
+sudo nmcli connection modify "<WiFi-Name>" ipv4.dns-search "~home"
+sudo nmcli connection up "<WiFi-Name>"
+
+# Verify routing domain is set:
+resolvectl domain
+# Link 3 (wlp9s0): ~home  <-- Tilde means "routing domain"
+```
+
+**Trade-offs**:
+- **Solution 1**: If AdGuard Home goes down, DNS fails network-wide
+  - Mitigation: Run second AdGuard Home instance for high availability
+- **Solution 2**: Must configure each Linux device individually
+  - Other devices (Windows, macOS, phones) typically respect primary DNS properly
+
+**Verification**:
+```bash
+# Test DNS resolution
+dig @192.168.20.22 jellyfin.home +short
+# 192.168.20.22  <-- AdGuard Home resolves correctly
+
+# Test via systemd-resolved
+resolvectl query jellyfin.home
+# jellyfin.home: 192.168.20.22  <-- Now works!
+
+# Test actual HTTP access
+curl -I http://jellyfin.home
+# Should return HTTP headers from Caddy/Jellyfin
+```
+
+**Fixed**: 2026-02-14
+
+---
 
 ## Want this in a PR?
 - Adds this file to `.github/`

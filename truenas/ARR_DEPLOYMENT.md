@@ -70,7 +70,7 @@ tail -f ~/truenas_media_transfer.log
 ps aux | grep rsync | grep -v grep  # Should return nothing
 
 # Verify media on TrueNAS
-ssh root@192.168.20.22 "du -sh /mnt/Data/media/*"
+ssh kero66@192.168.20.22 "du -sh /mnt/Data/media/*"
 ```
 
 ### 2. Secrets in Infisical
@@ -187,10 +187,10 @@ If any issues are found, the script will show exactly what's missing.
 
 ```bash
 # Check .env files exist
-ssh root@192.168.20.22 'ls -la /mnt/Fast/docker/{arr-stack,downloaders,tailscale}/.env'
+ssh kero66@192.168.20.22 'ls -la /mnt/Fast/docker/{arr-stack,downloaders,tailscale}/.env'
 
 # Verify content (redacted)
-ssh root@192.168.20.22 'head -5 /mnt/Fast/docker/arr-stack/.env'
+ssh kero66@192.168.20.22 'head -5 /mnt/Fast/docker/arr-stack/.env'
 ```
 
 Expected output:
@@ -207,19 +207,19 @@ Now that configs are migrated and .env files exist, do one final check:
 
 ```bash
 # Check Sonarr config migrated (should see database files, config.xml, etc.)
-ssh root@192.168.20.22 'ls -la /mnt/Fast/docker/sonarr/'
+ssh kero66@192.168.20.22 'ls -la /mnt/Fast/docker/sonarr/'
 
 # Check Radarr config
-ssh root@192.168.20.22 'ls -la /mnt/Fast/docker/radarr/'
+ssh kero66@192.168.20.22 'ls -la /mnt/Fast/docker/radarr/'
 
 # Check Prowlarr config
-ssh root@192.168.20.22 'ls -la /mnt/Fast/docker/prowlarr/'
+ssh kero66@192.168.20.22 'ls -la /mnt/Fast/docker/prowlarr/'
 
 # Check qBittorrent config and queue
-ssh root@192.168.20.22 'ls -la /mnt/Fast/docker/qbittorrent/'
+ssh kero66@192.168.20.22 'ls -la /mnt/Fast/docker/qbittorrent/'
 
 # Verify ownership is correct (should be 1000:1000)
-ssh root@192.168.20.22 'ls -ld /mnt/Fast/docker/sonarr'
+ssh kero66@192.168.20.22 'ls -ld /mnt/Fast/docker/sonarr'
 ```
 
 **What should be preserved:**
@@ -274,7 +274,7 @@ infisical secrets set TAILSCALE_AUTHKEY <YOUR_KEY> \
 
 **4c. Verify agent rendered Tailscale .env:**
 ```bash
-ssh root@192.168.20.22 'cat /mnt/Fast/docker/tailscale/.env | grep TS_AUTHKEY'
+ssh kero66@192.168.20.22 'cat /mnt/Fast/docker/tailscale/.env | grep TS_AUTHKEY'
 ```
 
 **4d. Deploy Tailscale App:**
@@ -315,8 +315,8 @@ Your setup included:
 If you need to verify or re-copy any service:
 ```bash
 # Example: Re-copy Sonarr config if needed
-scp -r media/sonarr/* root@192.168.20.22:/mnt/Fast/docker/sonarr/
-ssh root@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/sonarr"
+scp -r media/sonarr/* kero66@192.168.20.22:/mnt/Fast/docker/sonarr/
+ssh kero66@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/sonarr"
 ```
 
 ### Step 6: Deploy Arr Stack
@@ -351,8 +351,8 @@ Your setup included:
 If you need to re-copy:
 ```bash
 # Example: Re-copy qBittorrent config
-scp -r media/qbittorrent/* root@192.168.20.22:/mnt/Fast/docker/qbittorrent/
-ssh root@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/qbittorrent"
+scp -r media/qbittorrent/* kero66@192.168.20.22:/mnt/Fast/docker/qbittorrent/
+ssh kero66@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/qbittorrent"
 ```
 
 ### Step 8: Deploy Downloader Stack
@@ -413,10 +413,10 @@ Recyclarr automatically syncs TRaSH Guides settings daily. To run manually:
 
 ```bash
 # Check if config exists
-ssh root@192.168.20.22 "ls -la /mnt/Fast/docker/recyclarr/config/"
+ssh kero66@192.168.20.22 "ls -la /mnt/Fast/docker/recyclarr/config/"
 
 # Run sync manually (one-time)
-ssh root@192.168.20.22 "docker exec recyclarr recyclarr sync"
+ssh kero66@192.168.20.22 "docker exec recyclarr recyclarr sync"
 ```
 
 ## 🧪 Testing
@@ -443,7 +443,7 @@ ssh root@192.168.20.22 "docker exec recyclarr recyclarr sync"
 
 **Fix:**
 1. Check agent logs: TrueNAS → Apps → infisical-agent → Logs
-2. Verify templates uploaded: `ssh root@192.168.20.22 "ls /mnt/Fast/docker/infisical-agent/config/*.tmpl"`
+2. Verify templates uploaded: `ssh kero66@192.168.20.22 "ls /mnt/Fast/docker/infisical-agent/config/*.tmpl"`
 3. Verify secrets exist in Infisical
 4. Restart agent and wait 2 minutes
 
@@ -454,10 +454,10 @@ ssh root@192.168.20.22 "docker exec recyclarr recyclarr sync"
 **Fix:**
 ```bash
 # Check .env file exists and is readable
-ssh root@192.168.20.22 "ls -la /mnt/Fast/docker/<stack>/.env"
+ssh kero66@192.168.20.22 "ls -la /mnt/Fast/docker/<stack>/.env"
 
 # Check file is not empty
-ssh root@192.168.20.22 "wc -l /mnt/Fast/docker/<stack>/.env"
+ssh kero66@192.168.20.22 "wc -l /mnt/Fast/docker/<stack>/.env"
 
 # Restart the app via TrueNAS UI
 ```
@@ -497,15 +497,15 @@ After deployment, monitor services:
 
 ```bash
 # Check all container status
-ssh root@192.168.20.22 "docker ps --format 'table {{.Names}}\t{{.Status}}'"
+ssh kero66@192.168.20.22 "docker ps --format 'table {{.Names}}\t{{.Status}}'"
 
 # Check logs
-ssh root@192.168.20.22 "docker logs sonarr --tail 50"
-ssh root@192.168.20.22 "docker logs radarr --tail 50"
-ssh root@192.168.20.22 "docker logs qbittorrent --tail 50"
+ssh kero66@192.168.20.22 "docker logs sonarr --tail 50"
+ssh kero66@192.168.20.22 "docker logs radarr --tail 50"
+ssh kero66@192.168.20.22 "docker logs qbittorrent --tail 50"
 
 # Check resource usage
-ssh root@192.168.20.22 "docker stats --no-stream"
+ssh kero66@192.168.20.22 "docker stats --no-stream"
 ```
 
 ## 🎯 Next Steps
@@ -517,7 +517,7 @@ After successful deployment:
 3. ✅ **Update Caddy:** (if applicable) Point reverse proxy to TrueNAS
 4. ✅ **Test remote access:** Via Tailscale from external network
 5. ✅ **Monitor for 24-48 hours:** Ensure stability and downloads work
-6. ✅ **Backup TrueNAS configs:** `ssh root@192.168.20.22 "tar czf /tmp/configs_backup.tar.gz /mnt/Fast/docker/"`
+6. ✅ **Backup TrueNAS configs:** `ssh kero66@192.168.20.22 "tar czf /tmp/configs_backup.tar.gz /mnt/Fast/docker/"`
 
 ## 📝 Rollback Plan
 

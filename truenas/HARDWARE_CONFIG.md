@@ -225,7 +225,7 @@ Your Jellyfin stack includes:
 
 ```bash
 # SSH into TrueNAS (enable SSH service first)
-ssh root@192.168.20.22
+ssh kero66@192.168.20.22
 
 # Or use the web UI: Storage → Create Pool
 # - Name: Fast

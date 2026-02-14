@@ -36,22 +36,22 @@ ls -lh "$BACKUP_FILE"  # Verify backup created
 ### ✅ Step 5: Prepare TrueNAS
 ```bash
 # Create service directory
-ssh root@192.168.20.22 "mkdir -p /mnt/Fast/docker/<service>"
+ssh kero66@192.168.20.22 "mkdir -p /mnt/Fast/docker/<service>"
 
 # If service needs database
-ssh root@192.168.20.22 "mkdir -p /mnt/Fast/databases/<service>"
+ssh kero66@192.168.20.22 "mkdir -p /mnt/Fast/databases/<service>"
 ```
 
 ### ✅ Step 6: Migrate Configuration
 ```bash
 # Copy entire config directory
-scp -r <service-dir>/* root@192.168.20.22:/mnt/Fast/docker/<service>/
+scp -r <service-dir>/* kero66@192.168.20.22:/mnt/Fast/docker/<service>/
 
 # Verify files copied
-ssh root@192.168.20.22 "ls -la /mnt/Fast/docker/<service>/"
+ssh kero66@192.168.20.22 "ls -la /mnt/Fast/docker/<service>/"
 
 # Fix ownership (containers run as UID 1000)
-ssh root@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/<service>"
+ssh kero66@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/<service>"
 ```
 
 ### ✅ Step 7: Prepare Secrets (if needed)
@@ -82,16 +82,16 @@ ssh root@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/<service>"
 ### ✅ Step 10: Verify Deployment
 ```bash
 # Check container status
-ssh root@192.168.20.22 "docker ps | grep <service>"
+ssh kero66@192.168.20.22 "docker ps | grep <service>"
 
 # Check logs
-ssh root@192.168.20.22 "docker logs <service> --tail 50"
+ssh kero66@192.168.20.22 "docker logs <service> --tail 50"
 
 # Test service endpoint
 curl http://192.168.20.22:<port>/
 
 # Check health status
-ssh root@192.168.20.22 "docker inspect <service> | jq -r '.[0].State.Health.Status'"
+ssh kero66@192.168.20.22 "docker inspect <service> | jq -r '.[0].State.Health.Status'"
 ```
 
 ### ✅ Step 11: Update Documentation
@@ -150,7 +150,7 @@ If migration fails:
 
 ```bash
 # 1. Stop service on TrueNAS
-ssh root@192.168.20.22 "docker stop <service>"
+ssh kero66@192.168.20.22 "docker stop <service>"
 
 # 2. Restore backup on workstation
 cd /mnt/library/repos/homelab
