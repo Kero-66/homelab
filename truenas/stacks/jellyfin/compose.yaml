@@ -19,11 +19,18 @@ services:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
-    mem_limit: 2g
+    mem_limit: 4g
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+      # Intel N150 VAAPI hardware acceleration
+      # iHD driver is bundled in jellyfin-ffmpeg but not on the system PATH
+      - LIBVA_DRIVERS_PATH=/usr/lib/jellyfin-ffmpeg/lib/dri
+      - LIBVA_DRIVER_NAME=iHD
+    group_add:
+      - "107"  # render group GID — required for /dev/dri/renderD128 access
+      - "44"   # video group GID — required for /dev/dri/card0 access
     labels:
       - homepage.group=Media
       - homepage.name=Jellyfin
@@ -131,7 +138,7 @@ services:
     ports:
       - "3002:3000"
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

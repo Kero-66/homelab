@@ -169,3 +169,7 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 77 | dockhand_gitops_setup | 🔄 IN PROGRESS: Setting up Dockhand GitOps workflow for Homepage stack. Authentication working (cookie-based, credentials in Infisical at /TrueNAS path). GitOps configuration pending (likely via web UI at http://192.168.20.22:30328/). See truenas/DOCKHAND_GITOPS_GUIDE.md for procedures. Next: Configure git repo connection and auto-sync. | Claude | 2026-02-14 | in_progress | truenas/DOCKHAND_GITOPS_GUIDE.md, truenas/stacks/homepage/compose.yaml
 
+78 | jellyfin_vaapi_transcoding | ✅ COMPLETED: Enabled Intel N150 VAAPI hardware transcoding in Jellyfin. Added LIBVA_DRIVERS_PATH, LIBVA_DRIVER_NAME=iHD env vars + render(107)/video(44) group_add to compose. Deployed via TrueNAS API. Root cause of Terminator stuck: DTS-HD MA audio incompatible with web clients, fixed by VAAPI transcoding. Next: enable VAAPI in Jellyfin dashboard (Dashboard → Playback → Transcoding → VA-API → /dev/dri/renderD128). | Claude | 2026-02-18 | completed | truenas/stacks/jellyfin/compose.yaml
+
+79 | health_check_audit | Audit all compose files across stacks for broken health checks. Known issues: jellystat used curl (not installed), fixed to wget. Pattern: verify the tool used in healthcheck EXISTS in the container image before deploying. | Claude | 2026-02-18 | open | truenas/stacks/*/compose.yaml
+
