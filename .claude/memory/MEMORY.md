@@ -74,7 +74,7 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - VAAPI with Intel iHD driver - confirmed working 2026-02-18, configured via API
 - iHD driver bundled at `/usr/lib/jellyfin-ffmpeg/lib/dri/iHD_drv_video.so` (not system path)
 - Compose: LIBVA_DRIVERS_PATH + LIBVA_DRIVER_NAME + group_add render(107)/video(44) - see compose.yaml
-- Jellyfin API key in Infisical: **env dev, path `/` (root)** as `JELLYFIN_API_KEY`
+- Jellyfin API key in Infisical: **env dev, path `/media`** as `JELLYFIN_API_KEY` (NOT /TrueNAS, NOT /)
 - TrueNAS app update: `PUT /api/v2.0/app/id/{name}` with `{"custom_compose_config": <dict>}` → job ID
 
 ## For Detailed Documentation

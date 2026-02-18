@@ -57,37 +57,34 @@ TOKEN=$(infisical secrets get TRUENAS_API_TOKEN --env dev --path /TrueNAS --plai
 
 ## TrueNAS SSH
 
-### Secure SSH with private key from Infisical
-**NEVER store keys in /tmp with predictable names.**
+### Preferred: ssh-agent (key lives in memory only, never on disk)
 ```bash
-# Create secure temp dir (random name, only owner can access)
-KEYDIR=$(mktemp -d)
-chmod 700 "$KEYDIR"
+# Load key from Infisical into agent (memory only - no temp files)
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
 
-# Write the private key
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain > "$KEYDIR/id_ed25519"
-chmod 600 "$KEYDIR/id_ed25519"
+# Run SSH commands normally (agent provides the key automatically)
+ssh kero66@192.168.20.22 "sudo docker ps"
+ssh kero66@192.168.20.22 "sudo docker logs jellyfin --tail 50"
 
-# Use it
-ssh -i "$KEYDIR/id_ed25519" kero66@192.168.20.22 "your-command"
-
-# Clean up immediately
-rm -rf "$KEYDIR"
+# Clean up agent when done
+ssh-agent -k > /dev/null
 ```
 
-### Single-use SSH with automatic cleanup
+### SCP with ssh-agent
 ```bash
-KEYDIR=$(mktemp -d) && chmod 700 "$KEYDIR"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
-ssh -i "$KEYDIR/id" kero66@192.168.20.22 "echo hello"
-rm -rf "$KEYDIR"
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+scp local_file.txt kero66@192.168.20.22:/mnt/Fast/docker/service/
+ssh-agent -k > /dev/null
 ```
 
-### SCP a file to TrueNAS
+### Fallback: temp file (if ssh-agent fails)
+**If you must use a temp file, use mktemp -d for a random path and always clean up.**
 ```bash
 KEYDIR=$(mktemp -d) && chmod 700 "$KEYDIR"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
-scp -i "$KEYDIR/id" local_file.txt kero66@192.168.20.22:/mnt/Fast/docker/service/
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
+ssh -i "$KEYDIR/id" kero66@192.168.20.22 "your-command"
 rm -rf "$KEYDIR"
 ```
 
@@ -450,16 +447,31 @@ cp key /tmp/id_rsa
 
 ---
 
+## Infisical Folder Structure
+
+Root folders (run `infisical secrets folders get --env dev --path /` to list):
+- `/TrueNAS` - TrueNAS infrastructure secrets (SSH keys, API tokens)
+- `/media` - All media stack secrets (Jellyfin, Sonarr, Radarr, etc.)
+- `/homepage` - Homepage dashboard secrets
+- `/monitoring` - Monitoring stack secrets
+- `/networking` - Networking secrets
+- `/proxy` - Reverse proxy secrets
+- `/automations` - Automation secrets
+
 ## Infisical Secret Locations Reference
 
 | Secret Name | Environment | Path | Notes |
 |---|---|---|---|
 | `TRUENAS_API_TOKEN` | dev | `/TrueNAS` | Bearer token for TrueNAS REST API |
 | `kero66_ssh_key` | dev | `/TrueNAS` | ED25519 private key for kero66@192.168.20.22 |
-| `JELLYFIN_API_KEY` | dev | `/` | Root path, NOT /TrueNAS |
-| `POSTGRES_USER` | dev | `/TrueNAS` | Jellystat DB credentials |
-| `POSTGRES_PASSWORD` | dev | `/TrueNAS` | Jellystat DB credentials |
-| `JWT_SECRET` | dev | `/TrueNAS` | Jellystat JWT secret |
+| `JELLYFIN_API_KEY` | dev | `/media` | NOT /TrueNAS, NOT root / |
+| `JELLYSEERR_API_KEY` | dev | `/media` | Base64-encoded |
+| `SONARR_API_KEY` | dev | `/media` | |
+| `RADARR_API_KEY` | dev | `/media` | |
+| `PROWLARR_API_KEY` | dev | `/media` | |
+| `SABNZBD_API_KEY` | dev | `/media` | |
+| `JELLYSTAT_DB_PASS` | dev | `/media` | |
+| `JELLYSTAT_JWT_SECRET` | dev | `/media` | |
 
 ---
 
