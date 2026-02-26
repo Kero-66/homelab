@@ -4,6 +4,51 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-02-26 - JetKVM Tailscale + Caddy Integration (COMPLETED)
+
+### What Was Done
+
+Set up Tailscale on JetKVM and added it to the Caddy/AdGuard reverse proxy stack.
+
+### Changes Made
+
+1. **Infisical `/networking`** — stored `JETKVM_PW`, `JETKVM_SSH_PUBLIC_KEY`, `JETKVM_SSH_PRIVATE_KEY`
+2. **JetKVM** — Developer Mode enabled, dedicated Ed25519 SSH key added
+3. **Tailscale installed** on JetKVM via `https://jetkvm.com/install-tailscale.sh -y` with `TRUENAS_TAILSCALE_AUTH_KEY`
+4. **`truenas/stacks/caddy/Caddyfile`** — added `jetkvm.home` block (`reverse_proxy 192.168.20.25:80`)
+5. **Live Caddy reloaded** via `scp` + `caddy reload` (no restart)
+6. **AdGuard DNS rewrite** added: `jetkvm.home` → 192.168.20.22 (done by user)
+7. **`truenas/DEPLOYMENT_GUIDE.md`** — fully rewritten (was stale: said "cannot create programmatically")
+8. **`truenas/FRONTEND_STACK_DEPLOYMENT.md`** — added `jetkvm.home` to DNS rewrite table
+9. **`ai/reference.md`** — new JetKVM Tailscale section with SSH pattern and install command
+10. **`ai/todo.md`** — item #80 added (completed)
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| JetKVM LAN IP | 192.168.20.25 |
+| JetKVM web UI | http://jetkvm.home (via Caddy) |
+| JetKVM SSH user | `root` (key-based only) |
+| SSH key in Infisical | `/networking/JETKVM_SSH_PRIVATE_KEY` |
+| Tailscale auth key used | `TRUENAS_TAILSCALE_AUTH_KEY` at `/TrueNAS` |
+| Caddy proxy | `reverse_proxy 192.168.20.25:80` (not container name — external device) |
+
+### Pattern: Adding a New Non-Docker Device to Caddy
+
+For devices that are not Docker containers (JetKVM, TrueNAS UI, etc.):
+
+1. Add to `truenas/stacks/caddy/Caddyfile` using IP, not container name:
+   ```
+   http://device.home {
+       reverse_proxy 192.168.20.X:PORT
+   }
+   ```
+2. `scp` Caddyfile to TrueNAS + `caddy reload`
+3. Add DNS rewrite in AdGuard: `device.home` → `192.168.20.22`
+
+---
+
 ## Session 2026-02-26 - Tailscale + Caddy Remote Access (COMPLETED)
 
 ### What Was Done

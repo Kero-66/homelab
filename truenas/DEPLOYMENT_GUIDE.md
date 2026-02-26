@@ -1,154 +1,186 @@
-# TrueNAS Jellyfin Stack Deployment Guide
+# TrueNAS Stack Deployment Guide
 
 ## Overview
 
-This guide deploys Jellyfin, Jellyseerr, and Jellystat as Custom Apps on **TrueNAS Scale 25.10.1** with Infisical Agent for secrets management.
+This guide covers deploying all Custom App stacks on **TrueNAS Scale 25.10.1** with Infisical Agent for secrets management.
 
-**Important:** Custom Apps cannot be created via the REST API. Use `midclt call -j app.create` via SSH — see `ai/PATTERNS.md` → "Create a new Custom App". The Web UI also works but is not required.
+**Deployed stacks (all running):**
+- `infisical-agent` — renders `.env` files from Infisical secrets
+- `jellyfin` — Jellyfin, Jellyseerr, Jellystat + DB
+- `arr-stack` — Sonarr, Radarr, Prowlarr, Bazarr, Recyclarr, FlareSolverr, Cleanuparr
+- `downloaders` — qBittorrent, SABnzbd
+- `caddy` — reverse proxy for all `.home` domains
+- `adguard-home` — local DNS (resolves `.home` → 192.168.20.22)
+- `homepage` — dashboard
+- `tailscale` — subnet router for remote access
+
+**Important:** Custom Apps cannot be created via the REST API. Use `midclt call -j app.create` via SSH — see `ai/PATTERNS.md` → "Create a new Custom App".
+
+---
 
 ## Prerequisites
 
-### Pre-Deployment
-
-1. **Infisical Machine Identity** created and configured
-   - See [INFISICAL_SETUP.md](../docs/INFISICAL_GUIDE.md) for details
-   - Must have `Universal Auth` credentials ready
-
-2. **TrueNAS API Key** stored in Infisical
-   - Path: `/TrueNAS/truenas_admin_api`
-   - Current system: 192.168.20.22 (HTTPS)
-
-3. **Docker IPv6 Fix** applied
-   - IPv6 address pools removed to force IPv4-only operation
-   - This resolves image pull timeouts (home network lacks IPv6 routing)
-   - **Status:** ✅ Applied via Job 5442
-
-4. **Setup Agent Deployed**
-   - Run: `bash truenas/scripts/setup_agent.sh`
-   - This uploads all configs to `/mnt/Fast/docker/` on TrueNAS
-
-## Step 1: Create infisical-agent Custom App (Web UI)
-
-### Navigate to Apps
-
-1. Open TrueNAS Scale Web UI: **https://192.168.20.22**
-2. Go to **Apps** → **Discover**
-3. Click **Custom App** (bottom right)
-
-### Create App
-
-1. **Release Name:** `infisical-agent`
-2. **Version:** `1.0.0`
-3. **Compose YAML:** Copy from [truenas/stacks/infisical-agent/compose.yaml](./stacks/infisical-agent/compose.yaml)
-
-```yaml
-services:
-  infisical-agent:
-    image: infisical/cli:latest
-    container_name: infisical-agent
-    restart: unless-stopped
-    command: agent --config /config/agent-config.yaml
-    volumes:
-      # Agent config and templates (on Fast pool)
-      - /mnt/Fast/docker/infisical-agent/config:/config:ro
-      # Output directory - agent writes .env files here
-      - /mnt/Fast/docker:/output
-```
-
-4. Click **Install**
-   - Wait for job to complete (image pull should now work with IPv4-only Docker)
-   - Container will start and begin rendering secrets
-
-### Verify Deployment
-
-1. Go to **Apps** → **Installed**
-2. Look for **infisical-agent** in the list
-3. Check status: **ACTIVE**
-
-This app runs in the background and writes `.env` files to `/mnt/Fast/docker/` based on the templates it finds.
+1. **Infisical Machine Identity** configured with `Universal Auth` credentials
+2. **TrueNAS API Key** stored in Infisical at `/TrueNAS/truenas_admin_api`
+3. **SSH access** via kero66 key from Infisical (`kero66_ssh_key` at `/TrueNAS`)
+4. **Docker IPv6 fix** applied (Job 5442 — IPv6 pools removed, forcing IPv4-only)
 
 ---
 
-## Step 2: Create jellyfin Custom App (Web UI)
+## Deploying a New Stack
 
-### Navigate to Apps
-
-1. Apps → Discover → Custom App
-
-### Create App
-
-1. **Release Name:** `jellyfin`
-2. **Version:** `1.0.0`
-3. **Compose YAML:** Copy from [truenas/stacks/jellyfin/compose.yaml](./stacks/jellyfin/compose.yaml)
-
-```yaml
-services:
-  jellyfin:
-    image: jellyfin/jellyfin:latest
-    container_name: jellyfin
-    restart: unless-stopped
-    ports:
-      - "8096:8096"    # Web UI
-      - "8920:8920"    # HTTPS (optional)
-    environment:
-      - TZ=America/Chicago
-      - PUID=1000
-      - PGID=1000
-    volumes:
-      # Jellyfin config (migrated from old system)
-      - /mnt/Fast/docker/jellyfin/config:/config
-      # Video cache
-      - /mnt/Fast/docker/jellyfin/cache:/cache
-      # Media library mounts
-      - /mnt/Data/media/movies:/media/movies:ro
-      - /mnt/Data/media/shows:/media/shows:ro
-    devices:
-      # GPU passthrough (if applicable — check GPU_PASSTHROUGH_CONTEXT.md)
-      # - /dev/dri/renderD128:/dev/dri/renderD128
-
-  jellyseerr:
-    image: fallenbagel/jellyseerr:latest
-    container_name: jellyseerr
-    restart: unless-stopped
-    ports:
-      - "5055:5055"
-    environment:
-      - TZ=America/Chicago
-      - PUID=1000
-      - PGID=1000
-    volumes:
-      - /mnt/Fast/docker/jellyseerr/config:/app/config
-```
-
-4. Click **Install**
-   - Image pull should complete successfully
-   - Services will start on ports **8096** (Jellyfin) and **5055** (Jellyseerr)
-
-### Verify Deployment
-
-1. **Jellyfin:** Open http://192.168.20.22:8096
-   - Library should contain migrated media (config restored)
-2. **Jellyseerr:** Open http://192.168.20.22:5055
-   - Configuration will need to be re-applied
-
----
-
-## Step 3: Restore Jellystat Database (Manual)
-
-After the Jellyfin app is running:
-
-1. SSH to TrueNAS (if SSH is enabled) OR use the TrueNAS Web UI shell
-2. Execute:
+### Preferred: midclt via SSH (no Web UI needed)
 
 ```bash
-# Restore Jellystat DB dump
-docker exec -i jellyfin-db mysql -u root -p$MYSQL_ROOT_PASSWORD jellystat < /mnt/Fast/docker/jellyfin/jellystat_db_dump.sql
+# From workstation repo root
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
 
-# Or via mysql container if available
-docker compose -f /some/path/compose.yaml exec -i db mysql -u root -p$MYSQL_ROOT_PASSWORD jellystat < /mnt/Fast/docker/jellyfin/jellystat_db_dump.sql
+APP_NAME=my-app  # replace with actual app name
+python3 -c "
+import json
+compose = open('truenas/stacks/$APP_NAME/compose.yaml').read()
+payload = json.dumps({
+    'custom_app': True,
+    'app_name': '$APP_NAME',
+    'train': 'stable',
+    'custom_compose_config_string': compose
+})
+print(payload)
+" | ssh kero66@192.168.20.22 "cat > /tmp/app_payload.json && sudo midclt call -j app.create \"\$(cat /tmp/app_payload.json)\" 2>&1; rm /tmp/app_payload.json"
+
+ssh-agent -k > /dev/null
 ```
 
-**Note:** If using Infisical Agent to render the database credentials, ensure the agent has completed before running this.
+See `ai/PATTERNS.md` for the full verified pattern.
+
+### Alternative: Web UI
+
+1. TrueNAS Web UI → Apps → Discover → Custom App
+2. Release Name: `<app-name>`
+3. Version: `1.0.0`
+4. Paste compose YAML from `truenas/stacks/<app-name>/compose.yaml`
+5. Click Install
+
+---
+
+## Updating a Running Stack's Caddyfile
+
+The live Caddyfile is at `/mnt/Fast/docker/caddy/Caddyfile` on TrueNAS (the repo file is source of truth).
+
+```bash
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+
+# Copy repo file to live location
+scp truenas/stacks/caddy/Caddyfile kero66@192.168.20.22:/mnt/Fast/docker/caddy/Caddyfile
+
+# Reload Caddy (graceful, no restart needed)
+ssh kero66@192.168.20.22 "sudo docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
+
+ssh-agent -k > /dev/null
+```
+
+---
+
+## Stack Details
+
+### infisical-agent
+
+Renders `.env` files from Infisical secrets for other stacks.
+
+- Config: `/mnt/Fast/docker/infisical-agent/config/`
+- Output: `/mnt/Fast/docker/{arr-stack,downloaders,jellyfin,homepage}/`
+- Templates: `truenas/stacks/infisical-agent/*.tmpl`
+
+### jellyfin
+
+Media server stack.
+
+- Jellyfin: port 8096 → `http://jellyfin.home`
+- Jellyseerr: port 5055 → `http://jellyseerr.home`
+- Jellystat: port 3001 → `http://jellystat.home`
+- Hardware transcoding: Intel N150 VAAPI via iHD driver (see `ai/PATTERNS.md` → Intel N150 VAAPI)
+- Config: `/mnt/Fast/docker/jellyfin/`
+- Media: `/mnt/Data/media/`
+
+### arr-stack
+
+- Sonarr: `http://sonarr.home`
+- Radarr: `http://radarr.home`
+- Prowlarr: `http://prowlarr.home`
+- Bazarr: `http://bazarr.home`
+- Recyclarr, FlareSolverr, Cleanuparr (no web UI for last two)
+- Config: `/mnt/Fast/docker/arr-stack/`
+- Secrets: rendered from Infisical by infisical-agent
+
+### downloaders
+
+- qBittorrent: `http://qbittorrent.home`
+- SABnzbd: `http://sabnzbd.home`
+- Config: `/mnt/Fast/docker/downloaders/`
+- Downloads: `/mnt/Data/downloads/`
+
+### caddy
+
+Reverse proxy. Listens on :80 and :443.
+
+- Live config: `/mnt/Fast/docker/caddy/Caddyfile`
+- Source of truth: `truenas/stacks/caddy/Caddyfile`
+- To update: scp + `caddy reload` (see above)
+- All `.home` domains proxied except `truenas.home` (redirect to HTTPS IP)
+- External devices (JetKVM, TrueNAS) proxied by IP, not container name
+
+### adguard-home
+
+Local DNS resolver.
+
+- Admin UI: `http://adguard.home` (port 3000 internally, proxied by Caddy)
+- DNS port: 53 (receives queries from router DHCP clients)
+- DNS rewrites: all `.home` domains → 192.168.20.22
+- Upstream DNS: 1.1.1.1 (Cloudflare)
+- Router DHCP: only sends 192.168.20.22 as DNS (no secondary fallback)
+
+### homepage
+
+Dashboard at `http://homepage.home`.
+
+- Config: `/mnt/Fast/docker/homepage/config/`
+- Secrets injected via `.env` from infisical-agent
+
+### tailscale
+
+Subnet router for remote access.
+
+- Advertises `192.168.20.0/24`
+- Split DNS in Tailscale admin: `home` domain → TrueNAS Tailscale IP
+- Result: all `*.home` services work identically over Tailscale
+- Auth key: `TRUENAS_TAILSCALE_AUTH_KEY` in Infisical at `/TrueNAS`
+- State: `/mnt/Fast/docker/tailscale/`
+
+---
+
+## DNS Rewrites (AdGuard Home)
+
+All entries point to `192.168.20.22`. Add/verify at http://adguard.home → Filters → DNS rewrites.
+
+| Domain | Target |
+|--------|--------|
+| `homepage.home` | 192.168.20.22 |
+| `jellyfin.home` | 192.168.20.22 |
+| `jellyseerr.home` | 192.168.20.22 |
+| `jellystat.home` | 192.168.20.22 |
+| `sonarr.home` | 192.168.20.22 |
+| `radarr.home` | 192.168.20.22 |
+| `prowlarr.home` | 192.168.20.22 |
+| `bazarr.home` | 192.168.20.22 |
+| `qbittorrent.home` | 192.168.20.22 |
+| `sabnzbd.home` | 192.168.20.22 |
+| `adguard.home` | 192.168.20.22 |
+| `cleanuparr.home` | 192.168.20.22 |
+| `flaresolverr.home` | 192.168.20.22 |
+| `truenas.home` | 192.168.20.22 |
+| `jetkvm.home` | 192.168.20.22 |
 
 ---
 
@@ -156,115 +188,41 @@ docker compose -f /some/path/compose.yaml exec -i db mysql -u root -p$MYSQL_ROOT
 
 ### Image Pull Failures
 
-If you see **"context deadline exceeded"** or **"network is unreachable"** errors:
+IPv6 pools were removed (Job 5442) — all image pulls now use IPv4 only. If pulls fail again:
 
-1. **IPv6 is the culprit**
-   - The home network lacks IPv6 routing
-   - Docker tries AAAA (IPv6) records first and times out
-   
-2. **Fix Applied:**
-   - Job 5442: Removed IPv6 address pools from Docker daemon config
-   - Verified: `GET /api/v2.0/docker` shows only `172.17.0.0/12` (IPv4)
-
-3. **If issues persist:**
-   - Check TrueNAS Docker logs: `Apps → App > view logs`
-   - Or from shell: `docker logs <app_name>`
-
-### Agent Not Rendering Secrets
-
-If `.env` files are not being created:
-
-1. Verify `infisical-agent` is **ACTIVE** in Apps list
-2. Check agent logs: **Apps** → **infisical-agent** → **Logs**
-3. Verify config file exists on TrueNAS:
-   ```bash
-   # Via TrueNAS shell or mounted filesystem
-   ls -la /mnt/Fast/docker/infisical-agent/config/
-   ```
-4. Ensure Infisical credentials are correct in `/config/agent-config.yaml`
-
-### Services Not Starting
-
-1. Check **Apps** → **Installed** for error status
-2. Review logs for the app
-3. Common issues:
-   - Port conflicts (check if 8096, 5055 are already in use)
-   - Volume mount failures (verify paths exist on TrueNAS)
-   - Missing environment variables (check Infisical paths)
-
----
-
-## Configuration Files
-
-All files needed for deployment have been uploaded to TrueNAS by `setup_agent.sh`:
-
-### Location on TrueNAS
-
-```
-/mnt/Fast/docker/
-├── infisical-agent/
-│   └── config/
-│       ├── agent-config.yaml          # Updated with TrueNAS IP
-│       └── jellyfin.tmpl              # Template for jellyfin.env
-├── jellyfin/
-│   ├── config/                        # Jellyfin app config (migrated)
-│   ├── cache/                         # Cache directory
-│   └── jellystat_db_dump.sql          # Database backup for restore
-└── jellyseerr/
-    └── config/                        # Jellyseerr config (to be reconfigured)
+```bash
+TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /TrueNAS --plain)
+curl -sk "https://192.168.20.22/api/v2.0/docker" \
+  -H "Authorization: Bearer $TRUENAS_API_KEY" | jq '.address_pools[].base'
+# Expected: only 172.17.0.0/12
 ```
 
-### Compose Files (in repo)
+### Infisical Agent Not Rendering Secrets
 
-- [truenas/stacks/infisical-agent/compose.yaml](./stacks/infisical-agent/compose.yaml)
-- [truenas/stacks/jellyfin/compose.yaml](./stacks/jellyfin/compose.yaml)
+```bash
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+ssh kero66@192.168.20.22 "sudo docker logs infisical-agent --tail 30"
+ssh-agent -k > /dev/null
+```
 
----
+### Caddy Not Proxying Correctly
 
-## Next Steps
+```bash
+# Check live Caddyfile matches repo
+ssh kero66@192.168.20.22 "sudo docker exec caddy cat /etc/caddy/Caddyfile"
 
-1. ✅ Create **infisical-agent** Custom App (secrets rendering)
-2. ✅ Create **jellyfin** Custom App (media server + Jellyseerr)
-3. ✅ Restore Jellystat database
-4. Configure Jellyseerr to connect to Sonarr/Radarr (manual)
-5. Test media playback in Jellyfin
+# Reload if needed
+ssh kero66@192.168.20.22 "sudo docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
+```
 
 ---
 
 ## References
 
-- [GPU Passthrough Context](../.github/GPU_PASSTHROUGH_CONTEXT.md) — check before enabling GPU
-- [Infisical Setup](../docs/INFISICAL_GUIDE.md) — Machine Identity setup
-- [TrueNAS TROUBLESHOOTING](../.github/TROUBLESHOOTING.md) — API reference
-
----
-
-## API Reference (For Future Automation)
-
-### Docker Config Status
-
-Check IPv6 pools are removed:
-
-```bash
-TNAS_KEY=$(infisical secrets get truenas_admin_api --env dev --path /TrueNAS --domain "http://localhost:8081" --plain 2>/dev/null)
-curl -sk "https://192.168.20.22/api/v2.0/docker" \
-  -H "Authorization: Bearer $TNAS_KEY" 2>/dev/null | jq '.address_pools[].base'
-```
-
-**Expected output:** `172.17.0.0/12` only (no IPv6 pools)
-
-### List Deployed Apps
-
-```bash
-curl -sk "https://192.168.20.22/api/v2.0/app" \
-  -H "Authorization: Bearer $TNAS_KEY" 2>/dev/null | jq '[.[] | {release_name, status}]'
-```
-
----
-
-## Notes
-
-- **TrueNAS 25.10.1 Limitation:** Custom Apps cannot be created programmatically; Web UI is required.
-- **Media paths:** Adjust `/mnt/Data/media/` paths to match your actual TrueNAS pool/dataset structure.
-- **Timezone:** Set `TZ` environment variable in compose files to match your location.
-
+- **Verified commands**: `ai/PATTERNS.md` — check before trial-and-error
+- **Architecture**: `truenas/README.md`
+- **Frontend stack**: `truenas/FRONTEND_STACK_DEPLOYMENT.md`
+- **Migration checklist**: `truenas/MIGRATION_CHECKLIST.md`
+- **Troubleshooting**: `.github/TROUBLESHOOTING.md`
+- **TrueNAS API**: https://www.truenas.com/docs/scale/api/

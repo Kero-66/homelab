@@ -141,6 +141,7 @@ adguard.home      → 192.168.20.22
 cleanuparr.home   → 192.168.20.22
 flaresolverr.home → 192.168.20.22
 truenas.home      → 192.168.20.22
+jetkvm.home       → 192.168.20.22
 ```
 
 4. Click **Save**

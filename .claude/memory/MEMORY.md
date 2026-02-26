@@ -72,6 +72,14 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 # API requires HTTPS (http returns 308 redirect that drops auth header)
 ```
 
+## Tailscale (Remote Access) - Deployed 2026-02-26
+- **Stack**: `truenas/stacks/tailscale/` — subnet router, host network mode
+- **Subnet advertised**: `192.168.20.0/24`
+- **Split DNS**: Tailscale admin → DNS → custom nameserver for domain `home` → TrueNAS Tailscale IP
+- **Result**: All `*.home` services work identically over Tailscale as on LAN
+- **Auth key secret**: `TRUENAS_TAILSCALE_AUTH_KEY` in Infisical at `/TrueNAS`
+- **Deploy new apps**: `midclt call -j app.create` via SSH — NOT REST API. See PATTERNS.md.
+
 ## Jellyfin Hardware Transcoding (Intel N150)
 - VAAPI with Intel iHD driver - confirmed working 2026-02-18, configured via API
 - iHD driver bundled at `/usr/lib/jellyfin-ffmpeg/lib/dri/iHD_drv_video.so` (not system path)
