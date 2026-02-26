@@ -97,7 +97,9 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 51 | truenas_homepage_remote_access | Configure Homepage to access TrueNAS containers (192.168.20.22) instead of localhost. Caddy reverse proxy or direct IP configuration needed. | Claude | 2026-02-12 | open | apps/homepage/, networking/
 
-52 | truenas_tailscale_external_access | Set up Tailscale for external access to Jellyfin and other services. Generate auth key, deploy container, configure subnet routing. | Claude | 2026-02-12 | open | truenas/stacks/tailscale/, truenas/ARR_DEPLOYMENT.md
+52 | truenas_tailscale_external_access | ✅ COMPLETED: Tailscale deployed as subnet router (100.98.14.66). Split DNS configured in Tailscale admin: nameserver 100.98.14.66 for domain `home`. All *.home services work over Tailscale via AdGuard + Caddy. Key: TRUENAS_TAILSCALE_AUTH_KEY in Infisical /TrueNAS. Deploy via midclt (see PATTERNS.md), NOT Web UI or REST API. | Claude | 2026-02-26 | completed | truenas/stacks/tailscale/, ai/PATTERNS.md
+
+80 | jetkvm_tailscale_setup | ✅ COMPLETED: Enabled Tailscale on JetKVM (192.168.20.25). Developer Mode enabled, dedicated SSH key pair generated and stored in Infisical (/networking: JETKVM_SSH_PUBLIC_KEY, JETKVM_SSH_PRIVATE_KEY). Used TRUENAS_TAILSCALE_AUTH_KEY from /TrueNAS. SSH user: root. Health check warnings (DNS/socket) are expected on BusyBox and do not affect connectivity. Check Tailscale admin console for IP/hostname. | Claude | 2026-02-26 | completed | ai/reference.md
 
 53 | claude_memory_review | Review and consolidate .claude/memory files to properly reference .github and ai/ folder content. Ensure consistency and remove duplication. | Claude | 2026-02-12 | open | ~/.claude/projects/-mnt-library-repos-homelab/memory/, .github/, ai/
 

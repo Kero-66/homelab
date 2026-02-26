@@ -10,7 +10,7 @@
 
 {{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/TrueNAS" }}
 {{- range . }}
-{{- if eq .Key "TAILSCALE_AUTHKEY" }}
+{{- if eq .Key "TRUENAS_TAILSCALE_AUTH_KEY" }}
 TS_AUTHKEY={{ .Value }}
 {{- end }}
 {{- end }}

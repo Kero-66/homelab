@@ -4,6 +4,47 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-02-26 - Tailscale + Caddy Remote Access (COMPLETED)
+
+### What Was Done
+
+Deployed Tailscale as subnet router on TrueNAS and configured Split DNS so all `.home` services work over Tailscale identically to LAN.
+
+### Changes Made
+
+1. **`truenas/stacks/infisical-agent/tailscale.tmpl`** — Fixed secret key name: `TAILSCALE_AUTHKEY` → `TRUENAS_TAILSCALE_AUTH_KEY` (matches actual Infisical secret)
+2. **Tailscale deployed** via `midclt call -j app.create` (not Web UI, not REST API — see PATTERNS.md)
+3. **Subnet routes approved** in Tailscale admin console for `192.168.20.0/24`
+4. **Split DNS configured** in Tailscale admin → DNS → Custom nameserver: `100.98.14.66` restricted to domain `home`
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| TrueNAS Tailscale IP | `100.98.14.66` |
+| Hostname | `truenas` |
+| Subnet advertised | `192.168.20.0/24` |
+| Split DNS nameserver | `100.98.14.66` (AdGuard Home port 53) |
+| Split DNS domain | `home` |
+| Auth key secret | `TRUENAS_TAILSCALE_AUTH_KEY` at `/TrueNAS` in Infisical |
+| State persisted | `/mnt/Fast/docker/tailscale` |
+
+### How It Works
+
+- Tailscale runs in host network mode (`network_mode: host`) — required for subnet routing
+- When on Tailscale, DNS queries for `*.home` are routed to `100.98.14.66:53` (AdGuard) via Split DNS
+- AdGuard resolves all `.home` entries to `192.168.20.22`
+- Caddy on `192.168.20.22:80` proxies to the correct container
+- Result: `http://jellyfin.home` works identically on LAN and over Tailscale
+
+### Critical Discovery: midclt for App Creation
+
+- **REST API** (`POST /api/v2.0/app`) cannot create Custom Apps — schema validation always fails
+- **Web UI** is NOT required — use `midclt call -j app.create` via SSH instead
+- See PATTERNS.md → "Create a new Custom App" for the exact command pattern
+
+---
+
 ## Session 2026-02-18 - Jellyfin Playback Fix + VAAPI Hardware Transcoding (COMPLETED)
 
 ### What Was Done

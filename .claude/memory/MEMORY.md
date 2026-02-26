@@ -11,6 +11,7 @@
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**
 - **Workstation**: 192.168.20.66 (Fedora, cold spare)
+- **JetKVM**: 192.168.20.25 (LAN, Tailscale enabled) — SSH as root@, key in Infisical `/networking/JETKVM_SSH_PRIVATE_KEY`
 - **Pools**: `/mnt/Fast` (NVMe), `/mnt/Data` (HDD)
 - **Configs**: `/mnt/Fast/docker/<service>/`
 - **Media**: `/mnt/Data/media/{shows,movies,anime,music,tv,downloads}`
@@ -26,6 +27,7 @@
 - **DNS**: Router DHCP sends only 192.168.20.22 (AdGuard Home), no fallback (single point of failure accepted)
 
 ## Common Gotchas
+- **NEVER run `infisical secrets --env dev --path /TrueNAS` without `--plain` on a specific key** - table output exposes ALL secrets in cleartext in tool results. Always use targeted `infisical secrets get <KEY> --env dev --path /path --plain`
 - **ALWAYS check response type before piping to jq** - API endpoints may return HTML, not JSON
 - Use `jq` not `python3 -m json.tool`
 - SSH piped commands fail on TrueNAS → use separate steps

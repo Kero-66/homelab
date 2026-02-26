@@ -225,6 +225,24 @@ job = wait_for_job(session, result["job_id"])
 print(job["state"], job.get("error"))
 ```
 
+### Create a new Custom App (midclt - NOT the REST API)
+```bash
+# REST API cannot create Custom Apps — use midclt via SSH
+# Write payload locally, pipe to TrueNAS, call midclt from there
+python3 -c "
+import json
+compose = open('/mnt/library/repos/homelab/truenas/stacks/APP_NAME/compose.yaml').read()
+payload = json.dumps({
+    'custom_app': True,
+    'app_name': 'APP_NAME',
+    'train': 'stable',
+    'custom_compose_config_string': compose
+})
+print(payload)
+" | ssh kero66@192.168.20.22 "cat > /tmp/app_payload.json && sudo midclt call -j app.create \"\$(cat /tmp/app_payload.json)\" 2>&1; rm /tmp/app_payload.json"
+# Use ssh-agent to provide the key (see TrueNAS SSH section above)
+```
+
 ### Restart an app
 ```bash
 APP=jellyfin

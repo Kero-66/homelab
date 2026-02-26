@@ -77,6 +77,27 @@ Recording rationale:
 - **Agent Communication**: In a Docker bridge network, set `extra_hosts` with `host.docker.internal:host-gateway` on the Hub to allow it to reach the Agent running in `network_mode: host`.
 - **Registration**: System records can be managed via PocketBase API at `/api/collections/systems/records`.
 
+## JetKVM Tailscale Setup (2026-02-26)
+
+- **Device IP**: 192.168.20.25 (LAN), **Tailscale IP**: see Tailscale admin console
+- **SSH user**: `root` (key-based only, Developer Mode must be enabled)
+- **Web UI**: Password-only (no username). Login endpoint: `POST /auth/login-local` with `{"password":"..."}` → sets `auth` cookie (7-day TTL).
+- **Infisical secrets** (env `dev`, path `/networking`):
+  - `JETKVM_PW` — web UI password
+  - `JETKVM_SSH_PUBLIC_KEY` — Ed25519 public key installed on device
+  - `JETKVM_SSH_PRIVATE_KEY` — Ed25519 private key for SSH automation
+- **Tailscale auth key used**: `TRUENAS_TAILSCALE_AUTH_KEY` (env `dev`, path `/TrueNAS`)
+- **Install method**: Official script `https://jetkvm.com/install-tailscale.sh` with `-y` flag (skips TTY prompt):
+  ```bash
+  eval $(ssh-agent -s) > /dev/null
+  infisical secrets get JETKVM_SSH_PRIVATE_KEY --env dev --path /networking --plain | ssh-add - 2>/dev/null
+  TS_AUTH_KEY=$(infisical secrets get TRUENAS_TAILSCALE_AUTH_KEY --env dev --path /TrueNAS --plain)
+  curl -fsSL https://jetkvm.com/install-tailscale.sh | sh -s -- -y 192.168.20.25 -- --authkey="$TS_AUTH_KEY"
+  ssh-agent -k > /dev/null
+  ```
+- **Known warnings** (harmless on BusyBox): `socket: protocol not supported`, `getting OS base config is not supported`, DNS config errors. Tailscale connectivity works fine despite these.
+- **JetKVM REST API**: No Tailscale endpoints — install is SSH-only. See [JetKVM docs](https://jetkvm.com/docs/advanced-usage/developing) for Developer Mode instructions.
+
 ## TrueNAS Scale Custom App Management (2026-02-12)
 - **Documentation**:
   - [Custom App Screens | TrueNAS Documentation Hub](https://www.truenas.com/docs/scale/25.10/scaleuireference/apps/installcustomappscreens/)
@@ -95,6 +116,6 @@ Recording rationale:
   ssh root@TRUENAS 'docker compose -p ix-APP_NAME -f /path/to/compose.yaml up -d'
   ```
 - **Notes**:
-  - TrueNAS 25.10 does not support `app.create` via API for Custom Apps (Web UI required for initial deployment)
+  - TrueNAS 25.10 REST API cannot create Custom Apps — use `midclt call -j app.create` via SSH (see PATTERNS.md)
   - midclt tool can query apps: `midclt call app.query`, `midclt call app.get_instance APP_NAME`
   - Docker networks created by TrueNAS use `ix-APP_NAME_default` naming convention
