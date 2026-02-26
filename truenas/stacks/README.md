@@ -33,6 +33,12 @@ Deploy containerized services on TrueNAS Scale 25.10.1 using Custom Apps.
 |-------|----------|-------|-------------|
 | [infisical-agent](infisical-agent/) | infisical-agent | none | Fetches secrets from Infisical, writes .env files |
 | [jellyfin](jellyfin/) | jellyfin, jellyseerr, jellystat-db, jellystat | 8096, 5055, 3002 | Media server + requests + analytics |
+| [arr-stack](arr-stack/) | sonarr, radarr, prowlarr, bazarr, recyclarr, flaresolverr, cleanuparr | 8989, 7878, 9696, 6767 | Media automation |
+| [downloaders](downloaders/) | qbittorrent, sabnzbd | 8080, 8085 | Download clients |
+| [caddy](caddy/) | caddy | 80, 443 | Reverse proxy for all .home services |
+| [adguard-home](adguard-home/) | adguard-home | 53, 3000 | DNS + ad blocking |
+| [tailscale](tailscale/) | tailscale | host | Subnet router for remote access |
+| [homepage](homepage/) | homepage | 3000 | Dashboard |
 
 ## Prerequisites
 
@@ -129,36 +135,41 @@ infisical secrets set JELLYSTAT_JWT_SECRET="$(openssl rand -base64 32)" --env de
    - Create a template in `infisical-agent/<name>.tmpl`
    - Add a `templates:` entry in `infisical-agent/agent-config.yaml`
    - Redeploy the agent Custom App
-4. Deploy as a new Custom App in TrueNAS UI
+4. Deploy as a new Custom App using `midclt` — see **Deploying Apps** below.
+
+## Deploying Apps
+
+**Do NOT use the TrueNAS REST API or Web UI to create Custom Apps.** Use `midclt` via SSH:
+
+```bash
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+
+python3 -c "
+import json
+compose = open('/mnt/library/repos/homelab/truenas/stacks/APP_NAME/compose.yaml').read()
+print(json.dumps({'custom_app': True, 'app_name': 'APP_NAME', 'train': 'stable', 'custom_compose_config_string': compose}))
+" | ssh kero66@192.168.20.22 "cat > /tmp/p.json && sudo midclt call -j app.create \"\$(cat /tmp/p.json)\" 2>&1; rm /tmp/p.json"
+
+ssh-agent -k > /dev/null
+```
+
+See `ai/PATTERNS.md` → "Create a new Custom App" for the full pattern.
 
 ## Tailscale (Remote Access)
 
-See [Tailscale Setup](#tailscale-setup) below for remote access to services.
+Tailscale runs as a subnet router — all `*.home` services work identically over Tailscale as on LAN.
 
-### Tailscale Setup
+**How it works:**
+- Tailscale advertises `192.168.20.0/24` to your Tailscale network
+- Split DNS in Tailscale admin routes `*.home` queries to AdGuard Home on TrueNAS
+- AdGuard resolves `.home` → `192.168.20.22`, Caddy proxies to the correct container
 
-TrueNAS Scale has a first-party Tailscale app in the App Store.
-
-1. **Install Tailscale** from TrueNAS App Store:
-   - Apps → Discover → search "Tailscale"
-   - Install with default settings
-
-2. **Authenticate**:
-   - Check Tailscale app logs for the auth URL
-   - Open the URL in your browser and approve the device
-   - The TrueNAS machine gets a Tailscale IP (e.g., `100.x.y.z`)
-
-3. **Access services remotely** using the Tailscale IP:
-   - Jellyfin: `http://100.x.y.z:8096`
-   - Jellyseerr: `http://100.x.y.z:5055`
-   - Jellystat: `http://100.x.y.z:3002`
-
-4. **Optional — MagicDNS**: If enabled in your Tailscale admin console, access via hostname:
-   - `http://truenas:8096` (or whatever your TrueNAS machine name is)
-
-5. **Jellyfin client apps**: Configure the server URL to your Tailscale IP for remote streaming.
-
-> **Note**: Tailscale provides encrypted point-to-point connections. No port forwarding or reverse proxy needed for remote access.
+**Setup (one-time):**
+1. Ensure `TRUENAS_TAILSCALE_AUTH_KEY` exists in Infisical at `/TrueNAS`
+2. Deploy the `tailscale` stack using `midclt` (see above)
+3. In Tailscale admin → Machines → approve subnet route `192.168.20.0/24`
+4. In Tailscale admin → DNS → add custom nameserver for domain `home` pointing to TrueNAS Tailscale IP
 
 ## File Layout on TrueNAS
 

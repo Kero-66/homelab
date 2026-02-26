@@ -4,7 +4,7 @@
 
 This guide deploys Jellyfin, Jellyseerr, and Jellystat as Custom Apps on **TrueNAS Scale 25.10.1** with Infisical Agent for secrets management.
 
-**Important:** Custom Apps cannot be created via API in TrueNAS 25.10.1—they must be created through the Web UI. This guide provides step-by-step UI instructions.
+**Important:** Custom Apps cannot be created via the REST API. Use `midclt call -j app.create` via SSH — see `ai/PATTERNS.md` → "Create a new Custom App". The Web UI also works but is not required.
 
 ## Prerequisites
 
