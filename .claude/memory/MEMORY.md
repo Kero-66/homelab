@@ -48,6 +48,16 @@
 - **Verify response types** before piping to tools like jq (check for HTML vs JSON)
 - **Workstation → TrueNAS**: `.config/` → `/mnt/Fast/docker/<service>/`
 - **Migration steps**: backup → mkdir → scp → chown 1000:1000 → deploy via Web UI
+- **REPLICATE EXISTING PATTERNS** - Before doing anything new, read how existing working apps do it. Never invent a different approach.
+- **NO /tmp for working files** - Download/stage files in the repo, SCP to TrueNAS from there. `/tmp` is for secrets only (mktemp -d, cleanup immediately). See PATTERNS.md → File Staging.
+
+## TrueNAS App Management - CRITICAL RULES
+- **NEVER use REST API `PUT /app/id/{name}`** to update compose — breaks running containers with port conflicts
+- **Update compose**: `midclt app.stop` → `midclt app.update` → `midclt app.start` (see PATTERNS.md)
+- **New app**: `midclt app.create` with `custom_compose_config_string` (compose as string, not dict)
+- **Caddyfile**: `scp` to live location → `docker exec caddy caddy reload` (no app restart needed)
+- **Port conflicts**: Check `ss -tlnp` BEFORE designing compose ports. TrueNAS nginx owns 80, 443, 8082
+- **Check ports first**: Always verify free ports before assigning them in compose files
 - **TrueNAS SSH**: Use kero66 key from Infisical (kero66_ssh_key). See secure pattern below.
 - **NEVER store secrets in /tmp with predictable names** - use mktemp -d + cleanup
 
@@ -79,6 +89,15 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - **Result**: All `*.home` services work identically over Tailscale as on LAN
 - **Auth key secret**: `TRUENAS_TAILSCALE_AUTH_KEY` in Infisical at `/TrueNAS`
 - **Deploy new apps**: `midclt call -j app.create` via SSH — NOT REST API. See PATTERNS.md.
+
+## Bazarr (Subtitle Management) - Config 2026-03-17
+- Config file: `/mnt/Fast/docker/bazarr/config/config.yaml` (live) — gitignored, contains API keys
+- Repo reference copy: `media/.config/bazarr/config.yaml` — kept in sync manually after changes
+- `use_embedded_subs: false` — must stay false; embedded subs are often wrong (e.g. bad anime releases)
+- `use_subsync: true` — auto-sync enabled with thresholds (series 90, movie 70)
+- Bazarr API key in Infisical: `BAZARR_API_KEY` path `/media`
+- AnimeTosho subtitle attachments: `https://animetosho.org/view/<slug>` → scrape for `.ass.xz` links
+- AnimeTosho feed search: `https://feed.animetosho.org/json?q=<query>` (returns JSON)
 
 ## Jellyfin Hardware Transcoding (Intel N150)
 - VAAPI with Intel iHD driver - confirmed working 2026-02-18, configured via API

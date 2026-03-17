@@ -3,7 +3,7 @@
 Copy-paste ready reference of commands that have been confirmed to work.
 **No guessing. No trial-and-error. Only verified patterns.**
 
-Last updated: 2026-02-18
+Last updated: 2026-03-17
 
 ---
 
@@ -16,7 +16,10 @@ Last updated: 2026-02-18
 6. [Jellyfin API](#jellyfin-api)
 7. [Healthcheck Tool Availability](#healthcheck-tool-availability)
 8. [Security Patterns](#security-patterns)
-9. [Anti-Patterns (Never Do These)](#anti-patterns-never-do-these)
+9. [File Staging (Working Files)](#file-staging-working-files)
+10. [Bazarr (Subtitle Management)](#bazarr-subtitle-management)
+11. [AnimeTosho (Subtitle Source for Anime)](#animetosho-subtitle-source-for-anime)
+12. [Anti-Patterns (Never Do These)](#anti-patterns-never-do-these)
 
 ---
 
@@ -243,6 +246,50 @@ print(payload)
 # Use ssh-agent to provide the key (see TrueNAS SSH section above)
 ```
 
+### Update an existing app compose (midclt - safe pattern)
+```bash
+# SAFE: stop first to avoid port conflicts, then update, then start
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+
+APP_NAME=commafeed
+# 1. Stop first
+ssh kero66@192.168.20.22 "sudo midclt call -j app.stop $APP_NAME 2>&1 | tail -2"
+# 2. Push new compose
+python3 -c "
+import json
+compose = open('truenas/stacks/$APP_NAME/compose.yaml').read()
+print(json.dumps({'custom_compose_config_string': compose}))
+" | ssh kero66@192.168.20.22 "cat > /tmp/u.json && sudo midclt call -j app.update $APP_NAME \"\$(cat /tmp/u.json)\" 2>&1 | tail -2; rm -f /tmp/u.json"
+# 3. Start
+ssh kero66@192.168.20.22 "sudo midclt call -j app.start $APP_NAME 2>&1 | tail -2"
+
+ssh-agent -k > /dev/null
+```
+
+### ⚠️ NEVER use REST API PUT /app/id/{name} to update compose
+```
+# BROKEN: REST API PUT triggers container recreation WHILE the old one is running,
+# causing port conflicts and leaving the app in a broken Created state.
+# Use midclt stop → update → start instead (see above).
+```
+
+### Delete and re-create an app (nuclear option)
+```bash
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+
+APP_NAME=caddy
+ssh kero66@192.168.20.22 "sudo midclt call -j app.delete $APP_NAME 2>&1 | tail -2"
+python3 -c "
+import json
+compose = open('truenas/stacks/$APP_NAME/compose.yaml').read()
+print(json.dumps({'custom_app': True, 'app_name': '$APP_NAME', 'train': 'stable', 'custom_compose_config_string': compose}))
+" | ssh kero66@192.168.20.22 "cat > /tmp/a.json && sudo midclt call -j app.create \"\$(cat /tmp/a.json)\" 2>&1 | tail -3; rm -f /tmp/a.json"
+
+ssh-agent -k > /dev/null
+```
+
 ### Restart an app
 ```bash
 APP=jellyfin
@@ -448,6 +495,116 @@ cp key /tmp/id_rsa
 
 ---
 
+## File Staging (Working Files)
+
+**NEVER use `/tmp` for working files** — only for SSH keys (mktemp -d, cleanup immediately).
+Stage working files in the repo, SCP to TrueNAS from there.
+
+```bash
+# CORRECT: stage in repo, SCP to TrueNAS, clean up from repo when done
+WORKDIR="/mnt/library/repos/homelab/scratch"  # gitignored directory
+mkdir -p "$WORKDIR"
+# ... download/create files in $WORKDIR ...
+scp "$WORKDIR/file.ext" kero66@192.168.20.22:/mnt/Fast/docker/service/
+rm -rf "$WORKDIR"
+```
+
+---
+
+## Bazarr (Subtitle Management)
+
+### API setup
+```bash
+BAZARR_API_KEY=$(infisical secrets get BAZARR_API_KEY --env dev --path /media --plain 2>/dev/null)
+BAZARR_BASE="http://192.168.20.22:6767/bazarr/api"
+```
+
+### Get all settings
+```bash
+curl -s -H "X-API-KEY: $BAZARR_API_KEY" "$BAZARR_BASE/system/settings" | jq '.'
+```
+
+### Update settings (POST with full object required — partial updates don't work)
+```bash
+curl -s -H "X-API-KEY: $BAZARR_API_KEY" "$BAZARR_BASE/system/settings" > /tmp/s.json
+# edit /tmp/s.json, then:
+curl -s -X POST -H "X-API-KEY: $BAZARR_API_KEY" -H "Content-Type: application/json" \
+  -d @/tmp/s.json "$BAZARR_BASE/system/settings"
+rm /tmp/s.json
+# Then SCP the updated config into repo: scp truenas:/mnt/Fast/docker/bazarr/config/config.yaml media/.config/bazarr/config.yaml
+```
+
+### Find a series/episode
+```bash
+# Series (returns sonarrSeriesId as 'id')
+curl -s -H "X-API-KEY: $BAZARR_API_KEY" "$BAZARR_BASE/series" | jq '[.data[] | select(.title | test("keyword";"i")) | {id: .sonarrSeriesId, title}]'
+
+# Episodes for a series (use sonarrSeriesId from above)
+curl -s -H "X-API-KEY: $BAZARR_API_KEY" "$BAZARR_BASE/episodes?seriesid[]=$SERIES_ID" | jq '[.data[] | select(.episode == 8) | {id: .sonarrEpisodeId, title, path, subtitles}]'
+```
+
+### Key config values (confirmed correct)
+- `use_embedded_subs: false` — do NOT trust embedded subs (releases often ship wrong ones)
+- `use_subsync: true` — auto-sync downloaded subs to audio
+- `use_subsync_threshold: true`, `subsync_threshold: 90`
+- `use_subsync_movie_threshold: true`, `subsync_movie_threshold: 70`
+- Config on TrueNAS: `/mnt/Fast/docker/bazarr/config/config.yaml` (gitignored — sync to repo manually)
+- Repo reference: `media/.config/bazarr/config.yaml`
+
+---
+
+## AnimeTosho (Subtitle Source for Anime)
+
+AnimeTosho indexes Nyaa releases and hosts subtitle attachments separately — no account needed.
+
+### Search for a release
+```bash
+# JSON feed search (returns array of releases)
+curl -s "https://feed.animetosho.org/json?q=show+name+E08" | python3 -c "
+import json,sys
+for i in json.load(sys.stdin):
+    print(i['title'], '→', i.get('link',''))
+"
+```
+
+### Get subtitle attachment links from a release page
+```bash
+curl -s "https://animetosho.org/view/<slug>" | python3 -c "
+import sys, re
+for l in re.findall(r'href=\"(https://[^\"]*\.ass\.xz[^\"]*?)\"', sys.stdin.read()):
+    print(l)
+"
+```
+
+### Download and extract a subtitle attachment
+```bash
+# Download to repo scratch dir, NOT /tmp
+curl -sL "<animetosho_attach_url>.ass.xz" -o scratch/subtitle.ass.xz
+xz -d scratch/subtitle.ass.xz
+# Verify it has the right content before using:
+grep '^Dialogue:' scratch/subtitle.ass | head -5
+```
+
+### Remux subtitle into MKV (replace a bad embedded track)
+```bash
+# Example: replace track 0:2 (English) with correct external sub
+# -map 0:0 (video) -map 0:1 (audio) -map 1:0 (new sub) -map 0:3..N (keep other subs+attachments)
+sudo docker run --rm \
+  -v '/mnt/Data/media/shows:/shows' \
+  -v '/mnt/library/repos/homelab/scratch:/scratch' \
+  linuxserver/ffmpeg \
+  -i "/shows/Show Name/Season 01/episode.mkv" \
+  -i /scratch/subtitle.ass \
+  -map 0:0 -map 0:1 -map 1:0 -map 0:3 -map 0:4 ... \
+  -c copy \
+  -metadata:s:s:0 language=eng \
+  "/shows/Show Name/Season 01/episode.fixed.mkv"
+# Then rename: mv episode.mkv episode.bak.mkv && mv episode.fixed.mkv episode.mkv
+# Verify then delete bak
+```
+
+---
+
 ## Anti-Patterns (Never Do These)
 
 | Anti-Pattern | Why It Fails | Correct Pattern |
@@ -457,11 +614,14 @@ cp key /tmp/id_rsa
 | Pipe API response directly to `jq` without checking | Endpoint may return HTML (Angular SPA) not JSON | Check `Content-Type` or `head -c 200` first |
 | `ssh user@host "cmd1 && cmd2 | jq"` | SSH piped commands fail on TrueNAS | Run commands as separate SSH calls |
 | Store key in `/tmp/predictable_name` | Readable by other processes, not cleaned up | Use `mktemp -d`, `chmod 600`, cleanup with `rm -rf` |
+| **Use `/tmp` for working files** | Not version-controlled, easy to forget cleanup | Stage in repo `scratch/` dir, SCP to TrueNAS |
 | Use `curl` in jellystat healthcheck | `curl` not installed in that image | Use `wget --spider` |
 | `infisical secrets get X --env prod` | No prod environment exists | Use `--env dev` |
 | `infisical secrets get JELLYFIN_API_KEY --path /TrueNAS` | Key is at root path | Use `--path /` |
 | `docker ps` as kero66 on TrueNAS | Permission denied | `sudo docker ps` |
 | `python3 -m json.tool` | Not as reliable, doesn't handle all edge cases | Use `jq` |
+| Bazarr partial settings POST | API requires full settings object | GET settings, modify, POST full object back |
+| Trust embedded subs in MKV releases | Encoders sometimes ship wrong subs (e.g. wrong show) | Use `use_embedded_subs: false` in Bazarr; verify with ffmpeg |
 
 ---
 

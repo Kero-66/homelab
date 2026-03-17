@@ -218,6 +218,9 @@ security/infisical/seed_secrets.sh
 # Test/scratch compose configs
 media/config.test.yaml
 
+# Scratch directory for staging working files (subtitles, configs, etc.) before SCP to TrueNAS
+scratch/
+
 # App runtime data (databases, cache, thumbnails) — only config should be committed
 apps/*/data/
 Commafeed/data/

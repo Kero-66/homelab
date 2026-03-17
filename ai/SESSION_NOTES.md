@@ -4,6 +4,43 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-03-17 - Villainess Level 99 E08 Subtitle Fix + Bazarr Config (COMPLETED)
+
+### What Was Done
+
+1. **Fixed wrong subtitles in Villainess Level 99 S01E08**
+   - Root cause: upstream mislabeling — every release (VARYG WEBDL, SubsPlease HDTV) shipped *Mr. Villain's Day Off* subs instead of the correct ones
+   - Fix: downloaded correct English `.ass` from VARYG's REPACK on AnimeTosho, remuxed into existing MKV via `linuxserver/ffmpeg` Docker container on TrueNAS
+   - All other language tracks and font attachments preserved
+
+2. **Fixed Bazarr configuration**
+   - `use_embedded_subs: false` — was `true`, causing Bazarr to skip downloading subs when any embedded track existed (even wrong ones)
+   - `use_subsync: true` + thresholds enabled — auto-sync subtitles after download
+   - Updated live config: `/mnt/Fast/docker/bazarr/config/config.yaml`
+   - Updated repo reference: `media/.config/bazarr/config.yaml`
+
+3. **Established new patterns** (documented in PATTERNS.md):
+   - File staging: use repo `scratch/` dir, NOT `/tmp`, for working files
+   - AnimeTosho feed API and subtitle attachment download workflow
+   - Bazarr API patterns (full-object POST required for settings)
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| AnimeTosho feed API | `https://feed.animetosho.org/json?q=<query>` |
+| AnimeTosho attachment URL pattern | `https://animetosho.org/storage/attach/<hash>/<filename>.ass.xz` |
+| Bazarr API base | `http://192.168.20.22:6767/bazarr/api` |
+| Bazarr API key Infisical path | `/media` → `BAZARR_API_KEY` |
+| Bazarr config on TrueNAS | `/mnt/Fast/docker/bazarr/config/config.yaml` (gitignored) |
+| Bazarr config in repo | `media/.config/bazarr/config.yaml` |
+
+### Lesson Learned
+
+Used `/tmp` for working files (subtitle .ass, bazarr config) during the session — this was wrong. The correct pattern is to stage files in the repo and SCP from there to TrueNAS, keeping everything version-controlled. Updated PATTERNS.md and MEMORY.md with this rule.
+
+---
+
 ## Session 2026-02-26 - JetKVM Tailscale + Caddy Integration (COMPLETED)
 
 ### What Was Done
