@@ -54,3 +54,9 @@ templates:
     destination-path: /output/homepage/.env
     config:
       polling-interval: 5m
+
+  # Commafeed RSS reader secrets
+  - source-path: /config/commafeed.tmpl
+    destination-path: /output/commafeed/.env
+    config:
+      polling-interval: 5m

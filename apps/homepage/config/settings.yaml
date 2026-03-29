@@ -10,14 +10,11 @@ layout:
       style: column
     Downloaders:
       style: column
+  RSS:
+    style: row
+    columns: 4
   Calendar:
     style: row
-  Monitoring:
-    style: row
-    columns: 1
-    Glances:
-      style: row
-      columns: 5
   Status:
     style: row
     columns: 2

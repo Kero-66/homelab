@@ -3,7 +3,7 @@
 Copy-paste ready reference of commands that have been confirmed to work.
 **No guessing. No trial-and-error. Only verified patterns.**
 
-Last updated: 2026-03-17
+Last updated: 2026-03-29
 
 ---
 
@@ -14,12 +14,15 @@ Last updated: 2026-03-17
 4. [TrueNAS App Management](#truenas-app-management)
 5. [Docker on TrueNAS](#docker-on-truenas)
 6. [Jellyfin API](#jellyfin-api)
-7. [Healthcheck Tool Availability](#healthcheck-tool-availability)
-8. [Security Patterns](#security-patterns)
-9. [File Staging (Working Files)](#file-staging-working-files)
-10. [Bazarr (Subtitle Management)](#bazarr-subtitle-management)
-11. [AnimeTosho (Subtitle Source for Anime)](#animetosho-subtitle-source-for-anime)
-12. [Anti-Patterns (Never Do These)](#anti-patterns-never-do-these)
+7. [SABnzbd API](#sabnzbd-api)
+8. [Sonarr API](#sonarr-api)
+9. [qBittorrent API](#qbittorrent-api)
+10. [Healthcheck Tool Availability](#healthcheck-tool-availability)
+11. [Security Patterns](#security-patterns)
+12. [File Staging (Working Files)](#file-staging-working-files)
+13. [Bazarr (Subtitle Management)](#bazarr-subtitle-management)
+14. [AnimeTosho (Subtitle Source for Anime)](#animetosho-subtitle-source-for-anime)
+15. [Anti-Patterns (Never Do These)](#anti-patterns-never-do-these)
 
 ---
 
@@ -351,9 +354,9 @@ ssh -i "$KEYDIR/id" kero66@192.168.20.22 \
 
 ### Setup
 ```bash
-JELLYFIN_BASE="http://192.168.20.22:8096"
-JELLYFIN_API_KEY=$(infisical secrets get JELLYFIN_API_KEY --env dev --path / --plain)
-# NOTE: JELLYFIN_API_KEY is at path "/" not "/TrueNAS"
+JELLYFIN_BASE="http://jellyfin.home"
+JELLYFIN_API_KEY=$(infisical secrets get JELLYFIN_API_KEY --env dev --path /media --plain)
+# NOTE: JELLYFIN_API_KEY is at path "/media" not "/TrueNAS"
 ```
 
 ### Get encoding configuration
@@ -391,7 +394,132 @@ curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
 
 ---
 
-## Healthcheck Tool Availability
+## SABnzbd API
+
+### Setup
+```bash
+SABKEY=$(infisical secrets get SABNZBD_API_KEY --env dev --path /TrueNAS --plain 2>/dev/null)
+SAB_BASE="http://sabnzbd.home"
+```
+
+### Get queue status
+```bash
+curl -s "$SAB_BASE/api?mode=queue&output=json&apikey=$SABKEY" | jq '{status: .queue.status, paused: .queue.paused, slots: .queue.noofslots}'
+```
+
+### Get queue items with status
+```bash
+curl -s "$SAB_BASE/api?mode=queue&output=json&apikey=$SABKEY" | jq '.queue.slots[] | {filename: .filename, status: .status, nzo_id: .nzo_id, labels: .labels}'
+```
+
+### Resume all paused items (does NOT resume individual paused items — use per-item below)
+```bash
+curl -s "$SAB_BASE/api?mode=resume&output=json&apikey=$SABKEY" | jq '.status'
+```
+
+### Resume individual paused items by nzo_id
+```bash
+# Get IDs of paused items first
+IDS=$(curl -s "$SAB_BASE/api?mode=queue&output=json&apikey=$SABKEY" | jq -r '.queue.slots[] | select(.status == "Paused") | .nzo_id')
+for id in $IDS; do
+  curl -s "$SAB_BASE/api?mode=queue&name=resume&value=$id&output=json&apikey=$SABKEY" | jq -r '.status'
+done
+```
+
+### Get/set config values
+```bash
+# Get misc config section
+curl -s "$SAB_BASE/api?mode=get_config&section=misc&output=json&apikey=$SABKEY" | jq '.config.misc | {host_whitelist, pause_on_pwrar}'
+
+# Set a value (example: set encrypted download action to abort/fail instead of pause)
+# pause_on_pwrar: 0=ignore, 1=pause, 2=abort (abort notifies Sonarr as failure → triggers re-search)
+curl -s "$SAB_BASE/api?mode=set_config&section=misc&keyword=pause_on_pwrar&value=2&output=json&apikey=$SABKEY" | jq '.config.misc.pause_on_pwrar'
+```
+
+### Add hostname to whitelist (needed for reverse proxy .home domains)
+```bash
+# Get current whitelist, add new entry
+# First get current whitelist, then append new entry
+CURRENT=$(curl -s "$SAB_BASE/api?mode=get_config&section=misc&output=json&apikey=$SABKEY" | jq -r '.config.misc.host_whitelist | join(",")')
+curl -s "$SAB_BASE/api?mode=set_config&section=misc&keyword=host_whitelist&value=${CURRENT},sabnzbd.home&output=json&apikey=$SABKEY" | jq '.config.misc.host_whitelist'
+# NOTE: Must include 'sabnzbd.home' WITHOUT port — browsers send Host header without port on :80
+```
+
+### Get history with search
+```bash
+curl -s "$SAB_BASE/api?mode=history&output=json&apikey=$SABKEY&search=keyword" | jq '.history.slots[] | {name, status, fail_message}'
+```
+
+---
+
+## Sonarr API
+
+### Setup
+```bash
+SONARR_KEY=$(infisical secrets get SONARR_API_KEY --env dev --path /media --plain 2>/dev/null)
+# NOTE: SONARR_API_KEY is at /media NOT /TrueNAS
+# NOTE: Sonarr redirects — use -L to follow, or it returns 307 with no body
+SONARR_BASE="http://sonarr.home"
+```
+
+### Get queue (follow redirects with -L)
+```bash
+curl -sL "$SONARR_BASE/api/v3/queue?pageSize=100&apikey=$SONARR_KEY" | jq '.totalRecords, (.records[] | {title, status, protocol, trackedDownloadStatus, errorMessage})'
+```
+
+### Get queue for specific protocol
+```bash
+curl -sL "$SONARR_BASE/api/v3/queue?pageSize=100&apikey=$SONARR_KEY" | jq '.records[] | select(.protocol == "usenet") | {title, status, trackedDownloadStatus, errorMessage}'
+```
+
+### Find a series by name
+```bash
+curl -sL "$SONARR_BASE/api/v3/series?apikey=$SONARR_KEY" | jq '.[] | select(.title | ascii_downcase | test("keyword")) | {id, title, path}'
+```
+
+### Get episode files for a series (use series id from above)
+```bash
+SERIES_ID=55
+curl -sL "$SONARR_BASE/api/v3/episodefile?seriesId=$SERIES_ID&apikey=$SONARR_KEY" | jq '[.[] | {path, quality: .quality.quality.name, size, videoCodec: .mediaInfo.videoCodec, videoResolution: .mediaInfo.videoResolution}] | sort_by(.path)'
+```
+
+### Get history for a series
+```bash
+curl -sL "$SONARR_BASE/api/v3/history?seriesId=$SERIES_ID&pageSize=20&apikey=$SONARR_KEY" | jq '.records[] | {date, eventType, sourceTitle}'
+```
+
+### Check download client config (failed download handling)
+```bash
+curl -sL "$SONARR_BASE/api/v3/config/downloadclient?apikey=$SONARR_KEY" | jq '{enableCompletedDownloadHandling, autoRedownloadFailed}'
+```
+
+---
+
+## qBittorrent API
+
+### Setup
+```bash
+QBIT_USER=$(infisical secrets get QBITTORRENT_USER --env dev --path /TrueNAS --plain 2>/dev/null)
+QBIT_PASS=$(infisical secrets get QBITTORRENT_PASS --env dev --path /TrueNAS --plain 2>/dev/null)
+QBIT_BASE="http://qbittorrent.home"
+# Use .home hostname via Caddy — avoids IP ban issues from direct port access
+```
+
+### Login and query
+```bash
+curl -s -c /tmp/qb_cook -X POST "$QBIT_BASE/api/v2/auth/login" -d "username=$QBIT_USER&password=$QBIT_PASS"
+curl -s -b /tmp/qb_cook "$QBIT_BASE/api/v2/torrents/info" | jq '.[] | {name, category, state, ratio, seeding_time}'
+rm -f /tmp/qb_cook
+```
+
+### Filter torrents by name pattern
+```bash
+curl -s -b /tmp/qb_cook "$QBIT_BASE/api/v2/torrents/info" | jq '.[] | select(.name | ascii_downcase | test("keyword")) | {name, category, state, ratio, seeding_time}'
+```
+
+---
+
+
 
 Use this before writing a healthcheck to avoid "command not found" failures.
 
@@ -622,6 +750,12 @@ sudo docker run --rm \
 | `python3 -m json.tool` | Not as reliable, doesn't handle all edge cases | Use `jq` |
 | Bazarr partial settings POST | API requires full settings object | GET settings, modify, POST full object back |
 | Trust embedded subs in MKV releases | Encoders sometimes ship wrong subs (e.g. wrong show) | Use `use_embedded_subs: false` in Bazarr; verify with ffmpeg |
+| Use `192.168.20.22:PORT` for service API calls | Bypasses Caddy, causes IP bans (qBittorrent), misses host verification | Use `http://service.home` — routes through Caddy as intended |
+| `curl http://sonarr.home/api/...` (Sonarr without -L) | Returns 307 redirect with empty body | Always use `curl -sL` for Sonarr |
+| Pipe SSH output through local `base64` for auth headers | Variable expansion breaks across SSH boundary | Use `curl -u 'user:pass'` instead |
+| SABnzbd `mode=queue&name=resume` (resume all) | Does NOT resume individually paused items | Use `mode=queue&name=resume&value=<nzo_id>` per item |
+| `pause_on_pwrar=1` (SABnzbd default) | Pauses encrypted downloads — Sonarr sees "paused" not "failed", never re-searches | Set to `2` (abort) so Sonarr gets failure notification |
+| Assume Cleanuparr API is unauthenticated | Returns `{"error":"Setup required"}` for all unauthed requests — looks like misconfiguration | Cleanuparr requires login; "setup required" on API = auth failure, not missing config |
 
 ---
 
@@ -642,12 +776,18 @@ Root folders (run `infisical secrets folders get --env dev --path /` to list):
 |---|---|---|---|
 | `TRUENAS_API_TOKEN` | dev | `/TrueNAS` | Bearer token for TrueNAS REST API |
 | `kero66_ssh_key` | dev | `/TrueNAS` | ED25519 private key for kero66@192.168.20.22 |
+| `truenas_admin_api` | dev | `/TrueNAS` | TrueNAS admin API key |
+| `ADGUARD_PASSWORD` | dev | `/TrueNAS` | AdGuard Home admin password |
+| `QBITTORRENT_USER` | dev | `/TrueNAS` | qBittorrent username |
+| `QBITTORRENT_PASS` | dev | `/TrueNAS` | qBittorrent password |
+| `CLEANUPARR_API_KEY` | dev | `/media` | Cleanuparr API key |
 | `JELLYFIN_API_KEY` | dev | `/media` | NOT /TrueNAS, NOT root / |
 | `JELLYSEERR_API_KEY` | dev | `/media` | Base64-encoded |
-| `SONARR_API_KEY` | dev | `/media` | |
+| `SONARR_API_KEY` | dev | `/media` | NOT /TrueNAS |
 | `RADARR_API_KEY` | dev | `/media` | |
 | `PROWLARR_API_KEY` | dev | `/media` | |
-| `SABNZBD_API_KEY` | dev | `/media` | |
+| `SABNZBD_API_KEY` | dev | `/TrueNAS` | NOT /media |
+| `BAZARR_API_KEY` | dev | `/media` | |
 | `JELLYSTAT_DB_PASS` | dev | `/media` | |
 | `JELLYSTAT_JWT_SECRET` | dev | `/media` | |
 

@@ -57,12 +57,12 @@ http://qbittorrent.home {
 
 # SABnzbd (Usenet)
 http://sabnzbd.home {
-	reverse_proxy sabnzbd:8085
+	reverse_proxy sabnzbd:8080
 }
 
 # AdGuard Home (DNS Admin)
 http://adguard.home {
-	reverse_proxy adguard-home:3000
+	reverse_proxy 192.168.20.22:3080
 }
 
 # Cleanuparr (Queue Cleaner)
@@ -77,6 +77,11 @@ http://flaresolverr.home {
 
 # Recyclarr (TRaSH Guides Sync)
 # No web UI - API only
+
+# Commafeed (RSS Reader)
+http://rss.home {
+	reverse_proxy 192.168.20.22:8088
+}
 
 # TrueNAS (Admin Interface) - redirect to HTTPS
 truenas.home {

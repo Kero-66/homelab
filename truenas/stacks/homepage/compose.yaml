@@ -29,6 +29,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
       - NODE_ENV=production
+      - HOMEPAGE_ALLOWED_HOSTS=homepage.home
     env_file:
       - /mnt/Fast/docker/homepage/.env
     volumes:

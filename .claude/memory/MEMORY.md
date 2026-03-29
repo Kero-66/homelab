@@ -2,12 +2,6 @@
 
 **IMPORTANT:** First 200 lines only! Keep concise. Link to detailed docs.
 
-## Start Every Session Here
-1. **Read:** `ai/SESSION_NOTES.md` - Current work in progress
-2. **Read:** `ai/todo.md` - Pending tasks
-3. **Read:** This file - Quick facts
-4. **Before any command, check:** `ai/PATTERNS.md` - Verified copy-paste commands (saves tokens)
-
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**
 - **Workstation**: 192.168.20.66 (Fedora, cold spare)
@@ -104,7 +98,7 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - iHD driver bundled at `/usr/lib/jellyfin-ffmpeg/lib/dri/iHD_drv_video.so` (not system path)
 - Compose: LIBVA_DRIVERS_PATH + LIBVA_DRIVER_NAME + group_add render(107)/video(44) - see compose.yaml
 - Jellyfin API key in Infisical: **env dev, path `/media`** as `JELLYFIN_API_KEY` (NOT /TrueNAS, NOT /)
-- TrueNAS app update: `PUT /api/v2.0/app/id/{name}` with `{"custom_compose_config": <dict>}` → job ID
+- TrueNAS app update: use `midclt app.stop/update/start` via SSH — NOT the REST API (causes port conflicts)
 
 ## For Detailed Documentation
 - **Verified commands**: `ai/PATTERNS.md` ← CHECK THIS FIRST before trial-and-error
@@ -116,7 +110,6 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - **Task tracking**: `ai/todo.md`
 - **Doc structure**: `ai/DOCUMENTATION_STRUCTURE.md`
 
-## Task Tracking (User Requirement)
-- **Always use TaskCreate** for multi-step current session work
-- **Always add** long-term items to `ai/todo.md`
-- See `ai/DOCUMENTATION_STRUCTURE.md` for full workflow
+## Troubleshooting Rule (ENFORCED)
+- [Check logs first, never assume](../rules/troubleshooting.md) — `docker logs <container> --tail 30` BEFORE forming any hypothesis. Networking is rarely the cause.
+

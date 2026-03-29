@@ -1,77 +1,162 @@
-- RSS:
-    - CommaFeed:
-        icon: mdi-rss
-        href: http://commafeed.localhost/
-        description: RSS reader
-- Calendar:
-        - Release Schedule:
-            icon: mdi-calendar
+- Media:
+    - Arr Apps:
+        - Sonarr:
+            icon: sonarr.png
+            href: http://sonarr.home
+            description: TV series management
             widget:
-              type: calendar
-              view: agenda
-              maxEvents: 15
-              maxDays: 30
-              previousDays: 3
-              showTime: true
-              showDetails: true
-              integrations:
-                - type: sonarr
-                  service_group: Arr Apps
-                  service_name: Sonarr
-                  color: sky
-                - type: radarr
-                  service_group: Arr Apps
-                  service_name: Radarr
-                  color: orange
+              type: sonarr
+              url: http://sonarr:8989
+              key: "{{HOMEPAGE_VAR_SONARR_API_KEY}}"
+        - Radarr:
+            icon: radarr.png
+            href: http://radarr.home
+            description: Movie management
+            widget:
+              type: radarr
+              url: http://radarr:7878
+              key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}"
+        - Prowlarr:
+            icon: prowlarr.png
+            href: http://prowlarr.home
+            description: Indexer manager
+            widget:
+              type: prowlarr
+              url: http://prowlarr:9696
+              key: "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}"
+        - Bazarr:
+            icon: bazarr.png
+            href: http://bazarr.home
+            description: Subtitle management
+            widget:
+              type: bazarr
+              url: http://bazarr:6767/bazarr
+              key: "{{HOMEPAGE_VAR_BAZARR_API_KEY}}"
+    - Streaming:
+        - Jellyfin:
+            icon: jellyfin.png
+            href: http://jellyfin.home
+            description: Media server
+            widget:
+              type: jellyfin
+              url: http://jellyfin:8096
+              key: "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}"
+        - Jellyseerr:
+            icon: jellyseerr.png
+            href: http://jellyseerr.home
+            description: Media requests
+            widget:
+              type: jellyseerr
+              url: http://jellyseerr:5055
+              key: "{{HOMEPAGE_VAR_JELLYSEERR_API_KEY}}"
+        - Jellystat:
+            icon: jellystat.png
+            href: http://jellystat.home
+            description: Jellyfin analytics
+    - Downloaders:
+        - qBittorrent:
+            icon: qbittorrent.png
+            href: http://qbittorrent.home
+            description: Torrent client
+            widget:
+              type: qbittorrent
+              url: http://qbittorrent:8080
+              username: "{{HOMEPAGE_VAR_QBITTORRENT_USER}}"
+              password: "{{HOMEPAGE_VAR_QBITTORRENT_PASS}}"
+        - SABnzbd:
+            icon: sabnzbd.png
+            href: http://sabnzbd.home
+            description: Usenet downloader
+            widget:
+              type: sabnzbd
+              url: http://sabnzbd:8080
+              key: "{{HOMEPAGE_VAR_SABNZBD_API_KEY}}"
+
+- RSS:
+    - Commafeed:
+        icon: mdi-rss
+        href: http://rss.home
+        description: RSS reader
+
+- Calendar:
+    - Release Schedule:
+        icon: mdi-calendar
+        widget:
+          type: calendar
+          view: agenda
+          maxEvents: 15
+          maxDays: 30
+          previousDays: 3
+          showTime: true
+          showDetails: true
+          integrations:
+            - type: sonarr
+              service_group: Arr Apps
+              service_name: Sonarr
+              color: sky
+            - type: radarr
+              service_group: Arr Apps
+              service_name: Radarr
+              color: orange
+
 - Status:
     - Maintenance:
         - Cleanuparr:
             icon: mdi-delete-sweep
-            href: http://localhost:11011/
+            href: http://cleanuparr.home
             description: Queue cleaner
-
-        - FileFlows:
-            icon: mdi-file-video
-            href: http://localhost:19200/
-            description: Video processing
             widget:
-              type: fileflows
-              url: http://fileflows:5000
-- Monitoring:
-  - Glances:
-    - Glances CPU:
-        widget:
-          type: glances
-          url: http://glances:61208
-          version: 4
-          metric: cpu
-    - Glances Memory:
-        widget:
-          type: glances
-          url: http://glances:61208
-          version: 4
-          metric: memory
-    - Glances Network:
-        widget:
-          type: glances
-          url: http://glances:61208
-          version: 4
-          metric: network:eth0
-    - Glances Disk /data:
-        widget:
-          type: glances
-          url: http://glances:61208
-          version: 4
-          metric: fs:/data
-    - Glances Containers:
-        widget:
-          type: glances
-          url: http://glances:61208
-          version: 4
-          metric: containers
-    - Glances Processes:
-        widget:
-          type: glances
-          url: http://glances:61208
-          version: 4
-          metric: process
+              type: cleanuparr
+              url: http://cleanuparr:11011
+              key: "{{HOMEPAGE_VAR_CLEANUPARR_API_KEY}}"
+
+# Services below are not currently deployed — uncomment when available
+
+# - Monitoring:
+#   - Glances:
+#     - Glances CPU:
+#         widget:
+#           type: glances
+#           url: http://glances:61208
+#           version: 4
+#           metric: cpu
+#     - Glances Memory:
+#         widget:
+#           type: glances
+#           url: http://glances:61208
+#           version: 4
+#           metric: memory
+#     - Glances Network:
+#         widget:
+#           type: glances
+#           url: http://glances:61208
+#           version: 4
+#           metric: network:eth0
+#     - Glances Disk /data:
+#         widget:
+#           type: glances
+#           url: http://glances:61208
+#           version: 4
+#           metric: fs:/data
+#     - Glances Containers:
+#         widget:
+#           type: glances
+#           url: http://glances:61208
+#           version: 4
+#           metric: containers
+#     - Glances Processes:
+#         widget:
+#           type: glances
+#           url: http://glances:61208
+#           version: 4
+#           metric: process
+
+# - Status:
+#   - Maintenance:
+#     - FileFlows:
+#         icon: mdi-file-video
+#         href: http://fileflows.home
+#         description: Video processing
+#         widget:
+#           type: fileflows
+#           url: http://fileflows:5000

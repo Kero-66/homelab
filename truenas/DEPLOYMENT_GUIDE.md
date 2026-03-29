@@ -64,6 +64,35 @@ See `ai/PATTERNS.md` for the full verified pattern.
 
 ---
 
+## Updating a Running Stack's Compose
+
+**⚠️ NEVER use `PUT /api/v2.0/app/id/{name}` to update a compose.** The REST API triggers a container recreation while the old container is still running, causing port conflicts and leaving the app broken.
+
+**Safe compose update pattern (stop → update → start):**
+
+```bash
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+
+APP_NAME=myapp
+# 1. Stop the app (removes containers cleanly)
+ssh kero66@192.168.20.22 "sudo midclt call -j app.stop $APP_NAME 2>&1 | tail -2"
+# 2. Push updated compose
+python3 -c "
+import json
+compose = open('truenas/stacks/$APP_NAME/compose.yaml').read()
+print(json.dumps({'custom_compose_config_string': compose}))
+" | ssh kero66@192.168.20.22 "cat > /tmp/u.json && sudo midclt call -j app.update $APP_NAME \"\$(cat /tmp/u.json)\" 2>&1 | tail -2; rm -f /tmp/u.json"
+# 3. Start
+ssh kero66@192.168.20.22 "sudo midclt call -j app.start $APP_NAME 2>&1 | tail -2"
+
+ssh-agent -k > /dev/null
+```
+
+See `ai/PATTERNS.md` → "Update an existing app compose" for full details.
+
+---
+
 ## Updating a Running Stack's Caddyfile
 
 The live Caddyfile is at `/mnt/Fast/docker/caddy/Caddyfile` on TrueNAS (the repo file is source of truth).
@@ -178,6 +207,7 @@ All entries point to `192.168.20.22`. Add/verify at http://adguard.home → Filt
 | `sabnzbd.home` | 192.168.20.22 |
 | `adguard.home` | 192.168.20.22 |
 | `cleanuparr.home` | 192.168.20.22 |
+| `rss.home` | 192.168.20.22 |
 | `flaresolverr.home` | 192.168.20.22 |
 | `truenas.home` | 192.168.20.22 |
 | `jetkvm.home` | 192.168.20.22 |
@@ -185,6 +215,23 @@ All entries point to `192.168.20.22`. Add/verify at http://adguard.home → Filt
 ---
 
 ## Troubleshooting
+
+### Port Conflicts (TrueNAS nginx owns these ports)
+
+TrueNAS runs its own nginx on the host. **Never use these ports in compose files:**
+- `:80` — TrueNAS nginx HTTP (may be free if Caddy isn't running, but conflicts during restarts)
+- `:443` — TrueNAS nginx HTTPS (always occupied)
+- `:8082` — TrueNAS nginx (alternative port, always occupied)
+
+Before assigning any port, check:
+```bash
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+ssh kero66@192.168.20.22 "sudo ss -tlnp | grep LISTEN; sudo docker ps --format 'table {{.Names}}\t{{.Ports}}'"
+ssh-agent -k > /dev/null
+```
+
+---
 
 ### Image Pull Failures
 

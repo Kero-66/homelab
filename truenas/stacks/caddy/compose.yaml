@@ -11,7 +11,7 @@
 # DNS Integration:
 #   - Requires AdGuard Home running with local DNS entries
 #   - Example: jellyfin.home → 192.168.20.22
-#   - Caddy listens on :80 and :443, proxies to correct service
+#   - Caddy listens on :80 only (port 443 held by TrueNAS nginx)
 #
 # Network Access:
 #   - Joins arr-stack and jellyfin networks to proxy to services
@@ -46,9 +46,7 @@ services:
       # Caddy config cache
       - /mnt/Fast/docker/caddy/config:/config
     ports:
-      - "80:80"         # HTTP
-      - "443:443"       # HTTPS
-      - "443:443/udp"   # HTTP/3
+      - "80:80"         # HTTP only - port 443 is held by TrueNAS nginx
     networks:
       - default
       - ix-jellyfin_default

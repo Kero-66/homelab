@@ -2,6 +2,7 @@
 # For configuration options and examples, please see:
 # https://gethomepage.dev/configs/docker/
 
-my-docker:
-  host: docker-socket-proxy
-  port: 2375
+# docker-socket-proxy not deployed — auto-discovery via labels disabled
+# my-docker:
+#   host: docker-socket-proxy
+#   port: 2375
