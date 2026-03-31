@@ -293,14 +293,26 @@ print(json.dumps({'custom_app': True, 'app_name': '$APP_NAME', 'train': 'stable'
 ssh-agent -k > /dev/null
 ```
 
-### Restart an app
+### Restart an app (single-service standalone app)
 ```bash
-APP=jellyfin
-curl -sk -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  "$BASE/api/v2.0/app/id/$APP/restart"
+# For standalone apps (jellyfin, caddy, etc.) — stop/start via midclt
+ssh kero66@192.168.20.22 "sudo midclt call -j app.stop APP_NAME && sudo midclt call -j app.start APP_NAME"
 ```
+
+### ⚠️ midclt MUST use sudo — fails silently without it
+```
+# WRONG — runs as .UNAUTHENTICATED, returns job ID but does nothing:
+ssh kero66@192.168.20.22 "midclt call app.start bazarr"
+
+# CORRECT:
+ssh kero66@192.168.20.22 "sudo midclt call -j app.start APP_NAME"
+```
+TrueNAS audit log will show `.UNAUTHENTICATED` Method Call errors if sudo is omitted.
+
+### ⚠️ Multi-service apps (arr-stack, downloaders) — no per-service restart via midclt
+midclt only operates at the app level. To restart a single container within arr-stack or downloaders,
+stop/start the whole app — there is no per-service equivalent. Plan config changes to minimize full
+stack restarts.
 
 ---
 

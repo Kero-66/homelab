@@ -175,3 +175,5 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 79 | health_check_audit | Audit all compose files across stacks for broken health checks. Known issues: jellystat used curl (not installed), fixed to wget. Pattern: verify the tool used in healthcheck EXISTS in the container image before deploying. | Claude | 2026-02-18 | open | truenas/stacks/*/compose.yaml
 
+81 | subdl_re_enable | Re-enable subdl provider in Bazarr once the KeyError: 'subtitles' bug is fixed upstream. Bug: `result['subtitles']` is accessed without checking key existence in `custom_libs/subliminal_patch/providers/subdl.py` — API sometimes returns success without that key. Fix is `result.get('subtitles', [])`. Track: https://github.com/morpheus65535/bazarr — check releases for subdl fix. Config: `media/.config/bazarr/config.yaml` → `enabled_providers`. | Claude | 2026-03-31 | open | media/.config/bazarr/config.yaml
+

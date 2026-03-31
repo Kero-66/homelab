@@ -43,11 +43,14 @@ rm -rf "$TMPDIR_SAFE"
 
 ## TrueNAS App Management — CRITICAL
 - **NEVER use REST API to update compose** — breaks running containers with port conflicts
-- **Update compose**: `midclt app.stop` → `midclt app.update` → `midclt app.start`
+- **Update compose**: `sudo midclt call -j app.stop` → `app.update` → `app.start`
 - **New app**: `midclt app.create` with `custom_compose_config_string` (string, not dict)
 - **Caddyfile changes**: `scp` to live location → `docker exec caddy caddy reload` (no app restart)
 - **Port conflicts**: check `ss -tlnp` before assigning ports — TrueNAS nginx owns 80, 443, 8082
 - **NEVER store secrets in /tmp with predictable names** — use `mktemp -d` + cleanup immediately
+- **midclt REQUIRES sudo** — without `sudo`, calls silently fail as `.UNAUTHENTICATED` (audit log shows it)
+- **NEVER use `docker start/stop`** — use midclt to manage app lifecycle, not docker commands directly
+- **Multi-service stacks**: midclt has no per-container restart — stop/start restarts the whole app
 
 ## Common Gotchas
 - **ALWAYS check response type before piping to jq** — APIs may return HTML not JSON

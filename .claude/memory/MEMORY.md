@@ -47,13 +47,16 @@
 
 ## TrueNAS App Management - CRITICAL RULES
 - **NEVER use REST API `PUT /app/id/{name}`** to update compose — breaks running containers with port conflicts
-- **Update compose**: `midclt app.stop` → `midclt app.update` → `midclt app.start` (see PATTERNS.md)
+- **Update compose**: `sudo midclt call -j app.stop` → `app.update` → `app.start` (see PATTERNS.md)
 - **New app**: `midclt app.create` with `custom_compose_config_string` (compose as string, not dict)
 - **Caddyfile**: `scp` to live location → `docker exec caddy caddy reload` (no app restart needed)
 - **Port conflicts**: Check `ss -tlnp` BEFORE designing compose ports. TrueNAS nginx owns 80, 443, 8082
 - **Check ports first**: Always verify free ports before assigning them in compose files
 - **TrueNAS SSH**: Use kero66 key from Infisical (kero66_ssh_key). See secure pattern below.
 - **NEVER store secrets in /tmp with predictable names** - use mktemp -d + cleanup
+- **midclt REQUIRES sudo** — without `sudo`, calls run as `.UNAUTHENTICATED`, return job IDs but silently do nothing. TrueNAS audit log will show the failure.
+- **Multi-service stacks (arr-stack, downloaders)**: midclt only operates at app level — no per-container restart. To restart one container, must stop/start the whole app.
+- **NEVER use `docker start/stop` to manage containers** — use `sudo midclt call -j app.stop/start APP_NAME` instead. Docker commands bypass TrueNAS app lifecycle management.
 
 ## TrueNAS SSH - Secure Pattern
 ```bash
