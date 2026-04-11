@@ -4,6 +4,52 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-04-11 - Sonarr/Radarr Fixes + Recyclarr Sync (COMPLETED)
+
+### What Was Done
+
+1. **Fixed Jellyfin notification DNS error** (`NotificationService: Name jellyfin does not resolve`)
+   - Root cause: Sonarr/Radarr/Bazarr not on `ix-jellyfin_default` network — Docker DNS can't cross network boundaries
+   - Fix: added `networks: [default, ix-jellyfin_default]` to sonarr, radarr, bazarr in arr-stack compose, declared `ix-jellyfin_default` as external network
+   - Pattern: mirrors how downloaders joins `ix-arr-stack_default` (consumer joins provider's network)
+
+2. **Fixed Recyclarr never syncing**
+   - Root cause: base URLs were `172.39.0.x` (old workstation IPs from pre-TrueNAS migration)
+   - Fix: replaced with Docker service names `http://radarr:7878/radarr`, `http://sonarr:8989/sonarr`
+   - Also removed stale `include:` blocks referencing templates that don't exist in the container
+
+3. **Fixed invalid Repack2 trash_id** (Radarr line 90)
+   - Wrong: `ae43b294c4a7a5ba8f4891e3e22e3e22`
+   - Correct Radarr: `ae43b294509409a6a13919dedd4764c4`
+
+4. **Fixed x265 (HD) blocking anime imports** (VCB-Studio, fansub encodes)
+   - x265 default score is -10000 — correct for Standard/4K, wrong for Anime (BDs are almost always x265)
+   - Split into per-profile scoring: score 0 for Anime (1080p), -10000 for Standard and Ultra-HD (4K)
+   - Applied in both Radarr and Sonarr sections
+
+5. **Ran `recyclarr state repair --adopt` then `recyclarr sync`** — succeeded
+   - Radarr: 4 CFs updated, 3 profiles; Sonarr: 6 CFs updated, 3 profiles
+   - Verified via API: Anime BD Tier 01-08 = 1400→700, Web Tier 01-06 = 600→100, x265 = 0 on Anime / -10000 on Standard+4K
+
+6. **Created `truenas/scripts/import_downloads.sh`**
+   - Scans qBittorrent + SABnzbd completed dirs, auto-imports matched files into Sonarr/Radarr
+   - Reports unmatched/rejected files with reason; supports `--dry-run`
+   - See PATTERNS.md → Manual Import Script
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| Recyclarr config (live) | `/mnt/Fast/docker/recyclarr/config/recyclarr.yml` |
+| Recyclarr config (repo, gitignored) | `media/recyclarr/config/recyclarr.yml` |
+| Trash_id cache | `media/recyclarr/config/cache/resources/trash-guides/git/official/docs/json/` |
+| Recyclarr cron | `@daily` — check: `sudo docker logs recyclarr --tail 50` |
+| arr-stack network change | sonarr, radarr, bazarr now on `ix-jellyfin_default` |
+| x265 (HD) Radarr trash_id | `dc98083864ea246d05a42df0d05f81cc` |
+| x265 (HD) Sonarr trash_id | `47435ece6b99a0b477caf360e79ba0bb` |
+
+---
+
 ## Session 2026-03-17 - Villainess Level 99 E08 Subtitle Fix + Bazarr Config (COMPLETED)
 
 ### What Was Done

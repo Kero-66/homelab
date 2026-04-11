@@ -745,6 +745,96 @@ sudo docker run --rm \
 
 ---
 
+## Recyclarr
+
+### Setup
+```bash
+RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media --plain 2>/dev/null)
+SONARR_KEY=$(infisical secrets get SONARR_API_KEY --env dev --path /media --plain 2>/dev/null)
+# Config: /mnt/Fast/docker/recyclarr/config/recyclarr.yml (on TrueNAS)
+# Source of truth: media/recyclarr/config/recyclarr.yml (gitignored — contains secrets)
+# Secrets file: media/recyclarr/config/secrets.yml (gitignored)
+# Cron: @daily — logs visible via docker logs recyclarr
+```
+
+### Run a sync manually
+```bash
+TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
+ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 "sudo docker exec recyclarr recyclarr sync 2>&1"
+rm -rf "$TMPDIR_SAFE"
+```
+
+### Deploy updated config to TrueNAS
+```bash
+TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
+scp -i "$TMPKEY" -o StrictHostKeyChecking=no \
+  media/recyclarr/config/recyclarr.yml \
+  kero66@192.168.20.22:/mnt/Fast/docker/recyclarr/config/recyclarr.yml
+rm -rf "$TMPDIR_SAFE"
+```
+
+### Adopt existing CFs after first-time sync or CF rename (run before sync if you get "CFs with matching names" error)
+```bash
+ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 \
+  "sudo docker exec recyclarr recyclarr state repair --adopt 2>&1"
+```
+
+### Verify CF scores applied in Radarr
+```bash
+RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media --plain 2>/dev/null)
+curl -sL "http://192.168.20.22:7878/api/v3/qualityprofile" -H "X-Api-Key: $RADARR_KEY" | \
+  jq '[.[] | {name, formats: [.formatItems[] | select(.score != 0) | {name, score}] | sort_by(-.score)}]'
+```
+
+### Verify CF scores applied in Sonarr
+```bash
+SONARR_KEY=$(infisical secrets get SONARR_API_KEY --env dev --path /media --plain 2>/dev/null)
+curl -sL "http://192.168.20.22:8989/api/v3/qualityprofile" -H "X-Api-Key: $SONARR_KEY" | \
+  jq '[.[] | {name, formats: [.formatItems[] | select(.score != 0) | {name, score}] | sort_by(-.score)}]'
+```
+
+### Key config facts
+- Base URLs use Docker service names: `http://radarr:7878/radarr`, `http://sonarr:8989/sonarr`
+- API keys via `!secret` syntax referencing `secrets.yml` in same config dir
+- `delete_old_custom_formats: true` — recyclarr owns CFs it creates; won't touch manually added ones
+- Trash_ids for CFs are in `media/recyclarr/config/cache/resources/trash-guides/git/official/docs/json/{radarr,sonarr}/cf/`
+- Lookup correct trash_id: `grep -r "CF Name" media/recyclarr/config/cache/resources/trash-guides/git/official/docs/json/radarr/cf/`
+- x265 (HD): score 0 for Anime (1080p), -10000 for Standard and 4K — x265 is normal for anime BDs
+- Anime BD/Web tiers: no explicit score in config = recyclarr uses TRaSH default (1400 down to 100)
+- `min_format_score: 100` on Radarr Anime (1080p) — releases must match at least one anime tier CF to be accepted
+
+### Check cron sync history
+```bash
+TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
+ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 "sudo docker logs recyclarr --tail 50 2>&1"
+rm -rf "$TMPDIR_SAFE"
+```
+
+---
+
+## Manual Import Script
+
+Script: `truenas/scripts/import_downloads.sh`
+Scans qBittorrent and SABnzbd completed dirs, auto-imports clean matches into Sonarr/Radarr.
+
+```bash
+# Dry run — shows what would be imported without doing anything
+./truenas/scripts/import_downloads.sh --dry-run
+
+# Live run — moves matched files into media library
+./truenas/scripts/import_downloads.sh
+```
+
+Requirements: `jq`, `curl`, `infisical` CLI authenticated.
+Scan dirs: `/data/downloads/qbittorrent/completed`, `/data/downloads/sabnzbd/complete`
+Auto-imports: files with series/movie match and zero rejections (importMode: move)
+Reports: files needing manual attention with rejection reason
+
+---
+
 ## Anti-Patterns (Never Do These)
 
 | Anti-Pattern | Why It Fails | Correct Pattern |
