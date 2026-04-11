@@ -110,6 +110,9 @@ services:
       - /mnt/Fast/docker/sonarr:/config
       - /mnt/Data/media:/data
       - /mnt/Data/downloads:/data/downloads
+    networks:
+      - default
+      - ix-jellyfin_default
     ports:
       - "8989:8989"
     depends_on:
@@ -144,6 +147,9 @@ services:
       - /mnt/Fast/docker/radarr:/config
       - /mnt/Data/media:/data
       - /mnt/Data/downloads:/data/downloads
+    networks:
+      - default
+      - ix-jellyfin_default
     ports:
       - "7878:7878"
     depends_on:
@@ -177,6 +183,9 @@ services:
     volumes:
       - /mnt/Fast/docker/bazarr:/config
       - /mnt/Data/media:/data
+    networks:
+      - default
+      - ix-jellyfin_default
     ports:
       - "6767:6767"
     depends_on:
@@ -234,3 +243,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+networks:
+  ix-jellyfin_default:
+    external: true
