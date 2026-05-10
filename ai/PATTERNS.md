@@ -38,8 +38,8 @@ Last updated: 2026-03-29
 
 ### Authenticate (one-time per session — run manually in your terminal)
 ```bash
-infisical login -i --domain http://192.168.20.66:8081
-# -i = interactive terminal login (email + password prompt, no browser)
+infisical login -i --domain http://192.168.20.66:8081 --email <your-infisical-email>
+# -i = interactive terminal login (password prompt only, no browser)
 # Session token stored locally; Claude can use infisical after this.
 ```
 
