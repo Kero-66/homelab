@@ -103,7 +103,7 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 
 ## Infisical CLI - MacBook Air Setup (2026-05-10)
 - **Domain**: `http://192.168.20.66:8081` (self-hosted on workstation, NOT cloud)
-- **Auth**: user runs `infisical login --domain http://192.168.20.66:8081` manually (browser flow) — Claude uses the session after
+- **Auth**: user runs `infisical login -i --domain http://192.168.20.66:8081` manually (-i = terminal prompt, no browser) — Claude uses the session after
 - **DO NOT automate Bitwarden access** — any script that reads Bitwarden gives Claude access to the entire vault
 - **All infisical commands need**: `--domain http://192.168.20.66:8081 --projectId "$INFISICAL_PROJECT_ID"`
 - **Media secrets path**: `/media` (Bazarr, Jellyfin, Sonarr, Radarr API keys)

@@ -36,11 +36,11 @@ Last updated: 2026-03-29
 - **Project ID**: `$INFISICAL_PROJECT_ID`
 - **Requires `--projectId` and `--domain` flags** when no `.infisical.json` in working dir
 
-### Authenticate (one-time per session — browser flow, user runs this manually)
+### Authenticate (one-time per session — run manually in your terminal)
 ```bash
-infisical login --domain http://192.168.20.66:8081
-# Opens browser to complete login. Session token stored locally.
-# Claude can use infisical after this without accessing Bitwarden.
+infisical login -i --domain http://192.168.20.66:8081
+# -i = interactive terminal login (email + password prompt, no browser)
+# Session token stored locally; Claude can use infisical after this.
 ```
 
 ### Get a single secret (plain value)
