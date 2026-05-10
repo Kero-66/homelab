@@ -29,3 +29,9 @@ services:
       # Output directory - agent writes .env files here
       - /mnt/Fast/docker:/output
     # No ports needed - agent only makes outbound HTTPS calls to Infisical
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'infisical agent' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

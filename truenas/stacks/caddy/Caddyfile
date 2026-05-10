@@ -88,7 +88,17 @@ truenas.home {
 	redir https://192.168.20.22{uri} permanent
 }
 
+# FileFlows (Media Processing)
+http://fileflows.home {
+	reverse_proxy 192.168.20.22:19200
+}
+
 # JetKVM (KVM over IP)
 http://jetkvm.home {
 	reverse_proxy 192.168.20.25:80
+}
+
+# Dockhand (Container Update Manager)
+http://dockhand.home {
+	reverse_proxy 192.168.20.22:30328
 }

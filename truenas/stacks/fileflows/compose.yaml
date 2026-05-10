@@ -1,0 +1,51 @@
+# =============================================================================
+# FileFlows Stack - TrueNAS Scale
+# =============================================================================
+# Automated media processing (track defaulting, transcoding, etc.)
+#
+# Storage layout:
+#   Config → /mnt/Fast/docker/fileflows/     (NVMe pool - app data & flows)
+#   Temp   → /mnt/Fast/docker/fileflows/temp (NVMe pool - processing scratch)
+#   Media  → /mnt/Data/media/                (HDD pool - read/write media files)
+#
+# No secrets needed — all config is via web UI.
+# Hardware acceleration: Intel N150 VAAPI via /dev/dri
+#
+# Port: 19200 (internal 5000)
+# UI: http://fileflows.home
+#
+# =============================================================================
+
+services:
+  fileflows:
+    image: revenz/fileflows:26.03
+    container_name: fileflows
+    restart: unless-stopped
+    mem_limit: 2g
+    environment:
+      - TZ=Australia/Brisbane
+      - PUID=1000
+      - PGID=1000
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - "107"  # render group — Intel VAAPI access
+      - "44"   # video group
+    labels:
+      - homepage.group=Media
+      - homepage.name=FileFlows
+      - homepage.icon=fileflows.png
+      - homepage.href=http://fileflows.home
+      - homepage.description=Media processing automation
+    volumes:
+      - /mnt/Fast/docker/fileflows:/app/Data
+      - /mnt/Fast/docker/fileflows/temp:/temp
+      - /mnt/Data/media:/media
+    ports:
+      - "19200:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/ > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

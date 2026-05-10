@@ -43,6 +43,12 @@ services:
     volumes:
       - /mnt/Fast/docker/tailscale:/var/lib/tailscale
       - /dev/net/tun:/dev/net/tun
+    healthcheck:
+      test: ["CMD-SHELL", "tailscale --socket=/tmp/tailscaled.sock status --json | grep -q '\"BackendState\": \"Running\"' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     # Manual start until auth key is configured
     # profiles: ["tailscale"]
 
