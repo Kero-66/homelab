@@ -87,14 +87,24 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - **Auth key secret**: `TRUENAS_TAILSCALE_AUTH_KEY` in Infisical at `/TrueNAS`
 - **Deploy new apps**: `midclt call -j app.create` via SSH — NOT REST API. See PATTERNS.md.
 
-## Bazarr (Subtitle Management) - Config 2026-03-17
+## Bazarr (Subtitle Management) - Config 2026-05-10
 - Config file: `/mnt/Fast/docker/bazarr/config/config.yaml` (live) — gitignored, contains API keys
-- Repo reference copy: `media/.config/bazarr/config.yaml` — kept in sync manually after changes
+- Sanitized template in repo: `truenas/stacks/arr-stack/bazarr-config.yaml.template`
+- **Edit config**: SSH sed directly on TrueNAS, then `sudo midclt call -j app.stop/start arr-stack`
+- **API limitation**: some settings (e.g. `ignore_ass_subs`) don't persist via API — must edit YAML
 - `use_embedded_subs: false` — must stay false; embedded subs are often wrong (e.g. bad anime releases)
+- `ignore_ass_subs: true` — prevents .ass downloads; .ass causes multi-line overlap in Jellyfin
 - `use_subsync: true` — auto-sync enabled with thresholds (series 90, movie 70)
 - Bazarr API key in Infisical: `BAZARR_API_KEY` path `/media`
 - AnimeTosho subtitle attachments: `https://animetosho.org/view/<slug>` → scrape for `.ass.xz` links
 - AnimeTosho feed search: `https://feed.animetosho.org/json?q=<query>` (returns JSON)
+
+## Infisical CLI - MacBook Air Setup (2026-05-10)
+- **Domain**: `http://192.168.20.66:8081` (self-hosted on workstation, NOT cloud)
+- **Auth**: `eval "$(scripts/infisical-auth.sh)"` — prompts for Bitwarden password/Touch ID, exports INFISICAL_PROJECT_ID
+- **Bitwarden item**: "Infisical Homelab Machine Identity" (username=client-id, password=client-secret, custom field project-id)
+- **All infisical commands need**: `--domain http://192.168.20.66:8081 --projectId "$INFISICAL_PROJECT_ID"`
+- **Media secrets path**: `/media` (Bazarr, Jellyfin, Sonarr, Radarr API keys)
 
 ## Jellyfin Hardware Transcoding (Intel N150)
 - VAAPI with Intel iHD driver - confirmed working 2026-02-18, configured via API

@@ -31,12 +31,22 @@ Last updated: 2026-03-29
 ### Environment and Paths
 - **All secrets are in `dev` environment** (not `prod`, not default)
 - **Infrastructure secrets**: path `/TrueNAS`
-- **Jellyfin API key**: path `/` (root, not `/TrueNAS`)
-- **Run from**: `/mnt/library/repos/homelab` (project root with `.infisical.json`)
+- **Media secrets (Bazarr, Jellyfin, Sonarr, Radarr)**: path `/media`
+- **Infisical domain**: `http://192.168.20.66:8081` (self-hosted on workstation)
+- **Project ID**: `$INFISICAL_PROJECT_ID`
+- **Requires `--projectId` and `--domain` flags** when no `.infisical.json` in working dir
+
+### Authenticate (one-time per session — prompts for Bitwarden password/Touch ID)
+```bash
+eval "$(scripts/infisical-auth.sh)"
+# Reads machine identity from Bitwarden item "Infisical Homelab Machine Identity"
+# Also exports INFISICAL_PROJECT_ID into the current shell
+```
 
 ### Get a single secret (plain value)
 ```bash
-infisical secrets get <SECRET_NAME> --env dev --path /TrueNAS --plain
+PROJECT_ID="$INFISICAL_PROJECT_ID"
+infisical secrets get <SECRET_NAME> --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null
 ```
 
 ### Get Jellyfin API key (root path)
@@ -66,8 +76,9 @@ TOKEN=$(infisical secrets get TRUENAS_API_TOKEN --env dev --path /TrueNAS --plai
 ### Preferred: ssh-agent (key lives in memory only, never on disk)
 ```bash
 # Load key from Infisical into agent (memory only - no temp files)
+PROJECT_ID="$INFISICAL_PROJECT_ID"
 eval $(ssh-agent -s) > /dev/null
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
 
 # Run SSH commands normally (agent provides the key automatically)
 ssh kero66@192.168.20.22 "sudo docker ps"
@@ -79,8 +90,9 @@ ssh-agent -k > /dev/null
 
 ### SCP with ssh-agent
 ```bash
+PROJECT_ID="$INFISICAL_PROJECT_ID"
 eval $(ssh-agent -s) > /dev/null
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
 scp local_file.txt kero66@192.168.20.22:/mnt/Fast/docker/service/
 ssh-agent -k > /dev/null
 ```
@@ -88,8 +100,9 @@ ssh-agent -k > /dev/null
 ### Fallback: temp file (if ssh-agent fails)
 **If you must use a temp file, use mktemp -d for a random path and always clean up.**
 ```bash
+PROJECT_ID="$INFISICAL_PROJECT_ID"
 KEYDIR=$(mktemp -d) && chmod 700 "$KEYDIR"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
 ssh -i "$KEYDIR/id" kero66@192.168.20.22 "your-command"
 rm -rf "$KEYDIR"
 ```
