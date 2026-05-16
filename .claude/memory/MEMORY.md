@@ -22,6 +22,23 @@
 - **Networking**: Cross-stack via explicit network joins (downloaders→arr-stack, jellyseerr→both)
 - **DNS**: Router DHCP sends only 192.168.20.22 (AdGuard Home), no fallback (single point of failure accepted)
 
+## AdGuard Home - Verified Details
+- **Port**: 3080 (host) → 3000 (internal). NOT 3000 on host.
+- **Username**: `kero66` (NOT `admin`)
+- **Secret**: `ADGUARD_PASSWORD` in Infisical `/TrueNAS` — credentials are correct
+- **Auth pattern**: `curl -u "kero66:$ADGUARD_PASS"` — credentials in variable, never printed
+- **DNS rewrites**: `POST /control/rewrite/add` with `{"domain": "x.home", "answer": "192.168.20.22"}`
+- **Manual fallback**: `http://adguard.home` → Filters → DNS rewrites
+
+## Dockhand - Verified API
+- **URL**: `http://192.168.20.22:30328/`
+- **Credentials**: `DOCKHAND_USER` + `DOCKHAND_USER_PASSWORD` in Infisical `/TrueNAS`
+- **Auth**: Session cookie — POST `/api/auth/login`, use `-c`/`-b "$COOKIEJAR"`
+- **Deploy stack**: `POST /api/stacks` with `{"name": "...", "environmentId": 1, "compose": "<yaml>"}`
+- **Environment ID**: always `1` (TrueNAS, via Docker socket)
+- **⚠️ Never expose password in process listing**: pass via env vars to python3, not sys.argv
+- **Job status**: `GET /api/jobs/<jobId>` → `{status, result, error}`
+
 ## Common Gotchas
 - **NEVER run `infisical secrets --env dev --path /TrueNAS` without `--plain` on a specific key** - table output exposes ALL secrets in cleartext in tool results. Always use targeted `infisical secrets get <KEY> --env dev --path /path --plain`
 - **ALWAYS check response type before piping to jq** - API endpoints may return HTML, not JSON
@@ -34,8 +51,8 @@
 - **TrueNAS version**: 25.10.1 - don't discuss old versions (24.04/24.10) unless relevant to upgrade path
 - **Infisical environments**: ALL secrets are in `--env dev` (no prod environment exists)
 - **Infisical CLI pattern**: `infisical secrets get <NAME> --env dev --path /TrueNAS --plain`
-- **Dockhand**: Deployed at http://192.168.20.22:30328/ (credentials in Infisical)
-- **Dockhand API**: Not well documented, use UI for stack management instead of API
+- **Dockhand**: Deployed at http://192.168.20.22:30328/ — API IS documented (see MEMORY.md Dockhand section + PATTERNS.md)
+- **AdGuard API**: HTTP Basic Auth `-u "kero66:$ADGUARD_PASS"` at port 3080. If 401 from Mac but works from TrueNAS, cause unknown — use SSH fallback
 
 ## Critical Patterns
 - **DO THE WORK, don't ask user to run commands** - Set up access/tools needed, then troubleshoot
@@ -64,7 +81,9 @@
 ```bash
 # CORRECT: random temp dir, cleanup after use
 TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain \
+  --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.66:8081 2>/dev/null > "$TMPKEY"
+chmod 600 "$TMPKEY"
 ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 "your command here"
 rm -rf "$TMPDIR_SAFE"
 ```
@@ -80,6 +99,14 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 # PUT user: https://192.168.20.22/api/v2.0/user/id/72  (note: /id/ in path)
 # API requires HTTPS (http returns 308 redirect that drops auth header)
 ```
+
+## autobrr (Release Automation) - Deployed 2026-05-11
+- **Stack**: `truenas/stacks/autobrr/` — separate stack (not arr-stack), deployed via Dockhand
+- **URL**: `http://autobrr.home` (port 7474)
+- **Networks**: joins `ix-arr-stack_default` + `ix-downloaders_default` (can reach Sonarr, Radarr, qBittorrent)
+- **Config**: `/mnt/Fast/docker/autobrr/config/` on TrueNAS
+- **Purpose**: Grabs releases that Sonarr/Radarr block (packs, niche fansubs, non-parseable releases)
+- **To update**: edit compose → redeploy via Dockhand API (see PATTERNS.md → Dockhand)
 
 ## Tailscale (Remote Access) - Deployed 2026-02-26
 - **Stack**: `truenas/stacks/tailscale/` — subnet router, host network mode
@@ -105,8 +132,10 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - **Domain**: `http://192.168.20.66:8081` (self-hosted on workstation, NOT cloud)
 - **Auth**: user runs `infisical login -i --domain http://192.168.20.66:8081` manually (-i = terminal prompt, no browser) — Claude uses the session after
 - **DO NOT automate Bitwarden access** — any script that reads Bitwarden gives Claude access to the entire vault
-- **All infisical commands need**: `--domain http://192.168.20.66:8081 --projectId "$INFISICAL_PROJECT_ID"`
-- **Media secrets path**: `/media` (Bazarr, Jellyfin, Sonarr, Radarr API keys)
+- **Project ID**: `5086c25c-310d-4cfb-9e2c-24d1fa92c152` (ALWAYS include `--projectId` and `--domain`)
+- **Full pattern**: `infisical secrets get KEY --env dev --path /PATH --plain --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.66:8081 2>/dev/null`
+- **Media secrets path**: `/media` (Bazarr, Jellyfin, Sonarr, Radarr, Prowlarr API keys)
+- **TrueNAS secrets path**: `/TrueNAS` (kero66_ssh_key, truenas_admin_api, Tailscale auth)
 
 ## Jellyfin Hardware Transcoding (Intel N150)
 - VAAPI with Intel iHD driver - confirmed working 2026-02-18, configured via API

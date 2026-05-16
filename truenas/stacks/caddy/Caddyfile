@@ -102,3 +102,8 @@ http://jetkvm.home {
 http://dockhand.home {
 	reverse_proxy 192.168.20.22:30328
 }
+
+# autobrr (Release automation)
+http://autobrr.home {
+	reverse_proxy autobrr:7474
+}

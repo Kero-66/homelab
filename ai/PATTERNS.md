@@ -45,8 +45,21 @@ infisical login -i --domain http://192.168.20.66:8081 --email <your-infisical-em
 
 ### Get a single secret (plain value)
 ```bash
-PROJECT_ID="$INFISICAL_PROJECT_ID"
-infisical secrets get <SECRET_NAME> --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null
+# Project ID is hardcoded — always include --projectId and --domain
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+infisical secrets get <SECRET_NAME> --env dev --path /TrueNAS \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 --plain 2>/dev/null
+```
+
+### Standard preamble for any script needing multiple secrets
+```bash
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+_isec() { infisical secrets get "$1" --env dev --path "$2" --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null; }
+
+SONARR_KEY=$(_isec SONARR_API_KEY /media)
+RADARR_KEY=$(_isec RADARR_API_KEY /media)
+PROWLARR_KEY=$(_isec PROWLARR_API_KEY /media)
 ```
 
 ### Get Jellyfin API key (root path)
@@ -518,6 +531,51 @@ curl -sL "$SONARR_BASE/api/v3/history?seriesId=$SERIES_ID&pageSize=20&apikey=$SO
 curl -sL "$SONARR_BASE/api/v3/config/downloadclient?apikey=$SONARR_KEY" | jq '{enableCompletedDownloadHandling, autoRedownloadFailed}'
 ```
 
+### Force manual import for stuck importBlocked items
+Sonarr sometimes blocks auto-import with "release was matched to series by ID" for releases with non-English filenames. This pattern analyzes and imports all clean (zero-rejection) files for a given `downloadId`.
+
+```bash
+# Step 1: check what's stuck
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/queue?pageSize=50" | \
+  jq '.records[] | select(.trackedDownloadState == "importBlocked") | {title, downloadId, seriesId, episodeId}'
+
+# Step 2: analyze a stuck download (verify episode detection and check rejections)
+curl -s -H "X-Api-Key: $SONARR_KEY" \
+  "http://192.168.20.22:8989/sonarr/api/v3/manualimport?downloadId=<DOWNLOAD_ID>&filterExistingFiles=false" | \
+  jq '.[] | {path, episodes: [.episodes[].episodeNumber], rejections}'
+
+# Step 3: force import (pipe jq-built payload directly to curl — no temp files)
+# Imports only files with zero rejections; skips downgrades/unexpected episodes automatically
+curl -s -H "X-Api-Key: $SONARR_KEY" \
+  "http://192.168.20.22:8989/sonarr/api/v3/manualimport?downloadId=<DOWNLOAD_ID>&filterExistingFiles=false" | \
+  jq '[.[] | select(.rejections | length == 0)] | {name: "ManualImport", importMode: "move", files: [.[] | {path, seriesId: .series.id, episodeIds: [.episodes[0].id], quality, languages, downloadId}]}' | \
+  curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" \
+    --data-binary @- "http://192.168.20.22:8989/sonarr/api/v3/command" | jq '{id, status}'
+
+# Step 4: check result
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/command/<COMMAND_ID>" | jq '{status, message}'
+```
+
+**When this fails (permanent blocks):**
+- `"Not an upgrade for existing episode file"` → existing file is better quality, don't import
+- `"Episode was unexpected"` → season pack mislabeled; check which episodes actually need files
+- DVD ISO downloads → Sonarr cannot import ISOs at all; needs manual extraction first
+
+### Grab a specific release for an episode (upgrade/fix)
+```bash
+# Find available releases for an episode
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/release?episodeId=<EPISODE_ID>" | \
+  jq 'sort_by(-.customFormatScore) | .[:10] | .[] | "\(.customFormatScore) | \(.quality.quality.name) | \(.size/1048576 | floor)MB | \(.title)"'
+
+# Grab a specific release by guid+indexerId
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/release?episodeId=<EPISODE_ID>" | \
+  jq '.[] | select(.title | contains("keyword")) | {guid, indexerId, title}'
+
+curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" \
+  -d '{"guid": "<GUID>", "indexerId": <INDEXER_ID>}' \
+  "http://192.168.20.22:8989/sonarr/api/v3/release"
+```
+
 ---
 
 ## qBittorrent API
@@ -758,72 +816,179 @@ sudo docker run --rm \
 
 ---
 
-## Recyclarr
+## AdGuard Home DNS
+
+- **Web UI**: `http://adguard.home` → Filters → DNS rewrites
+- **Port**: 3080 (host) → 3000 (internal). API at `http://192.168.20.22:3080/control/`
+- **Username**: `kero66` (NOT `admin`)
+- **Password**: `ADGUARD_PASSWORD` in Infisical `/TrueNAS` — verify it's current before scripting
+- ⚠️ **ADGUARD_PASSWORD may be stale** — if 401, update the secret or use the web UI
+
+### Add a DNS rewrite via API
+```bash
+ADGUARD_PASS=$(infisical secrets get ADGUARD_PASSWORD --env dev --path /TrueNAS --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+
+curl -s -o /dev/null -w "%{http_code}" -u "kero66:$ADGUARD_PASS" \
+  -X POST "http://192.168.20.22:3080/control/rewrite/add" \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "newservice.home", "answer": "192.168.20.22"}'
+
+# Verify
+curl -s -u "kero66:$ADGUARD_PASS" "http://192.168.20.22:3080/control/rewrite/list" | \
+  jq '[.[] | select(.domain == "newservice.home")]'
+```
+
+### ⚠️ If 401 from Mac but works from TrueNAS
+Run via SSH from TrueNAS as a fallback — the cause is unknown but may be IP-based filtering after failed attempts.
+
+### Manual fallback (always works)
+Go to `http://adguard.home` → Filters → DNS rewrites → Add rewrite → domain: `newservice.home`, answer: `192.168.20.22`
+
+---
+
+## Dockhand (Stack Deployment)
+
+- **URL**: `http://192.168.20.22:30328/`
+- **Auth**: Session cookie — POST to `/api/auth/login`, then use `-b "$COOKIEJAR"` for all requests
+- **Username**: `DOCKHAND_USER` in Infisical `/TrueNAS`
+- **Password**: `DOCKHAND_USER_PASSWORD` in Infisical `/TrueNAS`
+- **Environment ID**: `1` (named "TrueNAS", connected via Docker socket)
+
+### Deploy a new stack
+```bash
+DOCKHAND_USER=$(infisical secrets get DOCKHAND_USER --env dev --path /TrueNAS --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+DOCKHAND_PASS=$(infisical secrets get DOCKHAND_USER_PASSWORD --env dev --path /TrueNAS --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+
+COOKIEJAR=$(mktemp)
+# Pass credentials via env vars to avoid password appearing in process listings
+DH_USER="$DOCKHAND_USER" DH_PASS="$DOCKHAND_PASS" python3 -c "
+import json,os; print(json.dumps({'username':os.environ['DH_USER'],'password':os.environ['DH_PASS']}))" | \
+  curl -s -c "$COOKIEJAR" -X POST "http://192.168.20.22:30328/api/auth/login" \
+  -H "Content-Type: application/json" --data-binary @- > /dev/null
+
+# Deploy — compose field name is "compose" (not "composeContent")
+python3 -c "
+import json
+compose = open('truenas/stacks/<APP>/compose.yaml').read()
+print(json.dumps({'name': '<APP>', 'environmentId': 1, 'compose': compose}))
+" | curl -s -b "$COOKIEJAR" -X POST "http://192.168.20.22:30328/api/stacks" \
+  -H "Content-Type: application/json" --data-binary @- | jq '{jobId}'
+
+# Check job result
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/jobs/<JOB_ID>" | jq '{status, error}'
+
+rm -f "$COOKIEJAR"
+```
+
+### List stacks
+```bash
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/stacks?environmentId=1" | jq '[.[] | {id, name, status}]'
+```
+
+---
+
+## Recyclarr (Quality Profile Sync)
+
+- **Config**: `truenas/stacks/recyclarr/recyclarr.yml` in repo → SCP to `/mnt/Fast/docker/recyclarr/config/recyclarr.yml` on TrueNAS
+- **Manages**: Sonarr + Radarr custom formats and quality profile scores
+
+### Sync after editing recyclarr.yml
+```bash
+# 1. SCP updated config to TrueNAS (use SSH secure pattern)
+scp -i "$TMPKEY" truenas/stacks/recyclarr/recyclarr.yml \
+  kero66@192.168.20.22:/mnt/Fast/docker/recyclarr/config/recyclarr.yml
+
+# 2. Sync Sonarr
+ssh -i "$TMPKEY" kero66@192.168.20.22 "sudo docker exec recyclarr recyclarr sync sonarr 2>&1 | tail -5"
+
+# 3. Sync Radarr
+ssh -i "$TMPKEY" kero66@192.168.20.22 "sudo docker exec recyclarr recyclarr sync radarr 2>&1 | tail -5"
+```
+
+### Key recyclarr.yml sections
+- `min_format_score` on quality profiles controls the grab threshold (0 = grab anything not explicitly blocked)
+- Radarr Anime (1080p): `min_format_score: 0` — allows niche/fansub releases to be grabbed
+- German blocking formats (score -10000): `German LQ`, `German LQ (release title)`, `German DL`
+
+---
+
+## Prowlarr Indexer Management
+
+### List all indexers with stats
+```bash
+PROWLARR_KEY=$(infisical secrets get PROWLARR_API_KEY --env dev --path /media --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+
+curl -s -H "X-Api-Key: $PROWLARR_KEY" "http://192.168.20.22:9696/prowlarr/api/v1/indexer" | \
+  jq '[.[] | {id, name, priority}]'
+
+curl -s -H "X-Api-Key: $PROWLARR_KEY" "http://192.168.20.22:9696/prowlarr/api/v1/indexerstats" | \
+  jq '.indexers[] | {name: .indexerName, queries: .numberOfQueries, failed: .numberOfFailedQueries, avgMs: .averageResponseTime}'
+```
+
+### Delete an indexer
+```bash
+curl -s -X DELETE -H "X-Api-Key: $PROWLARR_KEY" \
+  "http://192.168.20.22:9696/prowlarr/api/v1/indexer/<ID>"
+```
+
+### Cross-reference grab history (which indexer actually sourced grabs)
+```bash
+# Sonarr
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/history?pageSize=500&eventType=1" | \
+  jq '[.records[].data.indexer // "unknown"] | group_by(.) | map({indexer: .[0], grabs: length}) | sort_by(-.grabs)[]'
+
+# Radarr
+curl -s -H "X-Api-Key: $RADARR_KEY" "http://192.168.20.22:7878/radarr/api/v3/history?pageSize=500&eventType=1" | \
+  jq '[.records[].data.indexer // "unknown"] | group_by(.) | map({indexer: .[0], grabs: length}) | sort_by(-.grabs)[]'
+```
+
+---
+
+## Radarr API
 
 ### Setup
 ```bash
-RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media --plain 2>/dev/null)
-SONARR_KEY=$(infisical secrets get SONARR_API_KEY --env dev --path /media --plain 2>/dev/null)
-# Config: /mnt/Fast/docker/recyclarr/config/recyclarr.yml (on TrueNAS)
-# Source of truth: media/recyclarr/config/recyclarr.yml (gitignored — contains secrets)
-# Secrets file: media/recyclarr/config/secrets.yml (gitignored)
-# Cron: @daily — logs visible via docker logs recyclarr
+RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+RADARR="http://192.168.20.22:7878/radarr"
 ```
 
-### Run a sync manually
+### List monitored movies without files (missing)
 ```bash
-TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
-ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 "sudo docker exec recyclarr recyclarr sync 2>&1"
-rm -rf "$TMPDIR_SAFE"
+curl -s -H "X-Api-Key: $RADARR_KEY" "$RADARR/api/v3/movie" | \
+  jq '[.[] | select(.monitored == true and .hasFile == false) | {id, title, year, status, qualityProfileId}] | sort_by(.year)[]'
 ```
 
-### Deploy updated config to TrueNAS
+### Trigger search for specific movie IDs
 ```bash
-TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
-scp -i "$TMPKEY" -o StrictHostKeyChecking=no \
-  media/recyclarr/config/recyclarr.yml \
-  kero66@192.168.20.22:/mnt/Fast/docker/recyclarr/config/recyclarr.yml
-rm -rf "$TMPDIR_SAFE"
+curl -s -X POST -H "X-Api-Key: $RADARR_KEY" -H "Content-Type: application/json" \
+  -d '{"name": "MoviesSearch", "movieIds": [1, 2, 3]}' \
+  "$RADARR/api/v3/command" | jq '{id, name, status}'
 ```
 
-### Adopt existing CFs after first-time sync or CF rename (run before sync if you get "CFs with matching names" error)
+### Trigger search for all missing monitored movies
 ```bash
-ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 \
-  "sudo docker exec recyclarr recyclarr state repair --adopt 2>&1"
+MISSING_IDS=$(curl -s -H "X-Api-Key: $RADARR_KEY" "$RADARR/api/v3/movie" | \
+  jq '[.[] | select(.monitored == true and .hasFile == false and .status == "released") | .id]')
+curl -s -X POST -H "X-Api-Key: $RADARR_KEY" -H "Content-Type: application/json" \
+  -d "{\"name\": \"MoviesSearch\", \"movieIds\": $MISSING_IDS}" \
+  "$RADARR/api/v3/command" | jq '{id, status}'
 ```
 
-### Verify CF scores applied in Radarr
+### Check quality profile format scores
 ```bash
-RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media --plain 2>/dev/null)
-curl -sL "http://192.168.20.22:7878/api/v3/qualityprofile" -H "X-Api-Key: $RADARR_KEY" | \
-  jq '[.[] | {name, formats: [.formatItems[] | select(.score != 0) | {name, score}] | sort_by(-.score)}]'
+curl -s -H "X-Api-Key: $RADARR_KEY" "$RADARR/api/v3/qualityprofile/<PROFILE_ID>" | \
+  jq '.formatItems[] | select(.score != 0) | {format: .name, score}'
 ```
 
-### Verify CF scores applied in Sonarr
+### Interactive release search for a specific movie
 ```bash
-SONARR_KEY=$(infisical secrets get SONARR_API_KEY --env dev --path /media --plain 2>/dev/null)
-curl -sL "http://192.168.20.22:8989/api/v3/qualityprofile" -H "X-Api-Key: $SONARR_KEY" | \
-  jq '[.[] | {name, formats: [.formatItems[] | select(.score != 0) | {name, score}] | sort_by(-.score)}]'
-```
-
-### Key config facts
-- Base URLs use Docker service names: `http://radarr:7878/radarr`, `http://sonarr:8989/sonarr`
-- API keys via `!secret` syntax referencing `secrets.yml` in same config dir
-- `delete_old_custom_formats: true` — recyclarr owns CFs it creates; won't touch manually added ones
-- Trash_ids for CFs are in `media/recyclarr/config/cache/resources/trash-guides/git/official/docs/json/{radarr,sonarr}/cf/`
-- Lookup correct trash_id: `grep -r "CF Name" media/recyclarr/config/cache/resources/trash-guides/git/official/docs/json/radarr/cf/`
-- x265 (HD): score 0 for Anime (1080p), -10000 for Standard and 4K — x265 is normal for anime BDs
-- Anime BD/Web tiers: no explicit score in config = recyclarr uses TRaSH default (1400 down to 100)
-- `min_format_score: 100` on Radarr Anime (1080p) — releases must match at least one anime tier CF to be accepted
-
-### Check cron sync history
-```bash
-TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
-ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 "sudo docker logs recyclarr --tail 50 2>&1"
-rm -rf "$TMPDIR_SAFE"
+curl -s -H "X-Api-Key: $RADARR_KEY" "$RADARR/api/v3/release?movieId=<ID>" | \
+  jq '[.[] | {title: .title[0:70], score: .customFormatScore, rejected, reason: .rejections[0]}]'
 ```
 
 ---
@@ -892,7 +1057,10 @@ Root folders (run `infisical secrets folders get --env dev --path /` to list):
 | `TRUENAS_API_TOKEN` | dev | `/TrueNAS` | Bearer token for TrueNAS REST API |
 | `kero66_ssh_key` | dev | `/TrueNAS` | ED25519 private key for kero66@192.168.20.22 |
 | `truenas_admin_api` | dev | `/TrueNAS` | TrueNAS admin API key |
-| `ADGUARD_PASSWORD` | dev | `/TrueNAS` | AdGuard Home admin password |
+| `ADGUARD_PASSWORD` | dev | `/TrueNAS` | AdGuard Home admin password — username is `kero66`, may be stale |
+| `DOCKHAND_USER` | dev | `/TrueNAS` | Dockhand username |
+| `DOCKHAND_USER_PASSWORD` | dev | `/TrueNAS` | Dockhand password |
+| `DOCKHAND_GITHUB_DEPLOY_KEY_PRIVATE` | dev | `/TrueNAS` | Dockhand GitHub deploy key |
 | `QBITTORRENT_USER` | dev | `/TrueNAS` | qBittorrent username |
 | `QBITTORRENT_PASS` | dev | `/TrueNAS` | qBittorrent password |
 | `CLEANUPARR_API_KEY` | dev | `/media` | Cleanuparr API key |
