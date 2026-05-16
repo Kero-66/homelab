@@ -4,6 +4,38 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-05-16 - Hook Fixes + Ninja Kamui E05 Subtitle Sync (COMPLETED)
+
+### What Was Done
+
+1. **Fixed mempalace hooks failing at startup**
+   - Root cause: `mempalace` Python package not installed — hooks couldn't find `mempalace` CLI binary
+   - Fix: installed via `/usr/bin/python3 -m pip install mempalace` (system Python 3.9, NOT Homebrew 3.14 which has a broken libexpat)
+   - Binary lands in `~/Library/Python/3.9/bin` which isn't on PATH in hook context
+   - Fix: added `export PATH="$PATH:$HOME/Library/Python/3.9/bin"` to both wrapper hooks:
+     - `~/.claude/hooks/mempalace-stop.sh`
+     - `~/.claude/hooks/mempalace-precompact.sh`
+
+2. **Fixed Ninja Kamui S01E05 subtitles out of sync**
+   - File: `Ninja Kamui - S01E05 - 005 - Episode 5 Bluray-1080p x264 Opus 2.0 [JA] -BBF [tvdbid-420280].mkv`
+   - Root cause: BBF is a Blu-ray encode; Bazarr downloaded an `.en.srt` timed for a WEB-DL release — BD timing is ~3.21s earlier
+   - Diagnosed by extracting the embedded Italian ASS sub (correctly timed for BD) and comparing first dialogue timestamps
+   - Fix: shifted all SRT timestamps back 3213ms using a Python script run via SSH on TrueNAS
+   - Backup saved as `.en.srt.bak`
+   - See PATTERNS.md → "BD Subtitle Timing Offset Fix" for the reusable pattern
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| mempalace Python path | `~/Library/Python/3.9/bin/mempalace` (system Python 3.9) |
+| Why not Homebrew Python | Homebrew Python 3.14 has broken libexpat (`dlopen` Symbol not found) |
+| E05 timing offset | -3213ms (WEB sub → BD encode) |
+| E05 reference sub | Embedded Italian ASS track (stream 0:2), correctly timed for BD |
+| E05 SRT backup | Same path + `.bak` extension |
+
+---
+
 ## Session 2026-04-11 - Sonarr/Radarr Fixes + Recyclarr Sync (COMPLETED)
 
 ### What Was Done

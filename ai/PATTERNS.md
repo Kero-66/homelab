@@ -796,6 +796,66 @@ xz -d scratch/subtitle.ass.xz
 grep '^Dialogue:' scratch/subtitle.ass | head -5
 ```
 
+### BD Subtitle Timing Offset Fix
+
+When Bazarr downloads a subtitle timed for a WEB-DL release but the MKV is a Blu-ray encode,
+the sub will be consistently early or late (typically a few seconds constant offset).
+
+**Diagnosis**: Compare first dialogue timestamp in the external `.srt` against an embedded sub
+that IS correctly timed (e.g. an Italian or Japanese ASS track from the same encode group):
+
+```bash
+# Check MKV tracks
+sudo docker run --rm -v '/mnt/Data/media/shows:/shows' linuxserver/ffmpeg \
+  -i "/shows/Series/Season 01/episode.mkv" 2>&1 | grep 'Stream'
+
+# Extract embedded sub to stdout and check first timestamps
+sudo docker run --rm -v '/mnt/Data/media/shows:/shows' linuxserver/ffmpeg \
+  -i "/shows/Series/Season 01/episode.mkv" \
+  -map 0:2 -f ass - 2>/dev/null | grep '^Dialogue:' | head -5
+
+# Check first timestamps in the external SRT
+head -20 "/mnt/Data/media/shows/Series/Season 01/episode.en.srt"
+```
+
+**Fix**: Shift the `.srt` timestamps by the measured offset (negative = make earlier):
+
+```bash
+python3 - <<'PYEOF'
+import re, shutil
+
+SRT = '/mnt/Data/media/shows/Series/Season 01/episode.en.srt'
+SHIFT_MS = -3213  # negative = shift earlier; measure from comparing embedded vs external sub
+
+def shift_ts(match):
+    def to_ms(h, m, s, ms):
+        return int(h)*3600000 + int(m)*60000 + int(s)*1000 + int(ms)
+    def from_ms(v):
+        v = max(0, v)
+        h, v = divmod(v, 3600000)
+        m, v = divmod(v, 60000)
+        s, v = divmod(v, 1000)
+        return f'{h:02d}:{m:02d}:{s:02d},{v:03d}'
+    g = match.groups()
+    return f'{from_ms(to_ms(*g[:4]) + SHIFT_MS)} --> {from_ms(to_ms(*g[4:]) + SHIFT_MS)}'
+
+shutil.copy2(SRT, SRT + '.bak')
+with open(SRT) as f:
+    content = f.read()
+pattern = r'(\d{2}):(\d{2}):(\d{2}),(\d{3}) --> (\d{2}):(\d{2}):(\d{2}),(\d{3})'
+with open(SRT, 'w') as f:
+    f.write(re.sub(pattern, shift_ts, content))
+print('Done. Backup at', SRT + '.bak')
+PYEOF
+```
+
+Run via SSH: `ssh kero66@192.168.20.22 "python3 - <<'PYEOF' ... PYEOF"`
+
+**Note**: This is the right approach when the offset is constant throughout the episode (BD vs WEB timing).
+If the offset drifts (different encode speed), use subsync instead — trigger via Bazarr UI or API.
+
+---
+
 ### Remux subtitle into MKV (replace a bad embedded track)
 ```bash
 # Example: replace track 0:2 (English) with correct external sub
