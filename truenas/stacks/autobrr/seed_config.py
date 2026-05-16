@@ -1,30 +1,53 @@
 #!/usr/bin/env python3
 """
 autobrr pre-seed configuration script.
-Configures download clients (Sonarr, Radarr, qBittorrent), Prowlarr Torznab feed,
+Configures download clients (Sonarr, Radarr, qBittorrent), Prowlarr Torznab feeds,
 and a VOTOMS filter.
 
 All secrets read from environment variables — never passed as args.
+
+API notes (discovered against v1.78.0):
+- Indexers: POST /indexer must exist before feed creation
+- Feeds: POST /feeds with indexer_id — feeds without indexer_id are orphaned (invisible via GET)
+- Filters: POST /filters creates shell; PUT /filters/{id} attaches indexers
+- Actions: POST /actions with filter_id — NOT inline in filter body
+- Prowlarr Torznab URL: http://prowlarr:9696/{prowlarr_indexer_id}/api
 """
-import os, sys, json, urllib.request, urllib.error
+import os, json, urllib.request, urllib.error
 
 BASE = "http://localhost:7474/api"
+PROWLARR_BASE = "http://prowlarr:9696/prowlarr/api/v1"
+
 AUTOBRR_KEY = os.environ["AUTOBRR_KEY"]
 SONARR_KEY = os.environ["SONARR_KEY"]
 RADARR_KEY = os.environ["RADARR_KEY"]
 PROWLARR_KEY = os.environ["PROWLARR_KEY"]
 
 
-def api(method, path, body=None):
-    url = BASE + path
+def api(method, path, body=None, base=BASE, token_header="X-API-Token", token=None):
+    url = base + path
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method,
-        headers={"X-API-Token": AUTOBRR_KEY, "Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json", token_header: token or AUTOBRR_KEY}
+    req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         with urllib.request.urlopen(req) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         return {"error": e.code, "body": e.read().decode()}
+
+
+def prowlarr_get(path):
+    return api("GET", path, base=PROWLARR_BASE, token_header="X-Api-Key", token=PROWLARR_KEY)
+
+
+def get_prowlarr_indexer_id(name):
+    """Look up Prowlarr indexer ID by name — never hardcode IDs."""
+    indexers = prowlarr_get("/indexer")
+    match = next((i for i in indexers if i["name"].lower() == name.lower()), None)
+    if not match:
+        print(f"  WARNING: Prowlarr indexer '{name}' not found — skipping")
+        return None
+    return match["id"]
 
 
 def ensure_download_client(name, payload):
@@ -41,13 +64,43 @@ def ensure_download_client(name, payload):
     return result["id"]
 
 
-def ensure_feed(name, payload):
+def ensure_indexer(identifier, name):
+    """Create autobrr indexer definition (required before feed)."""
+    indexers = api("GET", "/indexer")
+    existing = next((i for i in indexers if i["identifier"] == identifier and i["name"] == name), None)
+    if existing:
+        print(f"  indexer '{name}' already exists (id={existing['id']})")
+        return existing["id"]
+    result = api("POST", "/indexer", {
+        "identifier": identifier,
+        "name": name,
+        "identifier_external": name,
+        "enabled": True,
+    })
+    if "error" in result:
+        print(f"  ERROR adding indexer {name}: {result}")
+        return None
+    print(f"  added indexer '{name}' (id={result['id']})")
+    return result["id"]
+
+
+def ensure_feed(name, indexer_id, prowlarr_indexer_id):
+    """Create autobrr feed linked to indexer, using Prowlarr Torznab URL."""
     feeds = api("GET", "/feeds")
     existing = next((f for f in feeds if f["name"] == name), None)
     if existing:
         print(f"  feed '{name}' already exists (id={existing['id']})")
         return existing["id"]
-    result = api("POST", "/feeds", payload)
+    result = api("POST", "/feeds", {
+        "name": name,
+        "type": "TORZNAB",
+        "indexer_id": indexer_id,
+        "url": f"http://prowlarr:9696/{prowlarr_indexer_id}/api",
+        "api_key": PROWLARR_KEY,
+        "enabled": True,
+        "interval": 15,
+        "timeout": 60,
+    })
     if "error" in result:
         print(f"  ERROR adding feed {name}: {result}")
         return None
@@ -61,7 +114,8 @@ def ensure_filter(name, payload):
     if existing:
         print(f"  filter '{name}' already exists (id={existing['id']})")
         return existing["id"]
-    result = api("POST", "/filters", payload)
+    # POST creates shell — indexers/actions attached separately
+    result = api("POST", "/filters", {k: v for k, v in payload.items() if k not in ("actions", "indexers")})
     if "error" in result:
         print(f"  ERROR adding filter {name}: {result}")
         return None
@@ -69,70 +123,129 @@ def ensure_filter(name, payload):
     return result["id"]
 
 
+def attach_filter_indexers(filter_id, filter_payload, indexers):
+    """PUT /filters/{id} to attach indexers (list of {id, name} dicts)."""
+    result = api("PUT", f"/filters/{filter_id}", {
+        **filter_payload,
+        "id": filter_id,
+        "indexers": indexers,
+    })
+    if "error" in result:
+        print(f"  ERROR attaching indexers to filter {filter_id}: {result}")
+    else:
+        names = [i["name"] for i in indexers]
+        print(f"  attached indexers {names} to filter id={filter_id}")
+
+
+def ensure_action(filter_id, action_name, payload):
+    """POST /actions with filter_id — actions are NOT set via filter body."""
+    actions = api("GET", "/actions")
+    existing = next((a for a in actions if a.get("name") == action_name), None)
+    if existing:
+        print(f"  action '{action_name}' already exists (id={existing['id']})")
+        return existing["id"]
+    result = api("POST", "/actions", {**payload, "name": action_name, "filter_id": filter_id})
+    if "error" in result:
+        print(f"  ERROR adding action {action_name}: {result}")
+        return None
+    print(f"  added action '{action_name}' (id={result['id']})")
+    return result["id"]
+
+
+# ── Download clients ──────────────────────────────────────────────────────────
+
 print("=== autobrr: configuring download clients ===")
 
-# qBittorrent (check if already exists from initial setup)
 ensure_download_client("qBittorrent", {
     "name": "qBittorrent", "type": "QBITTORRENT", "enabled": True,
     "host": "qbittorrent", "port": 8080, "tls": False, "tls_skip_verify": False,
     "settings": {"basic": {}, "rules": {"enabled": False}, "auth": {}}
 })
 
-# Sonarr
 sonarr_id = ensure_download_client("Sonarr", {
     "name": "Sonarr", "type": "SONARR", "enabled": True,
     "host": "sonarr", "port": 8989, "tls": False, "tls_skip_verify": False,
     "settings": {"apikey": SONARR_KEY, "basic": {}, "rules": {"enabled": False}, "auth": {}}
 })
 
-# Radarr
-radarr_id = ensure_download_client("Radarr", {
+ensure_download_client("Radarr", {
     "name": "Radarr", "type": "RADARR", "enabled": True,
     "host": "radarr", "port": 7878, "tls": False, "tls_skip_verify": False,
     "settings": {"apikey": RADARR_KEY, "basic": {}, "rules": {"enabled": False}, "auth": {}}
 })
 
-print("\n=== autobrr: configuring feeds (Prowlarr Torznab) ===")
+# ── Indexers + feeds (via Prowlarr Torznab) ───────────────────────────────────
 
-# Nyaa via Prowlarr Torznab (Prowlarr indexer ID 1 = Nyaa)
-nyaa_feed_id = ensure_feed("Nyaa (Prowlarr)", {
-    "name": "Nyaa (Prowlarr)",
-    "type": "TORZNAB",
-    "url": "http://prowlarr:9696/1/api",
-    "api_key": PROWLARR_KEY,
-    "enabled": True,
-    "interval": 15,
-    "timeout": 60
-})
+print("\n=== autobrr: configuring indexers + feeds ===")
+
+# Look up Prowlarr indexer IDs dynamically — never hardcode
+nyaa_prowlarr_id = get_prowlarr_indexer_id("Nyaa.si")
+animetosho_prowlarr_id = get_prowlarr_indexer_id("AnimeTosho")
+
+autobrr_indexers = {}
+
+if nyaa_prowlarr_id:
+    idx_id = ensure_indexer("torznab", "Nyaa.si")
+    ensure_feed("Nyaa.si (Prowlarr)", idx_id, nyaa_prowlarr_id)
+    autobrr_indexers["Nyaa.si"] = idx_id
+
+if animetosho_prowlarr_id:
+    # AnimeTosho uses RSS identifier — autobrr allows only one indexer per identifier,
+    # and "torznab" is already used by Nyaa.si. RSS feed points to Prowlarr's
+    # Torznab search-with-empty-query endpoint which returns RSS-format results.
+    idx_id = ensure_indexer("rss", "AnimeTosho")
+    feeds = api("GET", "/feeds")
+    existing = next((f for f in feeds if f["name"] == "AnimeTosho (Prowlarr)"), None)
+    if existing:
+        print(f"  feed 'AnimeTosho (Prowlarr)' already exists (id={existing['id']})")
+        at_feed_id = existing["id"]
+    else:
+        result = api("POST", "/feeds", {
+            "name": "AnimeTosho (Prowlarr)",
+            "type": "RSS",
+            "indexer_id": idx_id,
+            "url": f"http://prowlarr:9696/{animetosho_prowlarr_id}/api?t=search&q=&apikey={PROWLARR_KEY}",
+            "enabled": True,
+            "interval": 15,
+            "timeout": 60,
+        })
+        if "error" in result:
+            print(f"  ERROR adding feed AnimeTosho (Prowlarr): {result}")
+        else:
+            print(f"  added feed 'AnimeTosho (Prowlarr)' (id={result['id']})")
+    autobrr_indexers["AnimeTosho"] = idx_id
+
+# ── Filters ───────────────────────────────────────────────────────────────────
 
 print("\n=== autobrr: configuring filters ===")
 
-# VOTOMS - grab everything
-votoms_filter = {
+VOTOMS_BASE = {
     "name": "VOTOMS - Grab All",
     "enabled": True,
+    "priority": 1,
     "shows": "Armored Trooper VOTOMS, VOTOMS, 装甲騎兵ボトムズ",
-    "years": "",
+    "match_releases": "*VOTOMS*,*Votoms*,*votoms*,*ボトムズ*",
+    "announce_types": ["NEW"],
     "resolutions": [],
     "sources": [],
     "codecs": [],
     "containers": [],
-    "match_releases": "*VOTOMS*,*Votoms*,*votoms*,*ボトムズ*",
-    "except_releases": "",
-    "indexers": [{"id": nyaa_feed_id, "name": "Nyaa (Prowlarr)"}] if nyaa_feed_id else [],
-    "actions": [
-        {
-            "name": "Send to qBittorrent",
-            "type": "QBITTORRENT",
-            "enabled": True,
-            "client_id": 1,
-            "save_path": "/data/downloads/complete/anime",
-            "category": "anime",
-            "tags": "votoms,autobrr"
-        }
-    ],
-    "priority": 1
 }
-ensure_filter("VOTOMS - Grab All", votoms_filter)
+
+votoms_id = ensure_filter("VOTOMS - Grab All", VOTOMS_BASE)
+
+if votoms_id and autobrr_indexers:
+    attach_filter_indexers(
+        votoms_id,
+        VOTOMS_BASE,
+        [{"id": iid, "name": name} for name, iid in autobrr_indexers.items()],
+    )
+
+if votoms_id and sonarr_id:
+    ensure_action(votoms_id, "Send to Sonarr", {
+        "type": "SONARR",
+        "enabled": True,
+        "client_id": sonarr_id,
+    })
 
 print("\n=== Done ===")
