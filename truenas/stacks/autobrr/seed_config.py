@@ -232,20 +232,64 @@ VOTOMS_BASE = {
     "containers": [],
 }
 
-votoms_id = ensure_filter("VOTOMS - Grab All", VOTOMS_BASE)
-
-if votoms_id and autobrr_indexers:
-    attach_filter_indexers(
-        votoms_id,
-        VOTOMS_BASE,
-        [{"id": iid, "name": name} for name, iid in autobrr_indexers.items()],
-    )
-
-if votoms_id and sonarr_id:
-    ensure_action(votoms_id, "Send to Sonarr", {
-        "type": "SONARR",
+def setup_filter(name, shows, match_releases, client_id):
+    base = {
+        "name": name,
         "enabled": True,
-        "client_id": sonarr_id,
-    })
+        "priority": 1,
+        "shows": shows,
+        "match_releases": match_releases,
+        "announce_types": ["NEW"],
+        "resolutions": [],
+        "sources": [],
+        "codecs": [],
+        "containers": [],
+    }
+    fid = ensure_filter(name, base)
+    if fid and autobrr_indexers:
+        attach_filter_indexers(fid, base, [{"id": iid, "name": n} for n, iid in autobrr_indexers.items()])
+    if fid and client_id:
+        ensure_action(fid, "Send to Sonarr", {"type": "SONARR", "enabled": True, "client_id": client_id})
+    return fid
+
+
+# VOTOMS (main series + OVAs — all monitored in Sonarr)
+setup_filter(
+    "VOTOMS - Grab All",
+    "Armored Trooper VOTOMS, VOTOMS, 装甲騎兵ボトムズ",
+    "*VOTOMS*,*Votoms*,*votoms*,*ボトムズ*",
+    sonarr_id,
+)
+setup_filter(
+    "VOTOMS OVAs",
+    "Armored Trooper VOTOMS: Pailsen Files, Armored Trooper VOTOMS: Phantom Chapter, Armored Trooper VOTOMS: Shining Heresy",
+    "*VOTOMS*,*Votoms*,*Pailsen*,*Phantom Chapter*,*Shining Heresy*,*ボトムズ*",
+    sonarr_id,
+)
+
+# Obscure old anime missing from Sonarr — autobrr catches uploads as they appear on Nyaa/AnimeTosho
+setup_filter("Robotech", "Robotech", "*Robotech*", sonarr_id)
+setup_filter(
+    "Tekkaman Blade",
+    "Tekkaman Blade",
+    "*Tekkaman*,*宇宙の騎士テッカマン*",
+    sonarr_id,
+)
+setup_filter("Blue Gender", "Blue Gender", "*Blue Gender*,*ブルージェンダー*", sonarr_id)
+setup_filter(
+    "Macross",
+    "Macross 7, Macross Dynamite 7, Macross, Macross Zero, Macross Plus, Macross II, Macross Frontier",
+    "*Macross*,*マクロス*",
+    sonarr_id,
+)
+setup_filter("Trigun", "Trigun", "*Trigun*,*トライガン*", sonarr_id)
+setup_filter("Gasaraki", "Gasaraki", "*Gasaraki*,*ガサラキ*", sonarr_id)
+setup_filter(
+    "Gundam Wing",
+    "Mobile Suit Gundam Wing",
+    "*Gundam Wing*,*ガンダムW*,*Gundam W*",
+    sonarr_id,
+)
+setup_filter(".hack", ".hack", "*.hack*", sonarr_id)
 
 print("\n=== Done ===")
