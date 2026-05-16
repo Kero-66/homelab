@@ -114,7 +114,7 @@ scan_and_import() {
 
     if [[ "$DRY_RUN" == false ]]; then
       # Build the import payload — POST to manualimport
-      local payload
+      local payload result
       if [[ "$app" == "sonarr" ]]; then
         payload=$(echo "$importable" | jq '[.[] | {
           path,
@@ -125,7 +125,6 @@ scan_and_import() {
           releaseGroup,
           importMode: "move"
         }]')
-        local result
         result=$(sonarr_api "manualimport" \
           -X POST \
           -H "Content-Type: application/json" \
@@ -139,14 +138,29 @@ scan_and_import() {
           releaseGroup,
           importMode: "move"
         }]')
-        local result
         result=$(radarr_api "manualimport" \
           -X POST \
           -H "Content-Type: application/json" \
           -d "$payload" 2>/dev/null)
       fi
-      imported=$importable_count
-      log_ok "$app: imported $imported file(s) from $scan_dir"
+
+      # Validate response — API returns array of imported items on success
+      if ! echo "$result" | jq empty 2>/dev/null; then
+        log_warn "$app: invalid response from manualimport POST — files may not have been imported"
+        return
+      fi
+      local error_msg
+      error_msg=$(echo "$result" | jq -r 'if type == "object" then .message // "" else "" end')
+      if [[ -n "$error_msg" ]]; then
+        log_skip "$app: import failed — $error_msg"
+        return
+      fi
+      imported=$(echo "$result" | jq 'if type == "array" then length else 0 end')
+      if [[ "$imported" -eq 0 ]]; then
+        log_warn "$app: POST succeeded but no items confirmed imported from $scan_dir"
+      else
+        log_ok "$app: imported $imported file(s) from $scan_dir"
+      fi
     fi
   fi
 
