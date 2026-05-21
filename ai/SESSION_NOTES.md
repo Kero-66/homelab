@@ -4,6 +4,54 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-05-16 to 2026-05-22 - autobrr Setup + Missing Shows + Subtitle Fixes (COMPLETED)
+
+### What Was Done
+
+1. **autobrr fully configured** (was deployed but empty)
+   - Download clients: qBittorrent, Sonarr, Radarr
+   - Indexers/feeds: Nyaa.si (torznab via Prowlarr), AnimeTosho (rss identifier — one torznab limit)
+   - Filters: VOTOMS, VOTOMS OVAs, Robotech, Tekkaman Blade, Blue Gender, Macross, Trigun, Gasarr, Gundam Wing, .hack
+   - All filters push to Sonarr; monitored via Nyaa.si + AnimeTosho
+   - Seed script `truenas/stacks/autobrr/seed_config.py` corrected and idempotent
+
+2. **autobrr API quirks (v1.78.0)**
+   - `POST /indexer` must exist before feed creation — feeds without `indexer_id` are orphaned (invisible via GET /feeds)
+   - Actions via `POST /actions` with `filter_id` — NOT inline in filter body or via filter PUT
+   - Filter indexers via `PUT /filters/{id}` — not in initial POST
+   - Only one indexer per `identifier` (UNIQUE constraint) — Nyaa.si uses `torznab`, AnimeTosho uses `rss`
+   - AnimeTosho RSS feed URL: `http://prowlarr:9696/3/api?t=search&q=&apikey=KEY` (Torznab search-as-RSS)
+
+3. **Triggered SeriesSearch for all 22 missing series** in Sonarr
+
+4. **Bazarr: added subf2m provider** (no account needed) for English subtitle support on Korean/Asian content
+   - Config file edit required — `POST /system/settings` API ignores `enabled_providers` changes
+   - Edit: `/mnt/Fast/docker/bazarr/config/config.yaml` → restart arr-stack via midclt
+
+5. **Omniscient Reader: The Prophecy subtitle fixed**
+   - Downloaded English sub from subf2m (AMZN KyoGo retail)
+   - Shifted -6000ms (subs were 6s behind BD encode vs WEB-DL timing)
+   - File: `.en.hi.srt` (SDH — full dialogue translation, sound descriptions included)
+   - Backup: `.en.hi.srt.bak`
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| autobrr URL | http://autobrr.home (port 7474) |
+| autobrr API key | `AUTOBRR_API_KEY` in Infisical `/media` |
+| Bazarr config file | `/mnt/Fast/docker/bazarr/config/config.yaml` |
+| Bazarr enabled providers | animetosho, gestdown, bsplayer, subf2m |
+| AnimeTosho Prowlarr ID | 3 |
+| Nyaa.si Prowlarr ID | 1 |
+
+### Outstanding
+- Sonarr searches for missing series running — check http://sonarr.home/activity/queue for results
+- Timing on Omniscient Reader sub may still be slightly off — if so, adjust offset in `.en.hi.srt`
+- autobrr compose.yaml pinned to v1.78.0 by user
+
+---
+
 ## Session 2026-05-16 - Hook Fixes + Ninja Kamui E05 Subtitle Sync (COMPLETED)
 
 ### What Was Done

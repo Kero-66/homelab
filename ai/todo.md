@@ -179,3 +179,9 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 81 | subdl_re_enable | Re-enable subdl provider in Bazarr once the KeyError: 'subtitles' bug is fixed upstream. Bug: `result['subtitles']` is accessed without checking key existence in `custom_libs/subliminal_patch/providers/subdl.py` — API sometimes returns success without that key. Fix is `result.get('subtitles', [])`. Track: https://github.com/morpheus65535/bazarr — check releases for subdl fix. Config: `media/.config/bazarr/config.yaml` → `enabled_providers`. | Claude | 2026-03-31 | open | media/.config/bazarr/config.yaml
 
+83 | check_sonarr_missing_results | Sonarr SeriesSearch triggered for all 22 series with missing episodes (VOTOMS, Robotech, Tekkaman Blade, Blue Gender, Macross variants, Trigun, Gasaraki, Gundam Wing, .hack, etc.). Check http://sonarr.home/activity/queue and wanted list to see what was grabbed. autobrr filters also set up for ongoing monitoring. | Claude | 2026-05-22 | open | truenas/stacks/autobrr/seed_config.py
+
+84 | autobrr_seed_script_test | Re-run autobrr seed_config.py on a clean instance to verify idempotency. Current live config was set up manually then script updated — needs end-to-end test. | Claude | 2026-05-22 | open | truenas/stacks/autobrr/seed_config.py
+
+85 | bazarr_settings_api_bug | Bazarr POST /system/settings API silently ignores enabled_providers changes — only config.yaml edit works. If Bazarr is ever redeployed, re-add subf2m to enabled_providers in config.yaml before starting. | Claude | 2026-05-22 | open | /mnt/Fast/docker/bazarr/config/config.yaml
+
