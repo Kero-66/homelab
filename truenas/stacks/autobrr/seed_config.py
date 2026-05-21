@@ -15,8 +15,8 @@ API notes (discovered against v1.78.0):
 """
 import os, json, urllib.request, urllib.error
 
-BASE = "http://localhost:7474/api"
-PROWLARR_BASE = "http://prowlarr:9696/prowlarr/api/v1"
+BASE = os.environ.get("AUTOBRR_BASE", "http://localhost:7474/api")
+PROWLARR_BASE = os.environ.get("PROWLARR_BASE", "http://prowlarr:9696/prowlarr/api/v1")
 
 AUTOBRR_KEY = os.environ["AUTOBRR_KEY"]
 SONARR_KEY = os.environ["SONARR_KEY"]
@@ -76,6 +76,7 @@ def ensure_indexer(identifier, name):
         "name": name,
         "identifier_external": name,
         "enabled": True,
+        "settings": {},
     })
     if "error" in result:
         print(f"  ERROR adding indexer {name}: {result}")
