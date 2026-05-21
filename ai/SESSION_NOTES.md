@@ -4,6 +4,86 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-05-22 - autobrr Crash Diagnosis + DB Repair (IN PROGRESS)
+
+### What Was Done
+
+1. **Diagnosed autobrr crash loop** — nil pointer panic at `indexer/service.go:414` on every start
+   - Root cause: `seed_config.py` created indexers with `settings: {}` (or omitted)
+   - autobrr stores settings as a BLOB; omitting them stores `X'6E756C6C'` (null bytes) not `X'7B7D'` (`{}`)
+   - On startup, autobrr dereferences `settings.url` → nil → SIGSEGV
+   - This affects ALL versions (v1.78.0 and v1.79.0), not a version regression
+
+2. **DB repair journey**
+   - `settings = {}` fix insufficient — panic persisted
+   - Real fix: indexer POST requires `settings` as `map[string]string` with `url` (and optionally `api_key`)
+   - torznab: `{"url": "http://prowlarr:9696/{id}/api", "api_key": "PROWLARR_KEY"}`
+   - rss: `{"url": "http://prowlarr:9696/{id}/api?t=search&q=&apikey=KEY"}`
+   - Orphaned feeds (indexer_id=0 or pointing to deleted indexers) also caused panics
+   - Final fix: wiped `indexer`, `feed`, `filter_indexer` tables; kept filters/download_clients/actions
+
+3. **seed_config.py fixes committed**
+   - `ensure_indexer` now takes `settings` param (required, not optional `{}`)
+   - `BASE` and `PROWLARR_BASE` now read from env vars (needed to run from Docker container on arr-stack network)
+   - Run command: `docker run --rm --network ix-arr-stack_default -e AUTOBRR_BASE=http://autobrr:7474/api ...`
+
+4. **Infisical updated**
+   - `AUTOBRR_API_KEY` path was `/TrueNAS` (not `/media` as old notes said) — updated to correct value
+   - Key: `238af46d5c776cf7d6e90251d2ac14b4`
+
+5. **autobrr now on v1.79.0 (latest), running clean**
+   - DB: download clients intact, 10 filters intact, 0 indexers/feeds (not yet re-seeded)
+
+### Current State
+
+| Item | State |
+|---|---|
+| autobrr | Running v1.79.0, UP, no panics |
+| DB — download clients | ✅ qBittorrent, Sonarr, Radarr |
+| DB — filters | ✅ 10 filters (VOTOMS, VOTOMS OVAs, Robotech, Tekkaman Blade, Blue Gender, Macross, Trigun, Gasaraki, Gundam Wing, .hack) |
+| DB — indexers/feeds | ❌ Empty — needs re-seeding |
+| DB — filter_indexer | ❌ Empty — will be re-linked after re-seed |
+
+### Next Step: Re-seed Indexers and Feeds
+
+The seed script is now correct. Run:
+
+```bash
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$INFISICAL_PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
+
+SONARR_KEY=$(infisical secrets get SONARR_API_KEY --env dev --path /media ...)
+RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media ...)
+PROWLARR_KEY=$(infisical secrets get PROWLARR_API_KEY --env dev --path /media ...)
+AUTOBRR_KEY=$(infisical secrets get AUTOBRR_API_KEY --env dev --path /TrueNAS ...)
+
+scp truenas/stacks/autobrr/seed_config.py kero66@192.168.20.22:/tmp/seed_config.py
+sudo docker run --rm --network ix-arr-stack_default \
+  -e AUTOBRR_KEY -e SONARR_KEY -e RADARR_KEY -e PROWLARR_KEY \
+  -e AUTOBRR_BASE=http://autobrr:7474/api \
+  -e PROWLARR_BASE=http://prowlarr:9696/prowlarr/api/v1 \
+  -v /tmp/seed_config.py:/seed_config.py \
+  python:3-alpine python /seed_config.py
+```
+
+**Known remaining issue in seed script**: `attach_filter_indexers` fails with UNIQUE constraint on re-run. Needs idempotency fix before running again if indexers already exist.
+
+### Key Facts — autobrr API (verified v1.78.0 + v1.79.0)
+
+| Fact | Detail |
+|---|---|
+| Indexer settings format | `map[string]string` — NOT array, NOT `{}` |
+| torznab required fields | `url`, optionally `api_key` |
+| rss required field | `url` |
+| Null settings | Stored as BLOB `X'6E756C6C'` → SIGSEGV on startup |
+| AUTOBRR_API_KEY Infisical path | `/TrueNAS` (not `/media`) |
+| Seed run context | Must run inside Docker on `ix-arr-stack_default` network |
+| Prowlarr base URL (in-network) | `http://prowlarr:9696/prowlarr/api/v1` |
+| autobrr base URL (in-network) | `http://autobrr:7474/api` |
+
+---
+
 ## Session 2026-05-16 to 2026-05-22 - autobrr Setup + Missing Shows + Subtitle Fixes (COMPLETED)
 
 ### What Was Done
@@ -39,7 +119,7 @@ This file captures active session context, decisions, and in-progress research t
 | Item | Value |
 |------|-------|
 | autobrr URL | http://autobrr.home (port 7474) |
-| autobrr API key | `AUTOBRR_API_KEY` in Infisical `/media` |
+| autobrr API key | `AUTOBRR_API_KEY` in Infisical `/TrueNAS` (NOT `/media`) |
 | Bazarr config file | `/mnt/Fast/docker/bazarr/config/config.yaml` |
 | Bazarr enabled providers | animetosho, gestdown, bsplayer, subf2m |
 | AnimeTosho Prowlarr ID | 3 |
