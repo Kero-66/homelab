@@ -64,8 +64,14 @@ def ensure_download_client(name, payload):
     return result["id"]
 
 
-def ensure_indexer(identifier, name):
-    """Create autobrr indexer definition (required before feed)."""
+def ensure_indexer(identifier, name, settings=None):
+    """Create autobrr indexer definition (required before feed).
+
+    settings must be a dict[str,str] matching the indexer schema fields.
+    torznab requires {"url": "...", "api_key": "..."}.
+    rss requires {"url": "..."}.
+    Omitting or passing {} leaves settings null in the DB → nil deref panic.
+    """
     indexers = api("GET", "/indexer")
     existing = next((i for i in indexers if i["identifier"] == identifier and i["name"] == name), None)
     if existing:
@@ -76,7 +82,7 @@ def ensure_indexer(identifier, name):
         "name": name,
         "identifier_external": name,
         "enabled": True,
-        "settings": {},
+        "settings": settings or {},
     })
     if "error" in result:
         print(f"  ERROR adding indexer {name}: {result}")
@@ -186,34 +192,17 @@ animetosho_prowlarr_id = get_prowlarr_indexer_id("AnimeTosho")
 autobrr_indexers = {}
 
 if nyaa_prowlarr_id:
-    idx_id = ensure_indexer("torznab", "Nyaa.si")
+    idx_id = ensure_indexer("torznab", "Nyaa.si", {
+        "url": f"http://prowlarr:9696/{nyaa_prowlarr_id}/api",
+        "api_key": PROWLARR_KEY,
+    })
     ensure_feed("Nyaa.si (Prowlarr)", idx_id, nyaa_prowlarr_id)
     autobrr_indexers["Nyaa.si"] = idx_id
 
 if animetosho_prowlarr_id:
-    # AnimeTosho uses RSS identifier — autobrr allows only one indexer per identifier,
-    # and "torznab" is already used by Nyaa.si. RSS feed points to Prowlarr's
-    # Torznab search-with-empty-query endpoint which returns RSS-format results.
-    idx_id = ensure_indexer("rss", "AnimeTosho")
-    feeds = api("GET", "/feeds")
-    existing = next((f for f in feeds if f["name"] == "AnimeTosho (Prowlarr)"), None)
-    if existing:
-        print(f"  feed 'AnimeTosho (Prowlarr)' already exists (id={existing['id']})")
-        at_feed_id = existing["id"]
-    else:
-        result = api("POST", "/feeds", {
-            "name": "AnimeTosho (Prowlarr)",
-            "type": "RSS",
-            "indexer_id": idx_id,
-            "url": f"http://prowlarr:9696/{animetosho_prowlarr_id}/api?t=search&q=&apikey={PROWLARR_KEY}",
-            "enabled": True,
-            "interval": 15,
-            "timeout": 60,
-        })
-        if "error" in result:
-            print(f"  ERROR adding feed AnimeTosho (Prowlarr): {result}")
-        else:
-            print(f"  added feed 'AnimeTosho (Prowlarr)' (id={result['id']})")
+    at_rss_url = f"http://prowlarr:9696/{animetosho_prowlarr_id}/api?t=search&q=&apikey={PROWLARR_KEY}"
+    idx_id = ensure_indexer("rss", "AnimeTosho", {"url": at_rss_url})
+    ensure_feed("AnimeTosho (Prowlarr)", idx_id, animetosho_prowlarr_id)
     autobrr_indexers["AnimeTosho"] = idx_id
 
 # ── Filters ───────────────────────────────────────────────────────────────────
