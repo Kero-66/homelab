@@ -89,6 +89,55 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-05-23 - autobrr Indexer Expansion + Feed Fixes (COMPLETED)
+
+### What Was Done
+
+1. **Expanded indexer coverage**
+   - Added SubsPlease (identifier: `subsplease`) and SceneNZB (identifier: `newznab`) via Prowlarr
+   - Shana Project blocked — no unused valid identifier (torznab→Nyaa, rss→AnimeTosho, subsplease→SubsPlease, newznab→SceneNZB)
+   - Fixed AnimeTosho feed_type: was `TORZNAB` → caused caps request → `unauthorized` every 15-min poll. Fixed to `RSS`
+
+2. **Added catch-all filters**
+   - "Sonarr - All Monitored" (id=11) — empty match_releases, populated via Sonarr list
+   - "Radarr - All Monitored" (id=12) — empty match_releases, populated via Radarr list
+   - `upsert_filter` refactored to accept `action_type` + `action_client_id`
+
+3. **Added Sonarr/Radarr list integration**
+   - `sync_list_filters()` — upserts arr lists with `include_alternate_titles=True`
+   - Sonarr/Radarr Connect webhooks → `http://autobrr:7474/api/webhook/lists/trigger/arr` on grab/import/upgrade
+   - Confirmed: adding show to Sonarr → immediate list refresh → 98 shows, 341 titles
+
+4. **Fixed list scoping bug**
+   - Both lists were attached to all 12 filters → overwrote each other's `shows` field on every refresh
+   - Fixed: each list now scoped to its own catch-all filter only (Sonarr→11, Radarr→12)
+
+5. **Confirmed full pipeline working**
+   - Poll 02:52 AEST: AnimeTosho matched "Classroom of the Elite S04E09" → sent to Sonarr → Sonarr rejected (already have WEBDL-1080p, WEBRip-2160p not wanted)
+   - AnimeTosho matched "Mushoku Tensei S1 batch" → Sonarr rejected (not monitored)
+
+### Final State
+
+| Item | State |
+|---|---|
+| Indexers | Nyaa.si (torznab), AnimeTosho (rss), SubsPlease (subsplease), SceneNZB (newznab) |
+| Filters | 12 total — 10 specific show filters + 2 catch-all (Sonarr/Radarr) |
+| Lists | Sonarr list → filter 11 only; Radarr list → filter 12 only |
+| Webhooks | Sonarr + Radarr → autobrr list refresh on grab/import/upgrade |
+| Feed polling | ✅ All 4 feeds, 15-min interval |
+| Pipeline | ✅ End-to-end confirmed — autobrr matches → sends to arr → arr quality-gates |
+
+### Key Behavior Notes
+- `release rejected` in autobrr log = Sonarr/Radarr said no (not autobrr)
+- Completed shows won't auto-grab — feeds only carry new uploads. Use Sonarr manual search for existing content.
+- SceneNZB is a broad usenet indexer, not scene-only
+
+### Commits
+- `b7b4a53` — fix AnimeTosho feed_type TORZNAB→RSS
+- `1763beb` — fix list scoping to catch-all filters only
+
+---
+
 ## Session 2026-05-22 - Jellyfin Playback + Franchise Watch Order Research (COMPLETED)
 
 ### What Was Done
