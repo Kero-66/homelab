@@ -59,5 +59,21 @@ else
   echo "  settings.json installed"
 fi
 
+# ---------------------------------------------------------------------------
+# Skills (Kero-66/skills fork)
+# ---------------------------------------------------------------------------
+echo ""
+echo "Setting up skills..."
+SKILLS_DIR="$HOME/repos/skills"
+if [[ -d "$SKILLS_DIR/.git" ]]; then
+  echo "  skills repo exists — pulling latest"
+  git -C "$SKILLS_DIR" pull --ff-only
+else
+  mkdir -p "$HOME/repos"
+  git clone https://github.com/Kero-66/skills.git "$SKILLS_DIR"
+fi
+bash "$SKILLS_DIR/scripts/link-skills.sh"
+echo "  Skills linked to $HOME/.claude/skills"
+
 echo ""
 echo "Done. Restart Claude Code to pick up all changes."
