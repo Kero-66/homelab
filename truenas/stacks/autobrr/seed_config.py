@@ -335,7 +335,7 @@ def sync_list_filters(list_name, list_type, client_id):
         "filters": filter_refs,
         "match_release": False,
         "include_unmonitored": False,
-        "include_alternate_titles": False,
+        "include_alternate_titles": True,
         "include_year": False,
         "skip_clean_sanitize": False,
         "tags_included": [],
