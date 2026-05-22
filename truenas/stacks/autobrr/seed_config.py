@@ -182,7 +182,7 @@ if animetosho_prowlarr_id:
         upsert_feed(
             "AnimeTosho (Prowlarr)", idx_id,
             url=at_url,
-            feed_type="TORZNAB",
+            feed_type="RSS",
         )
         autobrr_indexers["AnimeTosho"] = idx_id
 
