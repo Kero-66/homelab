@@ -88,7 +88,7 @@ sonarr_id = upsert_download_client("Sonarr", {
     "settings": {"apikey": SONARR_KEY, "basic": {"auth": False}},
 })
 
-upsert_download_client("Radarr", {
+radarr_id = upsert_download_client("Radarr", {
     "name": "Radarr",
     "type": "RADARR",
     "enabled": True,
@@ -155,6 +155,9 @@ print("\n=== indexers + feeds ===")
 
 nyaa_prowlarr_id = get_prowlarr_indexer_id("Nyaa.si")
 animetosho_prowlarr_id = get_prowlarr_indexer_id("AnimeTosho")
+subsplease_prowlarr_id = get_prowlarr_indexer_id("SubsPlease")
+shanaproject_prowlarr_id = get_prowlarr_indexer_id("Shana Project")
+scenenzb_prowlarr_id = get_prowlarr_indexer_id("SceneNZB")
 
 autobrr_indexers = {}
 
@@ -183,15 +186,51 @@ if animetosho_prowlarr_id:
         )
         autobrr_indexers["AnimeTosho"] = idx_id
 
+if subsplease_prowlarr_id:
+    # "subsplease" is a built-in autobrr definition (supports rss+irc)
+    idx_id = upsert_indexer("subsplease", "SubsPlease", {
+        "url": f"http://prowlarr:9696/{subsplease_prowlarr_id}/api",
+        "api_key": PROWLARR_KEY,
+    })
+    if idx_id:
+        upsert_feed(
+            "SubsPlease (Prowlarr)", idx_id,
+            url=f"http://prowlarr:9696/{subsplease_prowlarr_id}/api",
+            api_key=PROWLARR_KEY,
+            feed_type="TORZNAB",
+        )
+        autobrr_indexers["SubsPlease"] = idx_id
+
+# Shana Project skipped: no valid autobrr definition (torznab taken by Nyaa.si, rss by AnimeTosho)
+# nyaa identifier is IRC-only (supports:['irc']) — cannot be used for Prowlarr torznab feed
+
+if scenenzb_prowlarr_id:
+    # "newznab" is the built-in Generic Newznab identifier for usenet indexers
+    idx_id = upsert_indexer("newznab", "SceneNZB", {
+        "url": f"http://prowlarr:9696/{scenenzb_prowlarr_id}/api",
+        "api_key": PROWLARR_KEY,
+    })
+    if idx_id:
+        upsert_feed(
+            "SceneNZB (Prowlarr)", idx_id,
+            url=f"http://prowlarr:9696/{scenenzb_prowlarr_id}/api",
+            api_key=PROWLARR_KEY,
+            feed_type="NEWZNAB",
+        )
+        autobrr_indexers["SceneNZB"] = idx_id
+
 
 # ── Filters ───────────────────────────────────────────────────────────────────
 
-def upsert_filter(name, shows, match_releases):
+def upsert_filter(name, shows, match_releases, action_type="SONARR", action_client_id=None):
     """Create or PATCH filter with indexers. Actions managed separately via DELETE+POST.
 
     PATCH appends actions (not idempotent) and ignores actions:[].
     So actions are managed by: delete all existing, then POST the correct one.
     """
+    if action_client_id is None:
+        action_client_id = sonarr_id
+
     filters = api("GET", "/filters")
     existing = next((f for f in filters if f["name"] == name), None)
 
@@ -232,20 +271,21 @@ def upsert_filter(name, shows, match_releases):
     for action in full_filter.get("actions", []):
         api("DELETE", f"/actions/{action['id']}")
 
+    action_label = f"Send to {action_type.capitalize()}"
     patch_with_action = api("PATCH", f"/filters/{fid}", {
         **filter_payload,
         "id": fid,
         "actions": [{
-            "name": "Send to Sonarr",
-            "type": "SONARR",
+            "name": action_label,
+            "type": action_type,
             "enabled": True,
-            "client_id": sonarr_id,
+            "client_id": action_client_id,
         }],
     })
     if "error" in patch_with_action:
         print(f"  ERROR setting action on filter '{name}': {patch_with_action}")
     else:
-        print(f"  set action 'Send to Sonarr' (client_id={sonarr_id}) on filter '{name}'")
+        print(f"  set action '{action_label}' (client_id={action_client_id}) on filter '{name}'")
 
     return fid
 
@@ -268,5 +308,57 @@ upsert_filter("Trigun", "Trigun", "*Trigun*,*トライガン*")
 upsert_filter("Gasaraki", "Gasaraki", "*Gasaraki*,*ガサラキ*")
 upsert_filter("Gundam Wing", "Mobile Suit Gundam Wing", "*Gundam Wing*,*ガンダムW*,*Gundam W*")
 upsert_filter(".hack", ".hack", "*.hack*")
+
+# Catch-all filters: no match_releases — Sonarr/Radarr list drives what gets grabbed.
+# Add a show to Sonarr/Radarr → autobrr picks it up automatically on next list refresh.
+upsert_filter("Sonarr - All Monitored", "", "",
+    action_type="SONARR", action_client_id=sonarr_id)
+upsert_filter("Radarr - All Monitored", "", "",
+    action_type="RADARR", action_client_id=radarr_id)
+
+
+# ── Lists → filters attachment ────────────────────────────────────────────────
+
+def sync_list_filters(list_name, list_type, client_id):
+    """Ensure the named arr list exists and is attached to ALL current filters."""
+    all_filters = api("GET", "/filters")
+    filter_refs = [{"id": f["id"], "name": f["name"]} for f in all_filters]
+
+    lists = api("GET", "/lists")
+    existing = next((l for l in lists if l["name"] == list_name), None)
+
+    payload = {
+        "name": list_name,
+        "type": list_type,
+        "enabled": True,
+        "client_id": client_id,
+        "filters": filter_refs,
+        "match_release": False,
+        "include_unmonitored": False,
+        "include_alternate_titles": False,
+        "include_year": False,
+        "skip_clean_sanitize": False,
+        "tags_included": [],
+        "tags_excluded": [],
+        "headers": [],
+    }
+
+    if existing:
+        result = api("PUT", f"/lists/{existing['id']}", {**payload, "id": existing["id"]})
+        if "error" in result:
+            print(f"  ERROR updating list '{list_name}': {result}")
+        else:
+            print(f"  updated list '{list_name}' → {len(filter_refs)} filters attached")
+    else:
+        result = api("POST", "/lists", payload)
+        if "error" in result:
+            print(f"  ERROR adding list '{list_name}': {result}")
+        else:
+            print(f"  added list '{list_name}' → {len(filter_refs)} filters attached")
+
+
+print("\n=== lists ===")
+sync_list_filters("Sonarr", "SONARR", sonarr_id)
+sync_list_filters("Radarr", "RADARR", radarr_id)
 
 print("\n=== Done ===")
