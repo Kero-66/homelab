@@ -319,10 +319,19 @@ upsert_filter("Radarr - All Monitored", "", "",
 
 # ── Lists → filters attachment ────────────────────────────────────────────────
 
-def sync_list_filters(list_name, list_type, client_id):
-    """Ensure the named arr list exists and is attached to ALL current filters."""
+def sync_list_filters(list_name, list_type, client_id, filter_name):
+    """Ensure the named arr list exists and is attached to its catch-all filter only.
+
+    Each list must only own the filter it drives — attaching all filters causes
+    Sonarr and Radarr lists to overwrite each other's shows field on every refresh.
+    """
     all_filters = api("GET", "/filters")
-    filter_refs = [{"id": f["id"], "name": f["name"]} for f in all_filters]
+    filter_refs = [{"id": f["id"], "name": f["name"]}
+                   for f in all_filters if f["name"] == filter_name]
+
+    if not filter_refs:
+        print(f"  WARNING: catch-all filter '{filter_name}' not found — skipping list '{list_name}'")
+        return
 
     lists = api("GET", "/lists")
     existing = next((l for l in lists if l["name"] == list_name), None)
@@ -348,17 +357,17 @@ def sync_list_filters(list_name, list_type, client_id):
         if "error" in result:
             print(f"  ERROR updating list '{list_name}': {result}")
         else:
-            print(f"  updated list '{list_name}' → {len(filter_refs)} filters attached")
+            print(f"  updated list '{list_name}' → filter '{filter_name}'")
     else:
         result = api("POST", "/lists", payload)
         if "error" in result:
             print(f"  ERROR adding list '{list_name}': {result}")
         else:
-            print(f"  added list '{list_name}' → {len(filter_refs)} filters attached")
+            print(f"  added list '{list_name}' → filter '{filter_name}'")
 
 
 print("\n=== lists ===")
-sync_list_filters("Sonarr", "SONARR", sonarr_id)
-sync_list_filters("Radarr", "RADARR", radarr_id)
+sync_list_filters("Sonarr", "SONARR", sonarr_id, "Sonarr - All Monitored")
+sync_list_filters("Radarr", "RADARR", radarr_id, "Radarr - All Monitored")
 
 print("\n=== Done ===")
