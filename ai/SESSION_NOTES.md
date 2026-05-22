@@ -36,7 +36,7 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
-## Session 2026-05-22 - autobrr Crash Diagnosis + DB Repair (IN PROGRESS)
+## Session 2026-05-22 - autobrr Crash Diagnosis + DB Repair (COMPLETED)
 
 ### What Was Done
 
@@ -66,17 +66,19 @@ This file captures active session context, decisions, and in-progress research t
 5. **autobrr now on v1.79.0 (latest), running clean**
    - DB: download clients intact, 10 filters intact, 0 indexers/feeds (not yet re-seeded)
 
-### Current State
+### Final State (COMPLETED 2026-05-23)
 
 | Item | State |
 |---|---|
 | autobrr | Running v1.79.0, UP, no panics |
-| DB — download clients | ✅ qBittorrent, Sonarr, Radarr |
+| DB — download clients | ✅ Sonarr, Radarr (qBittorrent removed — autobrr sends to Sonarr/Radarr only) |
 | DB — filters | ✅ 10 filters (VOTOMS, VOTOMS OVAs, Robotech, Tekkaman Blade, Blue Gender, Macross, Trigun, Gasaraki, Gundam Wing, .hack) |
 | DB — indexers/feeds | ✅ Nyaa.si (torznab) + AnimeTosho (rss), both linked to Prowlarr |
 | DB — filter_indexer | ✅ All 10 filters attached to both indexers |
-
-### COMPLETED 2026-05-22
+| autobrr lists | ✅ Pulling 92 Sonarr shows + 98 Radarr movies, auto-updating filter show lists |
+| Feed polling | ✅ Verified at ~00:55 AEST — processing real Nyaa.si releases, rejecting correctly |
+| seed_config.py | ✅ Idempotent upsert semantics — safe to re-run |
+| Security review | ✅ No findings ≥0.8 confidence |
 
 Re-seed run successfully. All indexers, feeds, and filter attachments restored.
 
