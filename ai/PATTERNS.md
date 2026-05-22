@@ -762,6 +762,31 @@ curl -s -H "X-API-KEY: $BAZARR_API_KEY" "$BAZARR_BASE/episodes?seriesid[]=$SERIE
 - Config on TrueNAS: `/mnt/Fast/docker/bazarr/config/config.yaml` (gitignored — sync to repo manually)
 - Repo reference: `media/.config/bazarr/config.yaml`
 
+### Manually trigger subsync on an existing subtitle (movie)
+
+Endpoint: `PATCH /bazarr/api/subtitles` (NOT `/api/movies/subtitles` — that's for download)
+
+```bash
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+BAZARR_KEY=$(infisical secrets get BAZARR_API_KEY --env dev --path /media \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 --plain 2>/dev/null)
+
+curl -s -w "\nHTTP %{http_code}" -X PATCH \
+  -H "X-API-KEY: $BAZARR_KEY" \
+  -G "http://192.168.20.22:6767/bazarr/api/subtitles" \
+  --data-urlencode "path=/data/movies/Show (Year)/subtitle.en.hi.srt" \
+  -d "action=sync&type=movie&id=<radarrId>&language=en&hi=True&forced=False&reference=a:1"
+# reference=a:0 = first audio track, a:1 = second audio track, etc.
+# Returns HTTP 204 on success; sync runs async (~4 min for 2hr 4K film)
+```
+
+For episodes, use `type=episode&id=<sonarrEpisodeId>`.
+
+**Required params**: `action`, `type`, `id`, `language`, `path`
+**Optional**: `hi`, `forced`, `reference` (audio stream to sync against — omit to use default)
+
+Get `radarrId`: `curl ... "$BAZARR_BASE/movies" | jq '[.data[] | select(.title | test("keyword";"i")) | {id: .radarrId, title}]'`
+
 ---
 
 ## AnimeTosho (Subtitle Source for Anime)

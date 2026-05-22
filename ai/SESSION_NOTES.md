@@ -4,6 +4,38 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-05-22 - Jellyfin Playback + Franchise Watch Order Research (COMPLETED)
+
+### What Was Done
+
+1. **Fixed Jellyfin "too many errors" on Omniscient Reader: The Prophecy**
+   - Root cause: `EnableTonemapping: true` with `EnableVppTonemapping: false` → used OpenCL tonemapping, but OpenCL not available in container (`Failed to get number of OpenCL platforms: -1001`)
+   - Fix: `EnableTonemapping: false`, `EnableVppTonemapping: true` → now uses Intel VAAPI VPP tonemapping (no OpenCL needed)
+   - Applied via Jellyfin API POST `/System/Configuration/encoding`
+   - N150 transcodes at 2.16x real-time speed — hardware is fine
+
+2. **Diagnosed AndroidTV freezing at 5s**
+   - Root cause: AndroidTV app bitrate cap was 20Mbps; file is ~30Mbps → forced transcode; transcode fast enough but WiFi at 20Mbps was unstable
+   - Fix: Set AndroidTV app quality to **Auto** (dynamic bitrate adjustment) — or use 30Mbps which works fine on this WiFi
+   - Note: 10Mbps and 30Mbps both work; 20Mbps was the unstable point
+
+3. **Researched franchise watch order tools for Jellyfin**
+   - No dedicated franchise-watch-order plugin exists
+   - Best option: Trakt custom list (community Macross watch order exists) + **Synclet** to sync → Jellyfin collection
+   - Alternative: **jellyfin-smartlists-plugin** (pulls from MDBList/Trakt/TMDB)
+   - ClassicTV plugin does cross-series interleaving but round-robin only, not franchise-order aware
+
+### Key Facts
+
+| Item | Value |
+|---|---|
+| Jellyfin tonemapping | VPP (`EnableVppTonemapping: true`) — OpenCL unavailable in container |
+| AndroidTV stable bitrates | 10Mbps ✅, 30Mbps ✅ (direct play), 20Mbps ❌ (WiFi instability) |
+| Synclet | Trakt lists → Jellyfin collections sync tool |
+| smartlists-plugin | GitHub: jyourstone/jellyfin-smartlists-plugin |
+
+---
+
 ## Session 2026-05-22 - autobrr Crash Diagnosis + DB Repair (IN PROGRESS)
 
 ### What Was Done
@@ -41,33 +73,23 @@ This file captures active session context, decisions, and in-progress research t
 | autobrr | Running v1.79.0, UP, no panics |
 | DB — download clients | ✅ qBittorrent, Sonarr, Radarr |
 | DB — filters | ✅ 10 filters (VOTOMS, VOTOMS OVAs, Robotech, Tekkaman Blade, Blue Gender, Macross, Trigun, Gasaraki, Gundam Wing, .hack) |
-| DB — indexers/feeds | ❌ Empty — needs re-seeding |
-| DB — filter_indexer | ❌ Empty — will be re-linked after re-seed |
+| DB — indexers/feeds | ✅ Nyaa.si (torznab) + AnimeTosho (rss), both linked to Prowlarr |
+| DB — filter_indexer | ✅ All 10 filters attached to both indexers |
 
-### Next Step: Re-seed Indexers and Feeds
+### COMPLETED 2026-05-22
 
-The seed script is now correct. Run:
+Re-seed run successfully. All indexers, feeds, and filter attachments restored.
 
+**Run pattern if re-seeding needed**:
 ```bash
-INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
-eval $(ssh-agent -s) > /dev/null
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$INFISICAL_PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
-
-SONARR_KEY=$(infisical secrets get SONARR_API_KEY --env dev --path /media ...)
-RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media ...)
-PROWLARR_KEY=$(infisical secrets get PROWLARR_API_KEY --env dev --path /media ...)
-AUTOBRR_KEY=$(infisical secrets get AUTOBRR_API_KEY --env dev --path /TrueNAS ...)
-
-scp truenas/stacks/autobrr/seed_config.py kero66@192.168.20.22:/tmp/seed_config.py
-sudo docker run --rm --network ix-arr-stack_default \
-  -e AUTOBRR_KEY -e SONARR_KEY -e RADARR_KEY -e PROWLARR_KEY \
-  -e AUTOBRR_BASE=http://autobrr:7474/api \
-  -e PROWLARR_BASE=http://prowlarr:9696/prowlarr/api/v1 \
-  -v /tmp/seed_config.py:/seed_config.py \
-  python:3-alpine python /seed_config.py
+# TrueNAS has Python 3.11 natively — no Docker image pull needed
+scp -i "$TMPKEY" truenas/stacks/autobrr/seed_config.py kero66@192.168.20.22:/tmp/seed_config.py
+ssh -i "$TMPKEY" kero66@192.168.20.22 \
+  "AUTOBRR_KEY='...' SONARR_KEY='...' RADARR_KEY='...' PROWLARR_KEY='...' \
+   AUTOBRR_BASE=http://localhost:7474/api \
+   PROWLARR_BASE=http://localhost:9696/prowlarr/api/v1 \
+   python3 /tmp/seed_config.py && rm /tmp/seed_config.py"
 ```
-
-**Known remaining issue in seed script**: `attach_filter_indexers` fails with UNIQUE constraint on re-run. Needs idempotency fix before running again if indexers already exist.
 
 ### Key Facts — autobrr API (verified v1.78.0 + v1.79.0)
 
@@ -127,8 +149,13 @@ sudo docker run --rm --network ix-arr-stack_default \
 
 ### Outstanding
 - Sonarr searches for missing series running — check http://sonarr.home/activity/queue for results
-- Timing on Omniscient Reader sub may still be slightly off — if so, adjust offset in `.en.hi.srt`
 - autobrr compose.yaml pinned to v1.78.0 by user
+
+### Omniscient Reader subtitle (2026-05-23) — RESOLVED
+- Previous -6000ms manual shift was still off (subs late vs Korean audio)
+- Triggered Bazarr subsync via `PATCH /bazarr/api/subtitles` with `reference=a:1` (Korean audio stream)
+- Subsync applied additional ~-4.3s shift; file updated `May 23 00:01`
+- Correct Bazarr sync API documented in PATTERNS.md → "Manually trigger subsync on an existing subtitle"
 
 ---
 
