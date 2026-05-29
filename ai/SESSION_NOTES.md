@@ -4,6 +4,66 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-05-29/30 - Comicarr Deploy (IN PROGRESS)
+
+### What Was Done
+
+1. **Comicarr deployed** via Dockhand at `http://comicarr.home` (port 8090)
+   - Stack: `truenas/stacks/comicarr/compose.yaml`
+   - Config: `/mnt/Fast/docker/comicarr/config/comicarr/config.ini`
+   - Volumes: `/comics`, `/manga`, `/webtoons` → `/mnt/Data/media/{comics,manga,webtoons}`
+   - Downloads: `/downloads` → `/mnt/Data/downloads/qbittorrent`
+   - Network: joins `ix-downloaders_default` (can reach qBittorrent/SABnzbd)
+   - DNS: `comicarr.home` → AdGuard rewrite → 192.168.20.22
+   - Caddy: `http://comicarr.home` → `192.168.20.22:8090`
+
+2. **Credentials seeded** — `kero66` / `COMICARR_PASSWORD` in Infisical `/media`
+   - Written plaintext to `config.ini` (Comicarr accepts plaintext, auto-upgrades to bcrypt on save)
+   - `authentication = 2` (form-based login required)
+
+3. **AniDB client fixed** — API name is `kplaylists` (not `AnimePlaylists`)
+   - Updated `ANIDB_CLIENT_PLAYLISTS` in Infisical `/media`
+
+4. **Watch order playlists created** in Jellyfin + playlist DB in `media/playlists/`
+   - Macross Watch Order (237 items, 7 gaps) — ID `89f8fafd8409a0798569199b793da23f`
+   - Tekkaman Blade Watch Order (66 items) — ID `e0d15ebfa210c1f47d9e43e147f4222f`
+   - Jellyfin shows "Missing" badge for gaps but doesn't count them in total
+
+### Next Steps — Comicarr Configuration (TODO)
+
+- [ ] **Comic Vine API key** → Settings → Metadata → ComicVine API Key
+- [ ] **Prowlarr Torznab** → Settings → Search Providers → Torznab → add Prowlarr endpoint
+  - URL: `http://prowlarr:9696/prowlarr/{id}/api` (but Comicarr is NOT on arr-stack network!)
+  - **Problem**: Comicarr joins `ix-downloaders_default` but NOT `ix-arr-stack_default` — can't reach Prowlarr by container name
+  - Fix options: (a) add `ix-arr-stack_default` to Comicarr compose, or (b) use host IP `192.168.20.22:9696`
+  - **Recommended**: add `ix-arr-stack_default` to compose and redeploy — use `http://prowlarr:9696/prowlarr`
+- [ ] **qBittorrent download client** → Settings → Download Clients → qBittorrent
+  - Host: `qbittorrent` (already on ix-downloaders_default), port 8080
+  - Credentials: `QBITTORRENT_USER` / `QBITTORRENT_PASS` in Infisical `/TrueNAS`
+- [ ] **SABnzbd** → Settings → Download Clients → SABnzbd
+  - Host: `sabnzbd` (on ix-downloaders_default), port 8080
+  - API key: `SABNZBD_API_KEY` in Infisical `/TrueNAS`
+- [ ] **Library paths** → Settings → Media Management
+  - Comic dir: `/comics`
+  - Manga dir: `/manga`
+- [ ] **MangaDex** already enabled in config (`mangadex_enabled = True`) — no extra setup needed
+- [ ] **Homepage widget** — add Comicarr to homepage services.yaml
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| URL | `http://comicarr.home` |
+| Port | 8090 |
+| Credentials | `kero66` / `COMICARR_PASSWORD` in Infisical `/media` |
+| Config | `/mnt/Fast/docker/comicarr/config/comicarr/config.ini` |
+| Network gap | NOT on `ix-arr-stack_default` — add to compose before configuring Prowlarr |
+| Prowlarr URL (after fix) | `http://prowlarr:9696/prowlarr/api/v1` |
+| MangaDex | Enabled by default, no key needed |
+| Version | v0.15.1 |
+
+---
+
 ## Session 2026-05-29 - Trakt Integration (COMPLETED)
 
 ### What Was Done
