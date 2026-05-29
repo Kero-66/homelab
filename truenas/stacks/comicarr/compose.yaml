@@ -1,0 +1,31 @@
+services:
+  comicarr:
+    image: ghcr.io/frankieramirez/comicarr:latest
+    container_name: comicarr
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    volumes:
+      - /mnt/Fast/docker/comicarr/config:/config
+      - /mnt/Data/media/comics:/comics
+      - /mnt/Data/media/manga:/manga
+      - /mnt/Data/media/webtoons:/webtoons
+      - /mnt/Data/downloads/qbittorrent:/downloads
+    ports:
+      - "8090:8090"
+    networks:
+      - default
+      - ix-downloaders_default
+    labels:
+      - homepage.group=Downloads
+      - homepage.name=Comicarr
+      - homepage.icon=comicarr
+      - homepage.href=http://comicarr.home
+      - homepage.description=Comic and manga manager
+
+networks:
+  ix-downloaders_default:
+    external: true
