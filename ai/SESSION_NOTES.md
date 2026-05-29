@@ -4,6 +4,31 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-05-29 - Trakt Integration (COMPLETED)
+
+### What Was Done
+
+1. **Trakt account created** by user, API app created at trakt.tv/oauth/applications
+2. **Secrets stored in Infisical** at `/media`: `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET`
+3. **Jellyfin Trakt plugin** — already installed (v30.0.0.0, Active). Authenticated via Jellyfin web UI (Admin → Plugins → Trakt → Authenticate). Token valid until 2026-06-04 (auto-renews).
+4. **Active config**: Scrobble=true, PostWatchedHistory=true, SynchronizeCollections=true
+
+### Next Steps
+- [ ] Monitor scrobbling — check Trakt profile after watching something
+- [ ] Revisit Radarr/Sonarr Trakt import lists once watch history has built up (skipped for now — Jellyseerr handles requests, import lists add no value until Trakt has meaningful history)
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| Trakt secrets | Infisical `/media` — `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET` |
+| Jellyfin plugin | Trakt v30.0.0.0, plugin GUID `4fe3201ed6ae4f2e8917e12bda571281` |
+| Plugin config endpoint | `GET/POST http://jellyfin.home/Plugins/4fe3201ed6ae4f2e8917e12bda571281/Configuration` |
+| Auth method | OAuth via Jellyfin web UI (browser flow, not API-automatable) |
+| Jellyfin user linked | `1ecfce63139f4501a4d498e372e1ee3d` |
+
+---
+
 ## Session 2026-05-22 - Jellyfin Playback + Franchise Watch Order Research (COMPLETED)
 
 ### What Was Done
@@ -190,6 +215,64 @@ ssh -i "$TMPKEY" kero66@192.168.20.22 \
 | E05 timing offset | -3213ms (WEB sub → BD encode) |
 | E05 reference sub | Embedded Italian ASS track (stream 0:2), correctly timed for BD |
 | E05 SRT backup | Same path + `.bak` extension |
+
+---
+
+## Session 2026-05-29 - Watch Order Playlists (COMPLETED)
+
+### Problem
+User wants to watch anime series in correct watch order (including movies/OVAs interleaved) without manually hunting for what to watch next. Jellyfin has no native cross-series watch order support. No existing tool solves this end-to-end.
+
+### Process (Manual — to be automated)
+
+**Step 1: Look up correct watch order**
+- Source: AniDB HTTP API (client: `kplaylists` v1) — fetch anime by AID, traverse `relatedanime` relations
+- AniDB titles dump: `https://anidb.net/api/anime-titles.xml.gz` — search for AIDs by name
+
+**Step 2: Check watch history via Jellystat**
+```bash
+JELLYSTAT_API_KEY=$(infisical secrets get JELLYSTAT_API_KEY --env dev --path /media --plain ...)
+curl -s -X GET -H "x-api-token: $JELLYSTAT_API_KEY" \
+  "http://jellystat.home/api/getHistory?size=200&page=1&search=<show>"
+```
+
+**Step 3: Get all Jellyfin item IDs**
+```bash
+JELLYFIN_API_KEY=$(infisical secrets get JELLYFIN_API_KEY --env dev --path /media --plain ...)
+curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+  "http://jellyfin.home/Items?searchTerm=<show>&Recursive=true&IncludeItemTypes=Series,Movie&fields=Name,ProductionYear"
+curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+  "http://jellyfin.home/Shows/{seriesId}/Episodes"
+```
+
+**Step 4: Create playlist**
+```bash
+curl -s -X POST -H "X-Emby-Token: $JELLYFIN_API_KEY" -H "Content-Type: application/json" \
+  "http://jellyfin.home/Playlists" \
+  -d '{"Name": "...", "Ids": [...], "UserId": "...", "MediaType": "Unknown"}'
+```
+
+### Playlists Created
+- **Macross Watch Order** — 237 items, playlist ID `89f8fafd8409a0798569199b793da23f`
+- **Tekkaman Blade Watch Order** — 66 items, playlist ID `e0d15ebfa210c1f47d9e43e147f4222f`
+- **Playlist DB**: `media/playlists/` — YAML files with AniDB IDs, Jellyfin IDs, gaps marked `jellyfin_id: null`
+
+### Key API Facts
+
+| Service | Endpoint | Notes |
+|---------|----------|-------|
+| Jellystat | `GET /api/getHistory?search=X&size=N&page=N` | Global history search |
+| Jellystat | `POST /api/getItemHistory` body `{id, page, size}` | Per-item history |
+| Jellystat | `GET /swagger/swagger-ui-init.js` | Full swagger spec embedded in JS |
+| Jellyfin | `GET /Shows/{id}/Episodes` | All episodes with season/episode numbers |
+| Jellyfin | `POST /Playlists` body `{Name, Ids[], UserId, MediaType}` | Create playlist |
+| AniDB HTTP | `http://api.anidb.net:9001/httpapi?request=anime&client=kplaylists&clientver=1&protover=1&aid=X` | Anime + relations |
+| AniDB titles | `https://anidb.net/api/anime-titles.xml.gz` | Full titles dump for AID lookup |
+
+### AniDB Client
+- **API client name**: `kplaylists` (stored in Infisical `/media` as `ANIDB_CLIENT_PLAYLISTS`)
+- **Software name** (display): AnimePlaylists — the API name differs, must use `kplaylists`
+- **Version**: 1 (`ANIDB_CLIENT_PLAYLISTS_VER`)
 
 ---
 

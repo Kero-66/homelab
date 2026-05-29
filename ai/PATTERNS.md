@@ -430,7 +430,79 @@ curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
   "$JELLYFIN_BASE/System/Info" | jq '{ServerName, Version, OperatingSystem}'
 ```
 
+### Get all episodes for a series (with season/episode numbers)
+```bash
+SERIES_ID="510503d8b628f2208659a267b3afa881"  # from /Items?searchTerm=...&IncludeItemTypes=Series
+curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+  "$JELLYFIN_BASE/Shows/$SERIES_ID/Episodes?fields=Name,ParentIndexNumber,IndexNumber" \
+  | python3 -c "import json,sys; [print(f'S{i[\"ParentIndexNumber\"]:02d}E{i[\"IndexNumber\"]:02d}', i['Name'], i['Id']) for i in json.load(sys.stdin)['Items']]"
+```
+
+### Create a playlist (watch order)
+```bash
+USER_ID=$(curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" "$JELLYFIN_BASE/Users" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['Id'])")
+
+# IDS = ordered list of Jellyfin item IDs (episodes + movies interleaved)
+IDS_JSON=$(python3 -c "import json; print(json.dumps(['id1','id2','id3']))")
+
+curl -s -X POST -H "X-Emby-Token: $JELLYFIN_API_KEY" -H "Content-Type: application/json" \
+  "$JELLYFIN_BASE/Playlists" \
+  -d "{\"Name\": \"My Watch Order\", \"Ids\": $IDS_JSON, \"UserId\": \"$USER_ID\", \"MediaType\": \"Unknown\"}"
+# Returns: {"Id": "<playlist_id>"}
+```
+
 ---
+
+## Jellystat API
+
+### Setup
+```bash
+JELLYSTAT_API_KEY=$(infisical secrets get JELLYSTAT_API_KEY --env dev --path /media --plain \
+  --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.66:8081 2>/dev/null)
+JELLYSTAT_BASE="http://jellystat.home"
+# Auth header: x-api-token (NOT Authorization or X-Emby-Token)
+```
+
+### Search global playback history
+```bash
+# size/page/search params — GET request
+curl -s -X GET -H "x-api-token: $JELLYSTAT_API_KEY" \
+  "$JELLYSTAT_BASE/api/getHistory?size=200&page=1&search=overlord"
+# Returns: {current_page, pages, size, results: [{NowPlayingItemName, SeriesName, UserId, PlaybackDuration, ActivityDateInserted, ...}]}
+```
+
+### Get history for a specific item (series/movie)
+```bash
+# POST with JSON body
+curl -s -X POST -H "x-api-token: $JELLYSTAT_API_KEY" -H "Content-Type: application/json" \
+  "$JELLYSTAT_BASE/api/getItemHistory" \
+  -d '{"id": "<jellyfin_item_id>", "page": 1, "size": 200}'
+```
+
+### Get history for a specific user
+```bash
+curl -s -X POST -H "x-api-token: $JELLYSTAT_API_KEY" -H "Content-Type: application/json" \
+  "$JELLYSTAT_BASE/api/getUserHistory" \
+  -d '{"userid": "<jellyfin_user_id>", "page": 1, "size": 200}'
+```
+
+### Swagger spec (all endpoints)
+```bash
+# Full API spec embedded in swagger-ui-init.js — extract with python3
+curl -s "$JELLYSTAT_BASE/swagger/swagger-ui-init.js" | python3 -c "
+import sys, re, json
+content = sys.stdin.read()
+match = re.search(r'\"swaggerDoc\": (\{.*\}),\s*\"customOptions\"', content, re.DOTALL)
+doc = json.loads(match.group(1))
+for path in doc['paths'].keys(): print(path)
+"
+```
+
+### Notes
+- API key from Jellystat UI: Settings → API Key — stored in Infisical `/media` as `JELLYSTAT_API_KEY`
+- `getHistory` is GET; `getItemHistory` and `getUserHistory` are POST
+- History search is case-insensitive partial match on item name
 
 ## SABnzbd API
 

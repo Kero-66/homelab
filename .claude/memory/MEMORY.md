@@ -3,6 +3,9 @@
 **IMPORTANT:** First 200 lines only! Keep concise. Link to detailed docs.
 
 - [Do not automate Bitwarden access](feedback_bitwarden_access.md) — scripts reading Bitwarden give Claude full vault access
+- [Never run infisical secrets table form](feedback_no_secret_table_output.md) — always use `infisical secrets get <KEY> --plain`, NEVER bare `infisical secrets` (prints all secrets in cleartext)
+- [No grep/head filtering on first run](feedback_no_grep_head.md) — always read raw output first, filter only if too large
+- [Never print secret values in output](feedback_no_secret_output.md) — suppress `infisical secrets set` table output, never echo secret vars
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**
@@ -99,6 +102,18 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 # PUT user: https://192.168.20.22/api/v2.0/user/id/72  (note: /id/ in path)
 # API requires HTTPS (http returns 308 redirect that drops auth header)
 ```
+
+## AniDB API Clients (Infisical `/media`)
+- **AnimeSubs** (v1) — used by Bazarr for subtitle matching → `ANIDB_CLIENT_SUBS` / `ANIDB_CLIENT_SUBS_VER`
+- **AnimePlaylists** (v1) — for watch order playlist script (todo #83) → `ANIDB_CLIENT_PLAYLISTS` / `ANIDB_CLIENT_PLAYLISTS_VER`
+- AniDB auth = client name + user credentials, no API key generated
+
+## Trakt Integration - Deployed 2026-05-29
+- **Secrets**: `TRAKT_CLIENT_ID`, `TRAKT_CLIENT_SECRET` in Infisical `/media`
+- **Jellyfin plugin**: v30.0.0.0, Active — GUID `4fe3201ed6ae4f2e8917e12bda571281`
+- **Auth**: OAuth via Jellyfin web UI (browser flow only, not API-automatable)
+- **Config**: Scrobble=true, PostWatchedHistory=true, SynchronizeCollections=true
+- **Next**: Add Radarr/Sonarr import lists (Settings → Import Lists → Trakt)
 
 ## autobrr (Release Automation) - Deployed 2026-05-11
 - **Stack**: `truenas/stacks/autobrr/` — separate stack (not arr-stack), deployed via Dockhand

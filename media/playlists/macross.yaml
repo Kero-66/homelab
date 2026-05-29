@@ -1,0 +1,133 @@
+# Macross Franchise — Watch Order Playlist
+# Source: AniDB relations + community watch order recommendations
+# jellyfin_id: present = in library | null = GAP (not yet acquired)
+# To rebuild Jellyfin playlist: scripts/create_jellyfin_playlist.sh macross
+
+franchise: Macross
+jellyfin_playlist_id: 89f8fafd8409a0798569199b793da23f
+last_updated: 2026-05-29
+
+entries:
+  - title: "Super Dimension Fortress Macross"
+    anidb_id: 77
+    type: TV
+    year: 1982
+    episodes: 36
+    jellyfin_id: "96e4eb14a4bfa67f70c3fcd108b9631f"
+
+  - title: "Macross: Do You Remember Love?"
+    anidb_id: 996
+    type: Movie
+    year: 1984
+    notes: "Theatrical retelling/alternate version of SDF Macross. Watch after the series."
+    jellyfin_id: "b256a600cb4b6c7299a94985a5476e3b"
+
+  - title: "Super Dimensional Fortress Macross: Flash Back 2012"
+    anidb_id: 2324
+    type: OVA
+    year: 1987
+    episodes: 1
+    notes: "Music video compilation. Short, can skip."
+    jellyfin_id: null  # GAP
+
+  - title: "Macross II: Lovers Again"
+    anidb_id: 501
+    type: OVA
+    year: 1992
+    episodes: 6
+    notes: "Non-canon (made without original creators). Standalone alternate universe."
+    jellyfin_id: "74ce59466a37bd9aac72332071423201"
+
+  - title: "Macross Plus"
+    anidb_id: 67
+    type: OVA
+    year: 1994
+    episodes: 4
+    jellyfin_id: "cc0ac6a7c360963fea1e7ed62a86bf1a"
+
+  - title: "Macross Plus Movie Edition"
+    anidb_id: 3392
+    type: Movie
+    year: 1995
+    notes: "Condensed theatrical version of the OVA with new ending."
+    jellyfin_id: "fe79f42050b21c39a1b82e2d185bde41"
+
+  - title: "Macross 7"
+    anidb_id: 442
+    type: TV
+    year: 1994
+    episodes: 49
+    jellyfin_id: "f810f77a956592ad1d942f7d4a6036cf"
+
+  - title: "Macross 7 Encore"
+    anidb_id: 1357
+    type: OVA
+    year: 1995
+    episodes: 3
+    notes: "3 standalone episodes set during Macross 7. Watch after the series."
+    jellyfin_id: null  # GAP
+
+  - title: "Macross Dynamite 7"
+    anidb_id: 497
+    type: OVA
+    year: 1997
+    episodes: 4
+    notes: "Sequel OVA to Macross 7."
+    jellyfin_id: null  # GAP
+
+  - title: "Macross Zero"
+    anidb_id: 427
+    type: OVA
+    year: 2002
+    episodes: 5
+    notes: "Prequel to SDF Macross. Better watched here after Mac7 due to production context."
+    jellyfin_id: "d3a32ef96b87e7fc7524d763ae970212"
+
+  - title: "Macross Frontier"
+    anidb_id: 5415
+    type: TV
+    year: 2008
+    episodes: 25
+    jellyfin_id: "7dd8f7783bc82e15756e92a156a02b9a"
+
+  - title: "Macross Frontier: Itsuwari no Utahime"
+    anidb_id: 6655
+    type: Movie
+    year: 2009
+    notes: "First Frontier movie — alternate retelling of the series."
+    jellyfin_id: null  # GAP
+
+  - title: "Macross Frontier: Sayonara no Tsubasa"
+    anidb_id: 7959
+    type: Movie
+    year: 2011
+    notes: "Second Frontier movie — alternate retelling with new ending."
+    jellyfin_id: null  # GAP
+
+  - title: "Macross Δ"
+    anidb_id: 10569
+    type: TV
+    year: 2016
+    episodes: 26
+    jellyfin_id: "05756fc3b0b92c79b698a2ac7404b01d"
+
+  - title: "Macross Δ: Passionate Walküre"
+    anidb_id: 13360
+    type: Movie
+    year: 2018
+    notes: "First Delta movie — recap/alternate retelling."
+    jellyfin_id: null  # GAP
+
+  - title: "Macross Δ: Zettai Live!!!!!!"
+    anidb_id: 14408
+    type: Movie
+    year: 2021
+    notes: "Second Delta movie — sequel to the series."
+    jellyfin_id: null  # GAP
+
+  - title: "Macross Frontier: Labyrinth of Time"
+    anidb_id: 16040
+    type: Movie
+    year: 2021
+    notes: "New sequel movie to Macross Frontier, set after the series/movies."
+    jellyfin_id: "7579172aff16d9e11e6fff475378f9ef"

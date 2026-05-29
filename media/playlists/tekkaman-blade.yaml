@@ -1,0 +1,23 @@
+# Tekkaman Blade — Watch Order Playlist
+# Source: AniDB relations
+# jellyfin_id: present = in library | null = GAP (not yet acquired)
+
+franchise: Tekkaman Blade
+jellyfin_playlist_id: e0d15ebfa210c1f47d9e43e147f4222f
+last_updated: 2026-05-29
+
+entries:
+  - title: "Tekkaman Blade"
+    anidb_id: 1033
+    type: TV
+    year: 1992
+    episodes: 49
+    jellyfin_id: "1e14f1de30c08e3e13cd47a7611c6dae"
+
+  - title: "Tekkaman Blade II"
+    anidb_id: 216
+    type: OVA
+    year: 1994
+    episodes: 6
+    notes: "Sequel OVA set 10 years after the original."
+    jellyfin_id: "e5fa77843754bb54ea6afede961ef8c4"
