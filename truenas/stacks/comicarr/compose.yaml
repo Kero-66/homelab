@@ -18,7 +18,7 @@ services:
       - "8090:8090"
     networks:
       - default
-      - ix-downloaders_default
+      - downloaders_default
     labels:
       - homepage.group=Downloads
       - homepage.name=Comicarr
@@ -27,5 +27,5 @@ services:
       - homepage.description=Comic and manga manager
 
 networks:
-  ix-downloaders_default:
+  downloaders_default:
     external: true

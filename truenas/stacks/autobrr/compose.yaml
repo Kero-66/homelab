@@ -13,8 +13,8 @@ services:
       - "7474:7474"
     networks:
       - default
-      - ix-arr-stack_default
-      - ix-downloaders_default
+      - arr-stack_default
+      - downloaders_default
     labels:
       - homepage.group=Downloads
       - homepage.name=autobrr
@@ -23,7 +23,7 @@ services:
       - homepage.description=Release automation
 
 networks:
-  ix-arr-stack_default:
+  arr-stack_default:
     external: true
-  ix-downloaders_default:
+  downloaders_default:
     external: true

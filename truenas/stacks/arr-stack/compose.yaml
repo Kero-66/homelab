@@ -112,7 +112,7 @@ services:
       - /mnt/Data/downloads:/data/downloads
     networks:
       - default
-      - ix-jellyfin_default
+      - jellyfin_default
     ports:
       - "8989:8989"
     depends_on:
@@ -149,7 +149,7 @@ services:
       - /mnt/Data/downloads:/data/downloads
     networks:
       - default
-      - ix-jellyfin_default
+      - jellyfin_default
     ports:
       - "7878:7878"
     depends_on:
@@ -185,7 +185,7 @@ services:
       - /mnt/Data/media:/data
     networks:
       - default
-      - ix-jellyfin_default
+      - jellyfin_default
     ports:
       - "6767:6767"
     depends_on:
@@ -245,5 +245,7 @@ services:
       start_period: 30s
 
 networks:
-  ix-jellyfin_default:
+  arr-stack_default:
+    name: arr-stack_default
+  jellyfin_default:
     external: true

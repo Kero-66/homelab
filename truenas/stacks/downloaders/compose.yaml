@@ -54,7 +54,7 @@ services:
       - "6881:6881/udp"
     networks:
       - default
-      - ix-arr-stack_default
+      - arr-stack_default
     healthcheck:
       test: curl -sf http://localhost:8080 || exit 1
       interval: 30s
@@ -92,7 +92,7 @@ services:
       - "8085:8080"
     networks:
       - default
-      - ix-arr-stack_default
+      - arr-stack_default
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:8080/ > /dev/null || exit 1"]
       interval: 30s
@@ -129,5 +129,7 @@ services:
   #     retries: 3
 
 networks:
-  ix-arr-stack_default:
+  downloaders_default:
+    name: downloaders_default
+  arr-stack_default:
     external: true

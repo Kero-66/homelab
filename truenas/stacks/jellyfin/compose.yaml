@@ -82,7 +82,7 @@ services:
       - "5055:5055"
     networks:
       - default
-      - ix-arr-stack_default
+      - arr-stack_default
     depends_on:
       - jellyfin
     healthcheck:
@@ -145,5 +145,7 @@ services:
       start_period: 60s
 
 networks:
-  ix-arr-stack_default:
+  jellyfin_default:
+    name: jellyfin_default
+  arr-stack_default:
     external: true

@@ -49,8 +49,8 @@ services:
       - "80:80"         # HTTP only - port 443 is held by TrueNAS nginx
     networks:
       - default
-      - ix-jellyfin_default
-      - ix-arr-stack_default
+      - jellyfin_default
+      - arr-stack_default
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:2019/config/ || exit 1"]
       interval: 30s
@@ -59,7 +59,7 @@ services:
       start_period: 30s
 
 networks:
-  ix-jellyfin_default:
+  jellyfin_default:
     external: true
-  ix-arr-stack_default:
+  arr-stack_default:
     external: true
