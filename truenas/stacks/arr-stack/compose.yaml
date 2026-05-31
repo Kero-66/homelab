@@ -216,7 +216,7 @@ services:
       - sonarr
       - radarr
     healthcheck:
-      test: ["CMD-SHELL", "ps aux | grep recyclarr || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f recyclarr || exit 1"]
       interval: 1m
       timeout: 10s
       retries: 3
