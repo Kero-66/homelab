@@ -5,6 +5,7 @@
 2. Read `ai/SESSION_NOTES.md` — current work in progress
 3. Read `ai/todo.md` — pending tasks
 4. Before any command, check `ai/PATTERNS.md` — verified copy-paste commands
+5. Run `mempalace wake-up` — load memory palace context (past decisions, known failures, session history)
 
 ## Infrastructure Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66) — Version 25.10.1
@@ -30,12 +31,7 @@
 - **Correct pattern**: `infisical secrets get <KEY> --env dev --path /TrueNAS --plain 2>/dev/null`
 
 ## TrueNAS SSH — Secure Pattern
-```bash
-TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null > "$TMPKEY" && chmod 600 "$TMPKEY"
-ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 "your command here"
-rm -rf "$TMPDIR_SAFE"
-```
+**Use ssh-agent pattern from `ai/PATTERNS.md` — ALWAYS check before running SSH commands.**
 - kero66 cannot access Docker socket directly — use `sudo docker ...`
 - kero66 UID on TrueNAS: **72**
 - API key: `truenas_admin_api` (env dev, path /TrueNAS)
@@ -61,7 +57,6 @@ rm -rf "$TMPDIR_SAFE"
 - qBittorrent doesn't create dirs at startup, only on first download
 
 ## Behavior Rules
-- **Check logs first** — `sudo docker logs <container> --tail 30` before forming any hypothesis about a broken service. See `.claude/rules/troubleshooting.md`.
 - **DO THE WORK** — set up SSH, install tools, troubleshoot yourself. Don't ask user to run commands.
 - **Research first, guess never** — read existing working apps before attempting anything new. Replicate patterns, never invent.
 - **NO /tmp for working files** — stage files in repo, SCP to TrueNAS. `/tmp` is for secrets only (mktemp -d, cleanup immediately).
@@ -69,10 +64,29 @@ rm -rf "$TMPDIR_SAFE"
 - **No secrets in output** — use variables, redirect stderr, never echo secrets.
 - **ALWAYS check existing setup** before creating new files.
 
+## Service Migrations
+See `.claude/docs/migrations.md`
+
+## Recyclarr
+See `.claude/docs/recyclarr.md`
+
+## Code Standards
+- **Shell**: `#!/usr/bin/env bash`, `set -euo pipefail`, idempotent designs, run `shellcheck` before committing
+- **YAML/Compose**: validate with `yamllint <file>` and `docker compose -f <file> config`
+- **Commits**: `<type>(<scope>): <short summary>` — e.g. `fix(autobrr): correct feed_type for AnimeTosho`
+
 ## Task Tracking
 - Use TodoWrite for multi-step current session work
 - Add long-term items to `ai/todo.md`
 - See `ai/DOCUMENTATION_STRUCTURE.md` for full workflow
+
+## Compact Instructions
+If context is compacted, preserve these critical facts:
+- TrueNAS SSH: use ssh-agent pattern from `ai/PATTERNS.md` (NOT temp-file pattern)
+- `midclt REQUIRES sudo` — without sudo, calls silently fail as `.UNAUTHENTICATED`
+- NEVER use REST API to update compose — use midclt stop→update→start
+- Infisical: ALL secrets are `--env dev`, NEVER run `infisical secrets` without targeting a key
+- Check logs first: `sudo docker logs <container> --tail 30` before any hypothesis
 
 ## Documentation Index
 - `ai/PATTERNS.md` — verified commands (check before trial-and-error)
