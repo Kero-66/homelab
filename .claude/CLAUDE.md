@@ -75,6 +75,13 @@ See `.claude/docs/recyclarr.md`
 - **YAML/Compose**: validate with `yamllint <file>` and `docker compose -f <file> config`
 - **Commits**: `<type>(<scope>): <short summary>` — e.g. `fix(autobrr): correct feed_type for AnimeTosho`
 
+## Commit Security Gate — REQUIRED
+Before EVERY commit:
+1. Run `/security-review` on staged changes
+2. If clean: `date +%s > ~/.claude/hooks/.security-review-timestamp`
+3. Then commit — hook reads timestamp, allows if within 10 minutes, deletes token
+4. If hook blocks: security review is stale or missing — repeat from step 1
+
 ## Task Tracking
 - Use TodoWrite for multi-step current session work
 - Add long-term items to `ai/todo.md`
@@ -87,6 +94,7 @@ If context is compacted, preserve these critical facts:
 - NEVER use REST API to update compose — use midclt stop→update→start
 - Infisical: ALL secrets are `--env dev`, NEVER run `infisical secrets` without targeting a key
 - Check logs first: `sudo docker logs <container> --tail 30` before any hypothesis
+- EVERY commit: run `/security-review` → if clean: `date +%s > ~/.claude/hooks/.security-review-timestamp` → then commit
 
 ## Documentation Index
 - `ai/PATTERNS.md` — verified commands (check before trial-and-error)

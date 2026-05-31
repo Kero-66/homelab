@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PreToolUse hook — intercepts git commit commands and reminds to run /security-review.
+# PreToolUse hook — blocks git commit unless /security-review ran clean within 10 minutes.
+# Bypass requires a timestamped review file, not a simple flag.
 
 INPUT=$(cat)
 
@@ -10,15 +11,22 @@ CMD=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print
 
 echo "$CMD" | grep -qE '^\s*git commit' || exit 0
 
-# Allow bypass if security review flag exists
-if [[ -f "$HOME/.claude/hooks/.security-reviewed" ]]; then
-  rm -f "$HOME/.claude/hooks/.security-reviewed"
-  exit 0
+REVIEW_FILE="$HOME/.claude/hooks/.security-review-timestamp"
+MAX_AGE_SECONDS=600  # 10 minutes
+
+if [[ -f "$REVIEW_FILE" ]]; then
+  review_time=$(cat "$REVIEW_FILE" 2>/dev/null)
+  now=$(date +%s)
+  age=$(( now - review_time ))
+  if [[ $age -le $MAX_AGE_SECONDS ]]; then
+    rm -f "$REVIEW_FILE"
+    exit 0
+  fi
 fi
 
 cat <<'EOF'
 {
   "decision": "block",
-  "reason": "Security check: before committing, run /security-review to scan for hardcoded secrets, credentials, or sensitive data in the staged changes. If you've already reviewed and it's clean, tell me to proceed."
+  "reason": "Security gate: /security-review must be run and pass before each commit. Run /security-review now — if it comes back clean, it will write a timestamp token and the next commit attempt will be allowed (within 10 minutes)."
 }
 EOF
