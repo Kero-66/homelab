@@ -4,50 +4,56 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
-## Session 2026-05-29/30 - Comicarr Deploy (IN PROGRESS)
+## Session 2026-05-30 - Comicarr Setup (BLOCKED — needs credentials re-setup)
 
-### What Was Done
+### Current State (handoff)
 
-1. **Comicarr deployed** via Dockhand at `http://comicarr.home` (port 8090)
-   - Stack: `truenas/stacks/comicarr/compose.yaml`
-   - Config: `/mnt/Fast/docker/comicarr/config/comicarr/config.ini`
-   - Volumes: `/comics`, `/manga`, `/webtoons` → `/mnt/Data/media/{comics,manga,webtoons}`
-   - Downloads: `/downloads` → `/mnt/Data/downloads/qbittorrent`
-   - Network: joins `ix-downloaders_default` (can reach qBittorrent/SABnzbd)
-   - DNS: `comicarr.home` → AdGuard rewrite → 192.168.20.22
-   - Caddy: `http://comicarr.home` → `192.168.20.22:8090`
+Comicarr is deployed and running at `http://comicarr.home` (port 8090) but needs first-run credential setup because the Docker volume path was corrected mid-session.
 
-2. **Credentials seeded** — `kero66` / `COMICARR_PASSWORD` in Infisical `/media`
-   - Written plaintext to `config.ini` (Comicarr accepts plaintext, auto-upgrades to bcrypt on save)
-   - `authentication = 2` (form-based login required)
+### What Was Done This Session
 
-3. **AniDB client fixed** — API name is `kplaylists` (not `AnimePlaylists`)
-   - Updated `ANIDB_CLIENT_PLAYLISTS` in Infisical `/media`
+1. **Deployed** via Dockhand, port 8090, DNS + Caddy configured ✓
+2. **Networks**: joins `ix-downloaders_default` + `ix-arr-stack_default` (can reach qBittorrent, SABnzbd, Prowlarr) ✓
+3. **config.ini configured** at correct path with CV key, qBit, SABnzbd, Torznab/Newznab indexers ✓
+4. **Volume mount corrected**: was `/mnt/Fast/docker/comicarr/config:/config` → now `/mnt/Fast/docker/comicarr/config/comicarr:/config`
+   - Root cause: Comicarr expects config at `/config/config.ini` but old mount placed it at `/config/comicarr/config.ini`
+   - Fix deployed, backend now starts without "No CV key" error ✓
+5. **Side effect**: changing the volume path reset the new UI's users/session database → app now shows "Setup required" 
 
-4. **Watch order playlists created** in Jellyfin + playlist DB in `media/playlists/`
-   - Macross Watch Order (237 items, 7 gaps) — ID `89f8fafd8409a0798569199b793da23f`
-   - Tekkaman Blade Watch Order (66 items) — ID `e0d15ebfa210c1f47d9e43e147f4222f`
-   - Jellyfin shows "Missing" badge for gaps but doesn't count them in total
+### NEXT STEPS TO COMPLETE
 
-### Next Steps — Comicarr Configuration (TODO)
+**Step 1 — First-run credential setup** (one-time, browser only):
+- Go to `http://comicarr.home`
+- Use `/api/auth/setup` (POST) or follow the setup wizard
+- Set username `kero66`, password from Infisical `/media` → `COMICARR_PASSWORD`
 
-- [ ] **Comic Vine API key** → Settings → Metadata → ComicVine API Key
-- [ ] **Prowlarr Torznab** → Settings → Search Providers → Torznab → add Prowlarr endpoint
-  - URL: `http://prowlarr:9696/prowlarr/{id}/api` (but Comicarr is NOT on arr-stack network!)
-  - **Problem**: Comicarr joins `ix-downloaders_default` but NOT `ix-arr-stack_default` — can't reach Prowlarr by container name
-  - Fix options: (a) add `ix-arr-stack_default` to Comicarr compose, or (b) use host IP `192.168.20.22:9696`
-  - **Recommended**: add `ix-arr-stack_default` to compose and redeploy — use `http://prowlarr:9696/prowlarr`
-- [ ] **qBittorrent download client** → Settings → Download Clients → qBittorrent
-  - Host: `qbittorrent` (already on ix-downloaders_default), port 8080
-  - Credentials: `QBITTORRENT_USER` / `QBITTORRENT_PASS` in Infisical `/TrueNAS`
-- [ ] **SABnzbd** → Settings → Download Clients → SABnzbd
-  - Host: `sabnzbd` (on ix-downloaders_default), port 8080
-  - API key: `SABNZBD_API_KEY` in Infisical `/TrueNAS`
-- [ ] **Library paths** → Settings → Media Management
-  - Comic dir: `/comics`
-  - Manga dir: `/manga`
-- [ ] **MangaDex** already enabled in config (`mangadex_enabled = True`) — no extra setup needed
-- [ ] **Homepage widget** — add Comicarr to homepage services.yaml
+**Step 2 — Get API key** (auto-generated on setup):
+- After login: `Settings → API & providers` shows the API key
+- Save to Infisical: `infisical secrets set COMICARR_API_KEY=<key> --env dev --path /media ...`
+
+**Step 3 — Configure via REST API** (`X-Api-Key` header, base URL `http://comicarr.home/api/`):
+```bash
+COMICARR_KEY=$(infisical secrets get COMICARR_API_KEY --env dev --path /media --plain ...)
+
+# Set CV key
+curl -s -X PUT -H "X-Api-Key: $COMICARR_KEY" -H "Content-Type: application/json" \
+  -d "{\"CV\": {\"comicvine_api\": \"$(infisical secrets get COMICVINE_API_KEY ...)\"}}" \
+  http://comicarr.home/api/config
+
+# Verify config saved
+curl -s -H "X-Api-Key: $COMICARR_KEY" http://comicarr.home/api/config | python3 -m json.tool
+```
+
+**Step 4 — Fix /comics /manga permissions** (container warns they're not writable):
+```bash
+sudo chown -R 1000:1000 /mnt/Data/media/comics /mnt/Data/media/manga /mnt/Data/media/webtoons
+```
+
+**Step 5 — Download clients** (new UI says "coming soon", use config.ini — already set):
+- qBittorrent: `qbittorrent:8080`, user `kero66`, pass `temppwd` → already in config.ini ✓
+- SABnzbd: host `sabnzbd`, apikey `SABNZBD_API_KEY` from Infisical `/TrueNAS` → already in config.ini ✓
+- Torznab (Prowlarr): 1337x(23), TPB(9), Nyaa.si(1) → already in config.ini ✓
+- Newznab (Prowlarr): altHUB(20), DrunkenSlug(16), SceneNZB(19) → already in config.ini ✓
 
 ### Key Facts
 
@@ -55,12 +61,36 @@ This file captures active session context, decisions, and in-progress research t
 |------|-------|
 | URL | `http://comicarr.home` |
 | Port | 8090 |
+| Version | v0.17.1 |
 | Credentials | `kero66` / `COMICARR_PASSWORD` in Infisical `/media` |
-| Config | `/mnt/Fast/docker/comicarr/config/comicarr/config.ini` |
-| Network gap | NOT on `ix-arr-stack_default` — add to compose before configuring Prowlarr |
-| Prowlarr URL (after fix) | `http://prowlarr:9696/prowlarr/api/v1` |
-| MangaDex | Enabled by default, no key needed |
-| Version | v0.15.1 |
+| Config path (host) | `/mnt/Fast/docker/comicarr/config/comicarr/config.ini` |
+| Config path (container) | `/config/config.ini` |
+| Volume mount | `/mnt/Fast/docker/comicarr/config/comicarr:/config` |
+| CV key | `COMICVINE_API_KEY` in Infisical `/media` — already in config.ini |
+| Comicarr API key | Auto-generated on setup — save to Infisical `/media` as `COMICARR_API_KEY` |
+| REST API auth | `X-Api-Key: <key>` header, base `http://comicarr.home/api/` |
+| REST API docs | https://comicarr.com/docs/api/rest-api |
+| Prowlarr (in-network) | `http://prowlarr:9696/prowlarr/{id}/api` |
+| MangaDex | Enabled by default in config.ini |
+| Networks | `ix-downloaders_default` + `ix-arr-stack_default` |
+
+### Key Comicarr REST API Endpoints
+```
+POST /api/auth/setup          # First-run credential setup
+POST /api/auth/login          # Login → JWT session cookie
+GET  /api/config              # Get full config
+PUT  /api/config              # Update config (JSON body matching config sections)
+POST /api/search/comics       # Search: {"query": "Batman"}
+POST /api/search/add          # Add series from search result
+GET  /api/series              # List monitored series
+GET  /api/system/version      # Version check
+```
+
+### AniDB / Watch Order Playlists (completed previous session)
+- AniDB client name: `kplaylists` (stored as `ANIDB_CLIENT_PLAYLISTS` in Infisical `/media`)
+- Macross Watch Order playlist ID: `89f8fafd8409a0798569199b793da23f` (237 items)
+- Tekkaman Blade Watch Order playlist ID: `e0d15ebfa210c1f47d9e43e147f4222f` (66 items)
+- Playlist DB: `media/playlists/`
 
 ---
 

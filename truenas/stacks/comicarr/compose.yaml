@@ -9,7 +9,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      - /mnt/Fast/docker/comicarr/config:/config
+      - /mnt/Fast/docker/comicarr/config/comicarr:/config
       - /mnt/Data/media/comics:/comics
       - /mnt/Data/media/manga:/manga
       - /mnt/Data/media/webtoons:/webtoons
@@ -19,6 +19,7 @@ services:
     networks:
       - default
       - downloaders_default
+      - arr-stack_default
     labels:
       - homepage.group=Downloads
       - homepage.name=Comicarr
@@ -28,4 +29,6 @@ services:
 
 networks:
   downloaders_default:
+    external: true
+  arr-stack_default:
     external: true
