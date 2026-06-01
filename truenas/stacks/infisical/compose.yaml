@@ -1,0 +1,73 @@
+# =============================================================================
+# Infisical - Self-hosted secrets management
+# =============================================================================
+# Migrated from workstation (192.168.20.66) to TrueNAS (192.168.20.22)
+#
+# Storage layout:
+#   DB    → /mnt/Fast/databases/infisical/postgres/  (NVMe - critical data)
+#   Redis → /mnt/Fast/databases/infisical/redis/     (NVMe - session cache)
+#   Env   → /mnt/Fast/docker/infisical/.env          (manually managed)
+#
+# CRITICAL: .env must contain ENCRYPTION_KEY from the workstation instance.
+#           If lost, all secrets are unrecoverable. See backup.sh.
+#
+# Port: 8081 — same as workstation, no changes needed in agent-config.yaml
+#              or PATTERNS.md after migration.
+# =============================================================================
+
+services:
+  infisical-db:
+    image: postgres:14-alpine
+    container_name: infisical-db
+    restart: unless-stopped
+    mem_limit: 512m
+    env_file:
+      - /mnt/Fast/docker/infisical/.env
+    environment:
+      - POSTGRES_DB=infisical
+    volumes:
+      - /mnt/Fast/databases/infisical/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infisical -d infisical"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  infisical-redis:
+    image: redis:7-alpine
+    container_name: infisical-redis
+    restart: unless-stopped
+    mem_limit: 256m
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - /mnt/Fast/databases/infisical/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  infisical:
+    image: infisical/infisical:latest
+    container_name: infisical
+    restart: unless-stopped
+    mem_limit: 1g
+    depends_on:
+      infisical-db:
+        condition: service_healthy
+      infisical-redis:
+        condition: service_healthy
+    env_file:
+      - /mnt/Fast/docker/infisical/.env
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
