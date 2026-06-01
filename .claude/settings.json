@@ -84,6 +84,16 @@
       }
     }
   },
+  "permissions": {
+    "deny": [
+      "Read(archive/**)",
+      "Read(.claude/projects/-Users-kieran-repos-homelab/**)",
+      "Read(**/*.log)",
+      "Read(**/*.sql)",
+      "Read(.git/**)",
+      "Read(truenas/sessions/**)"
+    ]
+  },
   "effortLevel": "low",
   "advisorModel": "opus",
   "theme": "light",
