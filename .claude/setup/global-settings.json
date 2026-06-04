@@ -1,12 +1,12 @@
 {
   "hooks": {
-    "UserPromptSubmit": [
+    "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$HOME/.claude/hooks/check-ai-standards-version.sh\"",
-            "timeout": 5
+            "command": "bash \"$HOME/.claude/hooks/mempalace-start.sh\"",
+            "timeout": 30
           }
         ]
       }
@@ -62,20 +62,17 @@
       }
     ]
   },
+  "env": {
+    "BASH_MAX_OUTPUT_LENGTH": "10000",
+    "MAX_MCP_OUTPUT_TOKENS": "4000"
+  },
   "enabledPlugins": {
     "context7@claude-plugins-official": true,
     "github@claude-plugins-official": true,
-    "caveman@caveman": true,
     "mempalace@mempalace": true,
     "token-optimizer@alexgreensh-token-optimizer": true
   },
   "extraKnownMarketplaces": {
-    "caveman": {
-      "source": {
-        "source": "git",
-        "url": "https://github.com/JuliusBrussee/caveman.git"
-      }
-    },
     "mempalace": {
       "source": {
         "source": "git",

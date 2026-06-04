@@ -63,6 +63,9 @@
 - **Repo is source of truth** — all persistent knowledge lives in this repo. `.claude/` travels with it.
 - **No secrets in output** — use variables, redirect stderr, never echo secrets.
 - **ALWAYS check existing setup** before creating new files.
+- **Broken service? Check logs first** — `sudo docker logs <container> --tail 30` before ANY hypothesis. Never assume networking; the cause is always visible in logs.
+- **Be concise** — no filler, no trailing summaries, no restating what was just done. Direct answers only.
+- **Memory lives in the repo** — write all new feedback/decisions to `.claude/memory/` and update `.claude/memory/MEMORY.md`. Never write to `~/.claude/projects/` (local-only, doesn't travel with repo).
 
 ## Service Migrations
 See `.claude/docs/migrations.md`
@@ -95,6 +98,22 @@ If context is compacted, preserve these critical facts:
 - Infisical: ALL secrets are `--env dev`, NEVER run `infisical secrets` without targeting a key
 - Check logs first: `sudo docker logs <container> --tail 30` before any hypothesis
 - EVERY commit: run `/security-review` → if clean: `date +%s > ~/.claude/hooks/.security-review-timestamp` → then commit
+
+## Intent Layer
+
+**Before modifying code in a subdirectory, read its AGENTS.md first** to understand local patterns and invariants.
+
+- **TrueNAS infrastructure**: `truenas/AGENTS.md` — app lifecycle, SSH, midclt, secrets, ports
+- **Media stack**: `media/AGENTS.md` — arr apps, Bazarr invariants, API patterns
+- **Media scripts**: `media/scripts/AGENTS.md` — configuration automation scripts
+- **AI/Claude ops**: `ai/AGENTS.md` — PATTERNS.md, handoffs, memory, todo workflow
+
+### Global Invariants
+- Check logs first before any hypothesis: `sudo docker logs <container> --tail 30`
+- All secrets are `--env dev` in Infisical — no prod environment exists
+- `midclt` requires `sudo` — without it, calls silently fail as `.UNAUTHENTICATED`
+- Never use REST API to update compose — midclt stop→update→start only
+- Memory lives in the repo: `.claude/memory/` not `~/.claude/projects/`
 
 ## Documentation Index
 - `ai/PATTERNS.md` — verified commands (check before trial-and-error)

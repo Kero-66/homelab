@@ -8,6 +8,8 @@ Format: id | title | description | created_by | created_at | status | related_fi
 
 2 | draft_sample_files | Should AI draft `media/config_samples/.env.sample` and `media/.config/.credentials.sample` now? | AI | 2025-12-16 | open | media/config_samples/
 
+3 | ai_standards_hook | Review value of check-ai-standards-version.sh hook for new repos/projects. Hook removed 2026-06-01 (golden repo path was hardcoded to Fedora /mnt/library, always silently exited on other machines). If reinstating: make GOLDEN_REPO configurable via AI_STANDARDS_GOLDEN_REPO env var so it works portably. Consider running in new project init workflow rather than every prompt. | AI | 2026-06-01 | open | .claude/hooks/check-ai-standards-version.sh
+
 3 | allow_copilot_update | Permission to update `.github/copilot-instructions.md` to record AI behaviour rules (unanswered questions auto-appended to `ai/todo.md`)? | AI | 2025-12-16 | open | .github/copilot-instructions.md, ai/improve_copilot_instructions.md
 
 4 | secret_storage_policy | Confirm preferred secret storage policy (local files only vs integrate Vault/SOPS) | AI | 2025-12-16 | open | ai/ideas.md
@@ -112,6 +114,10 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 82 | arr_stack_redeploy_network | Redeploy arr-stack on TrueNAS to apply ix-jellyfin_default network join (sonarr/radarr/bazarr need restart for change to take effect). Use midclt stop/start. | Claude | 2026-04-11 | open | truenas/stacks/arr-stack/compose.yaml
 
 81 | subdl_re_enable | Re-enable subdl provider in Bazarr once the KeyError: 'subtitles' bug is fixed upstream. Bug: `result['subtitles']` is accessed without checking key existence in `custom_libs/subliminal_patch/providers/subdl.py` — API sometimes returns success without that key. Fix is `result.get('subtitles', [])`. Track: https://github.com/morpheus65535/bazarr — check releases for subdl fix. Config: `media/.config/bazarr/config.yaml` → `enabled_providers`. | Claude | 2026-03-31 | open | media/.config/bazarr/config.yaml
+
+87 | mempalace_value_review | Evaluate whether MemPalace is delivering value. It saves diary + drawers at session end and now loads via SessionStart hook — but if context injected is noisy/irrelevant or token cost exceeds benefit, remove it. Review after ~4 weeks of use (target: 2026-07-01). Signals to check: does wake-up output actually inform responses? Does it surface past decisions unprompted? If not — remove plugin, Stop/PreCompact hooks, and SessionStart hook. | Claude | 2026-06-01 | open |
+
+86 | recurring_workflow_skills | Identify repeating homelab workflows that would benefit from being Claude skills with explicit model routing (e.g. Haiku for log triage → Sonnet for fix → Haiku for summary). Candidate areas: TrueNAS service health checks, Infisical secret rotation, arr-stack health + missing media triage, Caddy config changes. Goal: spawn subagents at appropriate model tiers instead of running everything in main thread. Use write-a-skill skill to build them. | Claude | 2026-06-01 | open | .claude/skills/, ai/PATTERNS.md
 
 83 | check_sonarr_missing_results | Sonarr SeriesSearch triggered for all 22 series with missing episodes (VOTOMS, Robotech, Tekkaman Blade, Blue Gender, Macross variants, Trigun, Gasaraki, Gundam Wing, .hack, etc.). Check http://sonarr.home/activity/queue and wanted list to see what was grabbed. autobrr filters also set up for ongoing monitoring. | Claude | 2026-05-22 | open | truenas/stacks/autobrr/seed_config.py
 

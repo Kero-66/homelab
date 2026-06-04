@@ -1,5 +1,16 @@
 # External references used by Copilot
 
+## Claude Code Skills Repos (2026-06-01)
+
+External skill repos we use — clone instructions if skills need to be reinstalled.
+
+| Skill | Repo | Install |
+|-------|------|---------|
+| Matt Pocock suite (caveman, diagnose, handoff, etc.) | https://github.com/mattpocock/skills | `npx --yes skills@latest add mattpocock/skills --yes --global` then prune to 9 (see `machines.md`) |
+| intent-layer (context engineering) | https://github.com/crafter-station/skills | `git clone https://github.com/crafter-station/skills.git /tmp/cs-skills && cp -r /tmp/cs-skills/context-engineering/intent-layer ~/.agents/skills/intent-layer` |
+
+**Note:** `npx skills add crafter-station/skills --skill intent-layer -g` does NOT work — intent-layer is not registered in the published package. Clone the repo manually.
+
 Sources consulted for external service configuration and APIs.
 
 ## Infisical CLI & Docker usage (2026-01-17)

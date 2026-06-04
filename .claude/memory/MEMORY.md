@@ -6,6 +6,8 @@
 - [Never run infisical secrets table form](feedback_no_secret_table_output.md) — always use `infisical secrets get <KEY> --plain`, NEVER bare `infisical secrets` (prints all secrets in cleartext)
 - [No grep/head filtering on first run](feedback_no_grep_head.md) — always read raw output first, filter only if too large
 - [Never print secret values in output](feedback_no_secret_output.md) — suppress `infisical secrets set` table output, never echo secret vars
+- [Use service APIs not shell commands](feedback_use_apis.md) — Jellyfin/Sonarr/Bazarr all have APIs; reach for ffprobe/python only when APIs lack the data
+- [Handoff files live in ai/](feedback_handoff_location.md) — always `ls ai/handoff*.md` before writing; append to today's file, never overwrite
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**

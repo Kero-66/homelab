@@ -36,9 +36,6 @@ done
 
 # ── Global settings ───────────────────────────────────────────────────────────
 if [[ -f "$SETTINGS_DST" ]]; then
-  # Merge: preserve machine-specific keys (theme, etc.), apply canonical keys
-  # Strategy: canonical is authoritative for hooks/plugins/marketplaces/effortLevel
-  # Machine keeps: any keys NOT in canonical (e.g. machine-specific statusLine overrides)
   python3 - <<PYEOF
 import json, sys
 
@@ -61,6 +58,32 @@ else
   ok "global settings: installed $SETTINGS_DST"
 fi
 
+# ── Skills (Matt Pocock suite via npx) ───────────────────────────────────────
+echo ""
+echo "Skills check:"
+
+AGENTS_SKILLS="$HOME/.agents/skills"
+REQUIRED_SKILLS=(caveman diagnose grill-me grill-with-docs handoff improve-codebase-architecture prototype review write-a-skill)
+MISSING_SKILLS=()
+
+for skill in "${REQUIRED_SKILLS[@]}"; do
+  if [[ -d "$AGENTS_SKILLS/$skill" ]]; then
+    ok "skill: $skill"
+  else
+    MISSING_SKILLS+=("$skill")
+    warn "skill MISSING: $skill"
+  fi
+done
+
+if [[ ${#MISSING_SKILLS[@]} -gt 0 ]]; then
+  echo ""
+  info "Install missing skills:"
+  info "  npx --yes skills@latest add mattpocock/skills --yes --global"
+  info ""
+  info "Then archive out-of-domain skills (keep only the 9 above):"
+  info "  See machines.md for the prune list"
+fi
+
 # ── Plugin install reminders ──────────────────────────────────────────────────
 echo ""
 echo "Plugin check (manual install required if missing):"
@@ -77,28 +100,28 @@ check_plugin() {
   fi
 }
 
-check_plugin "mempalace/mempalace"                   "mempalace"       "/install-plugin mempalace"
-check_plugin "caveman/caveman"                       "caveman"         "/install-plugin caveman"
-check_plugin "alexgreensh-token-optimizer"           "token-optimizer" "/install-plugin token-optimizer"
-check_plugin "claude-plugins-official/context7"      "context7"        "(official — install via Claude Code settings)"
-check_plugin "claude-plugins-official/github"        "github"          "(official — install via Claude Code settings)"
+check_plugin "mempalace/mempalace"              "mempalace"       "/install-plugin mempalace (in Claude Code)"
+check_plugin "alexgreensh-token-optimizer"      "token-optimizer" "/install-plugin token-optimizer (in Claude Code)"
+check_plugin "claude-plugins-official/context7" "context7"        "(official — install via Claude Code settings)"
+check_plugin "claude-plugins-official/github"   "github"          "(official — install via Claude Code settings)"
 
-# ── mempalace PATH (macOS Python) ─────────────────────────────────────────────
+# ── mempalace PATH ────────────────────────────────────────────────────────────
 echo ""
 if command -v mempalace &>/dev/null; then
   ok "mempalace CLI: $(which mempalace)"
 else
   warn "mempalace CLI not in PATH"
-  info "Add to ~/.zshrc or ~/.bashrc:"
-  info '  export PATH="$PATH:$HOME/Library/Python/3.9/bin"'
+  info "macOS: export PATH=\"\$PATH:\$HOME/Library/Python/3.9/bin\""
+  info "Linux: export PATH=\"\$PATH:\$HOME/.local/bin\""
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
-echo "Done. Restart Claude Code for hook changes to take effect."
+echo "Done. Restart Claude Code for hook/settings changes to take effect."
 echo ""
 echo "Next steps:"
-echo "  1. If any plugins were missing, install them in Claude Code"
-echo "  2. Run 'mempalace repair --mode from-sqlite --archive-existing --backup --yes' if palace feels degraded"
-echo "  3. Check .claude/setup/machines.md and add/update this machine's entry"
+echo "  1. Install any missing plugins/skills listed above"
+echo "  2. After npx install, prune extra MP skills — keep only: ${REQUIRED_SKILLS[*]}"
+echo "  3. If palace feels degraded: mempalace repair --mode from-sqlite --archive-existing --backup --yes"
+echo "  4. Update .claude/setup/machines.md for this machine"
 echo ""
