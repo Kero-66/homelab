@@ -84,6 +84,32 @@ if [[ ${#MISSING_SKILLS[@]} -gt 0 ]]; then
   info "  See machines.md for the prune list"
 fi
 
+# ── intent-layer skill (crafter-station) ────────────────────────────────────
+echo ""
+echo "intent-layer skill check:"
+
+INTENT_SRC="$HOME/.agents/skills/intent-layer"
+INTENT_LINK="$HOME/.claude/skills/intent-layer"
+
+if [[ -d "$INTENT_SRC" ]]; then
+  ok "intent-layer source: $INTENT_SRC"
+else
+  warn "intent-layer MISSING — install with:"
+  info "  git clone https://github.com/crafter-station/skills.git /tmp/cs-skills"
+  info "  cp -r /tmp/cs-skills/context-engineering/intent-layer $INTENT_SRC"
+  info "  rm -rf /tmp/cs-skills"
+fi
+
+if [[ -L "$INTENT_LINK" ]]; then
+  ok "intent-layer symlink: $INTENT_LINK"
+elif [[ -d "$INTENT_SRC" ]]; then
+  mkdir -p "$(dirname "$INTENT_LINK")"
+  ln -s "$INTENT_SRC" "$INTENT_LINK"
+  ok "intent-layer symlink: created"
+else
+  warn "intent-layer symlink: skipped (source not installed)"
+fi
+
 # ── Plugin install reminders ──────────────────────────────────────────────────
 echo ""
 echo "Plugin check (manual install required if missing):"

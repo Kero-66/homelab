@@ -14,6 +14,7 @@ Track per-machine Claude Code setup status here.
 | github plugin | ✅ installed | Official |
 | caveman plugin | ❌ removed | Replaced by MP caveman skill (npx install) |
 | MP skills (npx) | ✅ installed | 9 skills: caveman, diagnose, grill-me, grill-with-docs, handoff, improve-codebase-architecture, prototype, review, write-a-skill |
+| intent-layer skill | ✅ installed | git clone crafter-station/skills → `~/.agents/skills/intent-layer` → symlink to `~/.claude/skills/intent-layer` |
 | mempalace CLI in PATH | ✅ | `~/Library/Python/3.9/bin` |
 | Infisical CLI | ✅ | `infisical` available |
 | Last `apply.sh` run | 2026-06-01 | Post token-optimizer cleanup session |
@@ -22,6 +23,12 @@ Track per-machine Claude Code setup status here.
 - Token optimizer dashboard LaunchAgent at `~/Library/LaunchAgents/` (port 24842)
 - `statusLine` and `SessionEnd` hook use wrapper scripts (version-agnostic)
 - Output caps: `BASH_MAX_OUTPUT_LENGTH=10000`, `MAX_MCP_OUTPUT_TOKENS=4000` (in global-settings.json)
+
+### Key changes 2026-06-01 (intent-layer session)
+- Moved `CLAUDE.md` from `.claude/CLAUDE.md` → repo root `CLAUDE.md` (required for detect_state.sh)
+- Installed intent-layer skill: git clone crafter-station/skills → copy to `~/.agents/skills/intent-layer` → symlink to `~/.claude/skills/intent-layer`
+- Created AGENTS.md child nodes: `truenas/`, `media/`, `media/scripts/`, `ai/`
+- Added `SessionStart` hook → `mempalace wake-up` at session start
 
 ### Key changes 2026-06-01 (token-optimizer session)
 - Removed `caveman@caveman` plugin, replaced with Matt Pocock caveman via npx
@@ -61,7 +68,13 @@ bash .claude/setup/apply.sh
 # 4. Install skills
 npx --yes skills@latest add mattpocock/skills --yes --global
 
-# 5. Prune extra skills — archive everything except:
+# 5. Install intent-layer skill (npx does NOT work — clone manually)
+git clone https://github.com/crafter-station/skills.git /tmp/cs-skills
+cp -r /tmp/cs-skills/context-engineering/intent-layer ~/.agents/skills/intent-layer
+ln -s ~/.agents/skills/intent-layer ~/.claude/skills/intent-layer
+rm -rf /tmp/cs-skills
+
+# 6. Prune extra skills — archive everything except:
 #    caveman, diagnose, grill-me, grill-with-docs, handoff,
 #    improve-codebase-architecture, prototype, review, write-a-skill
 KEEP=(caveman diagnose grill-me grill-with-docs handoff improve-codebase-architecture prototype review write-a-skill)
