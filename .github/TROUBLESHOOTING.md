@@ -664,3 +664,25 @@ sudo chown -R 1000:1000 /mnt/Data/media/youtube
 **Note**: Volume mounts configured only in the TrueNAS UI (not in the repo compose) are lost on redeploy. The repo compose is the source of truth.
 
 **Fixed**: 2026-06-05
+
+---
+
+## FileFlows — Copy extracted audio to local machine
+
+After FileFlows processes YouTube URLs, MP3s land on TrueNAS at `/mnt/Data/media/youtube/`.
+To pull them down to your local Adobe Assets folder:
+
+```bash
+# One-liner — copies all MP3s from TrueNAS youtube dir to local Adobe Assets
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null | \
+  ssh-add - 2>/dev/null
+scp -o StrictHostKeyChecking=no \
+  "kero66@192.168.20.22:/mnt/Data/media/youtube/*.mp3" \
+  "/Users/kieran/Documents/Adobe/Assets/Music/"
+ssh-agent -k > /dev/null
+```
+
+scp will skip files that already exist at the destination (same name). Safe to run repeatedly.
