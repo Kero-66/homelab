@@ -232,6 +232,7 @@ services:
     volumes:
       - /mnt/Fast/docker/cleanuparr:/config
       - /mnt/Data/media:/data
+      - /mnt/Data/downloads:/data/downloads
     ports:
       - "11011:11011"
     depends_on:
@@ -246,6 +247,7 @@ services:
 
 networks:
   arr-stack_default:
-    name: arr-stack_default
+    name: ix-arr-stack_default  # TrueNAS ix- prefix — update to arr-stack_default after dockhand cutover
   jellyfin_default:
+    name: ix-jellyfin_default   # TrueNAS ix- prefix — update to jellyfin_default after dockhand cutover
     external: true
