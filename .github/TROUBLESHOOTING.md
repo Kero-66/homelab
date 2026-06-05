@@ -617,3 +617,50 @@ curl -I http://jellyfin.home
 ## Want this in a PR?
 - Adds this file to `.github/`
 - Adds a short README note pointing to it
+
+---
+
+## FileFlows — YouTube flows fail immediately (ProcessingFailed)
+
+**Symptom**: YouTube URLs fail instantly with `ProcessingFailed`, final size 0.
+
+**Diagnosis**: Check the runner log for the failed job:
+```bash
+sudo docker exec fileflows ls -lt /app/Logs/LibraryFiles/ | head -5
+sudo docker exec fileflows gunzip -c /app/Logs/LibraryFiles/<uuid>.log.gz | grep -i 'error\|fail\|invalid'
+```
+
+### Cause 1 — Plugin version mismatch
+
+**Log shows**: `Plugin: Web.dll version 26.04.x.xxxx (Invalid Version - won't use)`
+
+FileFlows auto-updates plugins independently of the container image. If the container is pinned to an older minor version (e.g. `26.03`), the runner refuses to load newer plugins and `InputUrl` (Web plugin) fails to load — breaking all YouTube flows.
+
+**Fix**: Bump the image tag in `truenas/stacks/fileflows/compose.yaml` to match the plugin version, then redeploy:
+```bash
+# Edit compose.yaml: revenz/fileflows:26.03 → revenz/fileflows:26.04
+# Then redeploy via midclt (see PATTERNS.md — midclt update workflow)
+```
+
+**Prevention**: Do not pin FileFlows to a minor version tag. Plugins auto-update; the image must keep pace.
+
+### Cause 2 — Missing volume mount (`/data/youtube`)
+
+**Log shows**: `Access to the path '/data/youtube/...' is denied.`
+
+The YouTube flow outputs to `/data/youtube` inside the container, but this path was not mounted.
+
+**Fix**: Add the mount to `compose.yaml` and redeploy:
+```yaml
+volumes:
+  - /mnt/Data/media/youtube:/data/youtube
+```
+
+Then fix ownership so UID 1000 (PUID) can write:
+```bash
+sudo chown -R 1000:1000 /mnt/Data/media/youtube
+```
+
+**Note**: Volume mounts configured only in the TrueNAS UI (not in the repo compose) are lost on redeploy. The repo compose is the source of truth.
+
+**Fixed**: 2026-06-05

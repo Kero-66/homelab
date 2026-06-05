@@ -7,6 +7,7 @@
 #   Config → /mnt/Fast/docker/fileflows/     (NVMe pool - app data & flows)
 #   Temp   → /mnt/Fast/docker/fileflows/temp (NVMe pool - processing scratch)
 #   Media  → /mnt/Data/media/                (HDD pool - read/write media files)
+#   YouTube → /mnt/Data/media/youtube/       (mounted as /data/youtube inside container)
 #
 # No secrets needed — all config is via web UI.
 # Hardware acceleration: Intel N150 VAAPI via /dev/dri
@@ -18,7 +19,7 @@
 
 services:
   fileflows:
-    image: revenz/fileflows:26.03
+    image: revenz/fileflows:26.04
     container_name: fileflows
     restart: unless-stopped
     mem_limit: 2g
@@ -41,6 +42,7 @@ services:
       - /mnt/Fast/docker/fileflows:/app/Data
       - /mnt/Fast/docker/fileflows/temp:/temp
       - /mnt/Data/media:/media
+      - /mnt/Data/media/youtube:/data/youtube
     ports:
       - "19200:5000"
     healthcheck:
