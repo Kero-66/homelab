@@ -8,6 +8,7 @@
 - [Never print secret values in output](feedback_no_secret_output.md) — suppress `infisical secrets set` table output, never echo secret vars
 - [Use service APIs not shell commands](feedback_use_apis.md) — Jellyfin/Sonarr/Bazarr all have APIs; reach for ffprobe/python only when APIs lack the data
 - [Handoff files live in ai/](feedback_handoff_location.md) — always `ls ai/handoff*.md` before writing; append to today's file, never overwrite
+- [Check docs before fixing](feedback_check_docs_before_fixing.md) — verify docs and established patterns before applying fixes, especially permissions/ownership
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**

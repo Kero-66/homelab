@@ -43,7 +43,7 @@ Reference compose files and setup automation for the homelab media stack (Jellyf
 ## Anti-patterns
 - DO NOT deploy `media/compose.yaml` directly — use `truenas/stacks/` via midclt
 - DO NOT use ffprobe/python to query media info when a service API exists
-- DO NOT edit Bazarr `enabled_providers` via API — it silently ignores it
+- DO NOT edit Bazarr `enabled_providers` via API — it silently ignores it on both read and write; use Bazarr UI: Settings → Providers
 - DO NOT re-enable subdl until upstream bug is fixed (see todo#81)
 
 ## Related Context

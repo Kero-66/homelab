@@ -1,0 +1,16 @@
+{
+  "trash_id": "homelab-multi-subs",
+  "name": "Multi-Subs",
+  "includeCustomFormatWhenRenaming": false,
+  "specifications": [
+    {
+      "name": "Multi-Subs Title",
+      "implementation": "ReleaseTitleSpecification",
+      "negate": false,
+      "required": false,
+      "fields": {
+        "value": "(?i)(multi[\\-. ]?sub|msubs?|\\[multi\\])"
+      }
+    }
+  ]
+}

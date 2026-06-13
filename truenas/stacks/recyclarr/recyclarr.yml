@@ -224,6 +224,19 @@ radarr:
           - name: "Anime (1080p)"
             score: -10000
 
+      # ========== LOCAL CUSTOM FORMATS ==========
+      # Multi-Subs — prefer releases with embedded English subtitles
+      # Defined in custom-formats/multi-subs.json (trash_id: homelab-multi-subs)
+      - trash_ids:
+          - homelab-multi-subs
+        assign_scores_to:
+          - name: "Standard (1080p)"
+            score: 350
+          - name: "Ultra-HD (4K)"
+            score: 350
+          - name: "Anime (1080p)"
+            score: 350
+
     quality_profiles:
       - name: "Standard (1080p)"
         upgrade:
@@ -576,6 +589,19 @@ sonarr:
             score: -10000
           - name: "Anime (1080p)"
             score: -10000
+
+      # ========== LOCAL CUSTOM FORMATS ==========
+      # Multi-Subs — prefer releases with embedded English subtitles
+      # Defined in custom-formats/multi-subs.json (trash_id: homelab-multi-subs)
+      - trash_ids:
+          - homelab-multi-subs
+        assign_scores_to:
+          - name: "Standard (1080p)"
+            score: 350
+          - name: "Ultra-HD (4K)"
+            score: 350
+          - name: "Anime (1080p)"
+            score: 350
 
     quality_profiles:
       - name: "Standard (1080p)"

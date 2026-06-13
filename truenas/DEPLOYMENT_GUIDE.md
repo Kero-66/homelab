@@ -142,6 +142,7 @@ Media server stack.
 - Recyclarr, FlareSolverr, Cleanuparr (no web UI for last two)
 - Config: `/mnt/Fast/docker/arr-stack/`
 - Secrets: rendered from Infisical by infisical-agent
+- **Recyclarr deploy**: SCP all three files from `truenas/stacks/recyclarr/` — `recyclarr.yml`, `settings.yml`, and the `custom-formats/` directory must all be present at `/mnt/Fast/docker/recyclarr/config/`. The `settings.yml` `resource_providers` block is what enables local custom formats; without it, any `homelab-*` trash_ids in `recyclarr.yml` will fail to sync.
 
 ### downloaders
 
