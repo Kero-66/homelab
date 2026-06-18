@@ -32,13 +32,13 @@ Last updated: 2026-03-29
 - **All secrets are in `dev` environment** (not `prod`, not default)
 - **Infrastructure secrets**: path `/TrueNAS`
 - **Media secrets (Bazarr, Jellyfin, Sonarr, Radarr)**: path `/media`
-- **Infisical domain**: `http://192.168.20.66:8081` (self-hosted on workstation)
+- **Infisical domain**: `http://192.168.20.22:8081` (self-hosted on TrueNAS)
 - **Project ID**: `$INFISICAL_PROJECT_ID`
 - **Requires `--projectId` and `--domain` flags** when no `.infisical.json` in working dir
 
 ### Authenticate (one-time per session — run manually in your terminal)
 ```bash
-infisical login -i --domain http://192.168.20.66:8081 --email <your-infisical-email>
+infisical login -i --domain http://192.168.20.22:8081 --email <your-infisical-email>
 # -i = interactive terminal login (password prompt only, no browser)
 # Session token stored locally; Claude can use infisical after this.
 ```
@@ -48,14 +48,14 @@ infisical login -i --domain http://192.168.20.66:8081 --email <your-infisical-em
 # Project ID is hardcoded — always include --projectId and --domain
 INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
 infisical secrets get <SECRET_NAME> --env dev --path /TrueNAS \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 --plain 2>/dev/null
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 --plain 2>/dev/null
 ```
 
 ### Standard preamble for any script needing multiple secrets
 ```bash
 INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
 _isec() { infisical secrets get "$1" --env dev --path "$2" --plain \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null; }
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null; }
 
 SONARR_KEY=$(_isec SONARR_API_KEY /media)
 RADARR_KEY=$(_isec RADARR_API_KEY /media)
@@ -91,7 +91,7 @@ TOKEN=$(infisical secrets get TRUENAS_API_TOKEN --env dev --path /TrueNAS --plai
 # Load key from Infisical into agent (memory only - no temp files)
 PROJECT_ID="$INFISICAL_PROJECT_ID"
 eval $(ssh-agent -s) > /dev/null
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.22:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
 
 # Run SSH commands normally (agent provides the key automatically)
 ssh kero66@192.168.20.22 "sudo docker ps"
@@ -105,7 +105,7 @@ ssh-agent -k > /dev/null
 ```bash
 PROJECT_ID="$INFISICAL_PROJECT_ID"
 eval $(ssh-agent -s) > /dev/null
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.22:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
 scp local_file.txt kero66@192.168.20.22:/mnt/Fast/docker/service/
 ssh-agent -k > /dev/null
 ```
@@ -115,7 +115,7 @@ ssh-agent -k > /dev/null
 ```bash
 PROJECT_ID="$INFISICAL_PROJECT_ID"
 KEYDIR=$(mktemp -d) && chmod 700 "$KEYDIR"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.66:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.22:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
 ssh -i "$KEYDIR/id" kero66@192.168.20.22 "your-command"
 rm -rf "$KEYDIR"
 ```
@@ -459,7 +459,7 @@ curl -s -X POST -H "X-Emby-Token: $JELLYFIN_API_KEY" -H "Content-Type: applicati
 ### Setup
 ```bash
 JELLYSTAT_API_KEY=$(infisical secrets get JELLYSTAT_API_KEY --env dev --path /media --plain \
-  --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.66:8081 2>/dev/null)
+  --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.22:8081 2>/dev/null)
 JELLYSTAT_BASE="http://jellystat.home"
 # Auth header: x-api-token (NOT Authorization or X-Emby-Token)
 ```
@@ -841,7 +841,7 @@ Endpoint: `PATCH /bazarr/api/subtitles` (NOT `/api/movies/subtitles` — that's 
 ```bash
 INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
 BAZARR_KEY=$(infisical secrets get BAZARR_API_KEY --env dev --path /media \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 --plain 2>/dev/null)
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 --plain 2>/dev/null)
 
 curl -s -w "\nHTTP %{http_code}" -X PATCH \
   -H "X-API-KEY: $BAZARR_KEY" \
@@ -984,7 +984,7 @@ sudo docker run --rm \
 ### Add a DNS rewrite via API
 ```bash
 ADGUARD_PASS=$(infisical secrets get ADGUARD_PASSWORD --env dev --path /TrueNAS --plain \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
 
 curl -s -o /dev/null -w "%{http_code}" -u "kero66:$ADGUARD_PASS" \
   -X POST "http://192.168.20.22:3080/control/rewrite/add" \
@@ -1011,13 +1011,25 @@ Go to `http://adguard.home` → Filters → DNS rewrites → Add rewrite → dom
 - **Username**: `DOCKHAND_USER` in Infisical `/TrueNAS`
 - **Password**: `DOCKHAND_USER_PASSWORD` in Infisical `/TrueNAS`
 - **Environment ID**: `1` (named "TrueNAS", connected via Docker socket)
+- **`/mnt/Fast` is mounted** into Dockhand container — `env_file: /mnt/Fast/...` paths work correctly
+
+### Update Dockhand catalog app config (e.g. add storage mounts)
+```bash
+# Use REST API with values wrapper — midclt app.update rejects all fields for catalog apps
+TRUENAS_API=$(infisical secrets get truenas_admin_api --env dev --path /TrueNAS --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
+curl -sk -X PUT -H "Authorization: Bearer $TRUENAS_API" -H "Content-Type: application/json" \
+  -d '{"values": {"storage": {"data": {"type": "ix_volume", "ix_volume_config": {"acl_enable": false, "dataset_name": "data"}}, "additional_storage": [{"type": "host_path", "read_only": false, "mount_path": "/mnt/Fast", "host_path_config": {"acl_enable": false, "path": "/mnt/Fast"}}]}}}' \
+  "https://192.168.20.22/api/v2.0/app/id/dockhand" | python3 -c "import sys,json; d=json.load(sys.stdin); print('job_id:', d.get('job_id'))"
+# job returns immediately — check /api/v2.0/core/get_jobs?id=<job_id> for status
+```
 
 ### Deploy a new stack
 ```bash
 DOCKHAND_USER=$(infisical secrets get DOCKHAND_USER --env dev --path /TrueNAS --plain \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
 DOCKHAND_PASS=$(infisical secrets get DOCKHAND_USER_PASSWORD --env dev --path /TrueNAS --plain \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
 
 COOKIEJAR=$(mktemp)
 # Pass credentials via env vars to avoid password appearing in process listings
@@ -1077,7 +1089,7 @@ ssh -i "$TMPKEY" kero66@192.168.20.22 "sudo docker exec recyclarr recyclarr sync
 ### List all indexers with stats
 ```bash
 PROWLARR_KEY=$(infisical secrets get PROWLARR_API_KEY --env dev --path /media --plain \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
 
 curl -s -H "X-Api-Key: $PROWLARR_KEY" "http://192.168.20.22:9696/prowlarr/api/v1/indexer" | \
   jq '[.[] | {id, name, priority}]'
@@ -1110,7 +1122,7 @@ curl -s -H "X-Api-Key: $RADARR_KEY" "http://192.168.20.22:7878/radarr/api/v3/his
 ### Setup
 ```bash
 RADARR_KEY=$(infisical secrets get RADARR_API_KEY --env dev --path /media --plain \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null)
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
 RADARR="http://192.168.20.22:7878/radarr"
 ```
 

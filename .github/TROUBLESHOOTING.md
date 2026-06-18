@@ -677,7 +677,7 @@ To pull them down to your local Adobe Assets folder:
 INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
 eval $(ssh-agent -s) > /dev/null
 infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain \
-  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.66:8081 2>/dev/null | \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null | \
   ssh-add - 2>/dev/null
 scp -o StrictHostKeyChecking=no \
   "kero66@192.168.20.22:/mnt/Data/media/youtube/*.mp3" \

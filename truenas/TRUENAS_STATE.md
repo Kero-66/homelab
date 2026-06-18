@@ -161,13 +161,12 @@ Note: arr-stack_default, jellyfin_default, downloaders_default networks (from ne
 
 ## Secrets Management
 
-- **Infisical**: self-hosted on workstation PC (192.168.20.66:8081)
+- **Infisical**: self-hosted on TrueNAS (192.168.20.22:8081) — migrated from workstation 2026-06-18
 - **Project ID**: `5086c25c-310d-4cfb-9e2c-24d1fa92c152`
 - **All secrets**: `--env dev`, paths `/TrueNAS` and `/media` and `/networking`
 - **Infisical agent**: running on TrueNAS, renders `.env` files to `/mnt/Fast/docker/<stack>/`
 - **Bitwarden**: personal passwords (not infrastructure)
-
-⚠️ **Infisical dependency**: if workstation PC (192.168.20.66) is off, Infisical agent cannot renew secrets. Containers keep running on cached `.env` files but will fail to render on restart.
+- **Stack**: Dockhand-managed (`infisical` stack), env vars inlined in compose (env_file not supported through Dockhand)
 
 ## Dockhand Migration Status (2026-05-31)
 
@@ -207,4 +206,4 @@ Note: arr-stack_default, jellyfin_default, downloaders_default networks (from ne
 | Jellystat | http://jellystat.home | Analytics |
 | Dockhand | http://192.168.20.22:30328 | Container manager |
 | Portainer | http://192.168.20.22:31015 | Container UI |
-| Infisical | http://192.168.20.66:8081 | Secrets (workstation must be on) |
+| Infisical | http://192.168.20.22:8081 | Secrets (TrueNAS-hosted) |

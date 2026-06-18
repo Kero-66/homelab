@@ -199,7 +199,7 @@ log_ok "Credentials retrieved from Infisical"
 
 # --- Verify credentials work ---
 log_info "Verifying Machine Identity credentials..."
-if ! curl -sf -X POST "http://192.168.20.66:8081/api/v1/auth/universal-auth/login" \
+if ! curl -sf -X POST "http://192.168.20.22:8081/api/v1/auth/universal-auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"clientId\": \"$CLIENT_ID\", \"clientSecret\": \"$CLIENT_SECRET\"}" >/dev/null 2>&1; then
     log_error "Machine Identity authentication failed. Check your Client ID and Secret."

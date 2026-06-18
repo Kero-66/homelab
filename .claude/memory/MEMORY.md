@@ -44,6 +44,7 @@
 - **Environment ID**: always `1` (TrueNAS, via Docker socket)
 - **⚠️ Never expose password in process listing**: pass via env vars to python3, not sys.argv
 - **Job status**: `GET /api/jobs/<jobId>` → `{status, result, error}`
+- **`/mnt/Fast` mounted into Dockhand** (added 2026-06-18) — `env_file: /mnt/Fast/...` now resolves correctly in all Dockhand stacks. To add/change Dockhand mounts, use REST API `PUT /api/v2.0/app/id/dockhand` with `{"values": {"storage": {...}}}` wrapper — `midclt call app.update` rejects all fields for catalog apps.
 
 ## Common Gotchas
 - **NEVER run `infisical secrets --env dev --path /TrueNAS` without `--plain` on a specific key** - table output exposes ALL secrets in cleartext in tool results. Always use targeted `infisical secrets get <KEY> --env dev --path /path --plain`
@@ -88,7 +89,7 @@
 # CORRECT: random temp dir, cleanup after use
 TMPDIR_SAFE=$(mktemp -d) && chmod 700 "$TMPDIR_SAFE" && TMPKEY="$TMPDIR_SAFE/k"
 infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain \
-  --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.66:8081 2>/dev/null > "$TMPKEY"
+  --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.22:8081 2>/dev/null > "$TMPKEY"
 chmod 600 "$TMPKEY"
 ssh -i "$TMPKEY" -o StrictHostKeyChecking=no kero66@192.168.20.22 "your command here"
 rm -rf "$TMPDIR_SAFE"
@@ -147,11 +148,11 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - AnimeTosho feed search: `https://feed.animetosho.org/json?q=<query>` (returns JSON)
 
 ## Infisical CLI - MacBook Air Setup (2026-05-10)
-- **Domain**: `http://192.168.20.66:8081` (self-hosted on workstation, NOT cloud)
-- **Auth**: user runs `infisical login -i --domain http://192.168.20.66:8081` manually (-i = terminal prompt, no browser) — Claude uses the session after
+- **Domain**: `http://192.168.20.22:8081` (self-hosted on TrueNAS)
+- **Auth**: user runs `infisical login -i --domain http://192.168.20.22:8081` manually (-i = terminal prompt, no browser) — Claude uses the session after
 - **DO NOT automate Bitwarden access** — any script that reads Bitwarden gives Claude access to the entire vault
 - **Project ID**: `5086c25c-310d-4cfb-9e2c-24d1fa92c152` (ALWAYS include `--projectId` and `--domain`)
-- **Full pattern**: `infisical secrets get KEY --env dev --path /PATH --plain --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.66:8081 2>/dev/null`
+- **Full pattern**: `infisical secrets get KEY --env dev --path /PATH --plain --projectId "5086c25c-310d-4cfb-9e2c-24d1fa92c152" --domain http://192.168.20.22:8081 2>/dev/null`
 - **Media secrets path**: `/media` (Bazarr, Jellyfin, Sonarr, Radarr, Prowlarr API keys)
 - **TrueNAS secrets path**: `/TrueNAS` (kero66_ssh_key, truenas_admin_api, Tailscale auth)
 

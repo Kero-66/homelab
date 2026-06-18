@@ -59,7 +59,7 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 54 | truenas_docs_review | Review truenas/ directory structure and documentation for correctness, clarity, and organization. Consolidate or restructure as needed. | Claude | 2026-02-12 | open | truenas/
 
-56 | migrate_infisical_to_truenas | Migrate Infisical server from workstation (192.168.20.66:8081) to TrueNAS for centralized deployment. Current connection restored but should migrate for consistency. | Claude | 2026-02-12 | open | security/infisical/, truenas/stacks/infisical-agent/
+56 | migrate_infisical_to_truenas | Migrate Infisical server from workstation (192.168.20.66:8081) to TrueNAS for centralized deployment. Current connection restored but should migrate for consistency. | Claude | 2026-02-12 | done 2026-06-18 | security/infisical/, truenas/stacks/infisical-agent/
 
 57 | standardize_kero66_password | Update kero66 password to be consistent across all services (TrueNAS, Infisical, AdGuard, etc.) for password manager storage. Currently using different passwords. | User | 2026-02-12 | open | Various services
 
