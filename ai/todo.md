@@ -125,3 +125,5 @@ Notes for AI behaviour (to be mirrored into `.github/copilot-instructions.md` an
 
 85 | bazarr_settings_api_bug | Bazarr POST /system/settings API silently ignores enabled_providers changes — only config.yaml edit works. If Bazarr is ever redeployed, re-add subf2m to enabled_providers in config.yaml before starting. | Claude | 2026-05-22 | open | /mnt/Fast/docker/bazarr/config/config.yaml
 
+86 | animetosho_replacement | AnimeTosho is shutting down — replace it in Prowlarr. An NZB group is reportedly archiving all AnimeTosho content; find and add that indexer. Nyaa.si may cover the torrent gap. Review once AnimeTosho goes offline. | Kieran | 2026-06-13 | open | truenas/stacks/prowlarr/
+

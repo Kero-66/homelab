@@ -112,3 +112,12 @@ http://autobrr.home {
 http://comicarr.home {
 	reverse_proxy 192.168.20.22:8090
 }
+
+# Infisical (Secret Manager)
+http://infisical.home {
+	redir / /login 302
+	reverse_proxy 192.168.20.22:8081 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+	}
+}
