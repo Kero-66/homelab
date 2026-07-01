@@ -38,15 +38,30 @@
 - API requires HTTPS — http returns 308 that drops auth header
 
 ## TrueNAS App Management — CRITICAL
+
+### App managers: two separate systems
+- **TrueNAS native apps** (arr-stack, jellyfin, downloaders, caddy, recyclarr, etc.) — managed by **midclt**
+- **Dockhand-managed apps** (comicarr, and any future apps deployed via Dockhand UI) — managed by **docker compose**
+
+### TrueNAS native apps (midclt)
 - **NEVER use REST API to update compose** — breaks running containers with port conflicts
 - **Update compose**: `sudo midclt call -j app.stop` → `app.update` → `app.start`
 - **New app**: `midclt app.create` with `custom_compose_config_string` (string, not dict)
-- **Caddyfile changes**: `scp` to live location → `docker exec caddy caddy reload` (no app restart)
-- **Port conflicts**: check `ss -tlnp` before assigning ports — TrueNAS nginx owns 80, 443, 8082
-- **NEVER store secrets in /tmp with predictable names** — use `mktemp -d` + cleanup immediately
 - **midclt REQUIRES sudo** — without `sudo`, calls silently fail as `.UNAUTHENTICATED` (audit log shows it)
 - **NEVER use `docker start/stop`** — use midclt to manage app lifecycle, not docker commands directly
 - **Multi-service stacks**: midclt has no per-container restart — stop/start restarts the whole app
+
+### Dockhand-managed apps (docker compose)
+- Compose files live at `/mnt/.ix-apps/app_mounts/dockhand/data/stacks/<name>/compose.yaml`
+- **Update compose**: `scp` to `/mnt/Fast/docker/<name>/compose.yaml` → copy to Dockhand path → `sudo docker compose -f /mnt/Fast/docker/<name>/compose.yaml up -d --force-recreate`
+- Dockhand API `forceRecreate` option does NOT reliably recreate containers — use docker compose directly
+- **Restart only** (no compose change): `sudo docker compose -f /mnt/Fast/docker/<name>/compose.yaml restart`
+- To identify: check if the stack appears in Dockhand UI at `http://192.168.20.22:30328`
+
+### Both systems
+- **Caddyfile changes**: `scp` to live location → `docker exec caddy caddy reload` (no app restart)
+- **Port conflicts**: check `ss -tlnp` before assigning ports — TrueNAS nginx owns 80, 443, 8082
+- **NEVER store secrets in /tmp with predictable names** — use `mktemp -d` + cleanup immediately
 
 ## Common Gotchas
 - **ALWAYS check response type before piping to jq** — APIs may return HTML not JSON
@@ -94,7 +109,8 @@ Before EVERY commit:
 If context is compacted, preserve these critical facts:
 - TrueNAS SSH: use ssh-agent pattern from `ai/PATTERNS.md` (NOT temp-file pattern)
 - `midclt REQUIRES sudo` — without sudo, calls silently fail as `.UNAUTHENTICATED`
-- NEVER use REST API to update compose — use midclt stop→update→start
+- TrueNAS native apps: NEVER use REST API to update compose — use midclt stop→update→start
+- Dockhand apps (comicarr): use `sudo docker compose up -d --force-recreate` — midclt does NOT apply
 - Infisical: ALL secrets are `--env dev`, NEVER run `infisical secrets` without targeting a key
 - Check logs first: `sudo docker logs <container> --tail 30` before any hypothesis
 - EVERY commit: run `/security-review` → if clean: `date +%s > ~/.claude/hooks/.security-review-timestamp` → then commit

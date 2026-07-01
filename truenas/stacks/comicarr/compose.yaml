@@ -8,8 +8,12 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Australia/Brisbane
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+    entrypoint: ["/entrypoint-custom.sh"]
     volumes:
       - /mnt/Fast/docker/comicarr/config/comicarr:/config
+      - /mnt/Fast/docker/comicarr/entrypoint.sh:/entrypoint-custom.sh:ro
       - /mnt/Data/media/comics:/comics
       - /mnt/Data/media/manga:/manga
       - /mnt/Data/media/webtoons:/webtoons
@@ -18,8 +22,8 @@ services:
       - "8090:8090"
     networks:
       - default
-      - downloaders_default
-      - arr-stack_default
+      - ix-downloaders_default
+      - ix-arr-stack_default
     labels:
       - homepage.group=Downloads
       - homepage.name=Comicarr
@@ -28,7 +32,7 @@ services:
       - homepage.description=Comic and manga manager
 
 networks:
-  downloaders_default:
+  ix-downloaders_default:
     external: true
-  arr-stack_default:
+  ix-arr-stack_default:
     external: true

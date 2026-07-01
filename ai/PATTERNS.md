@@ -112,10 +112,13 @@ ssh-agent -k > /dev/null
 
 ### Fallback: temp file (if ssh-agent fails)
 **If you must use a temp file, use mktemp -d for a random path and always clean up.**
+**The key from Infisical has CRLF/escape-sequence line endings — must decode with python, NOT tr -d '\r'.**
 ```bash
 PROJECT_ID="$INFISICAL_PROJECT_ID"
 KEYDIR=$(mktemp -d) && chmod 700 "$KEYDIR"
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.22:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.22:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null \
+  | python3 -c "import sys; d=sys.stdin.read(); d=d.replace('\\\\n','\n').replace('\\r','').replace('\\n','\n'); sys.stdout.write(d)" \
+  > "$KEYDIR/id" && chmod 600 "$KEYDIR/id"
 ssh -i "$KEYDIR/id" kero66@192.168.20.22 "your-command"
 rm -rf "$KEYDIR"
 ```
@@ -339,6 +342,39 @@ TrueNAS audit log will show `.UNAUTHENTICATED` Method Call errors if sudo is omi
 midclt only operates at the app level. To restart a single container within arr-stack or downloaders,
 stop/start the whole app — there is no per-service equivalent. Plan config changes to minimize full
 stack restarts.
+
+---
+
+## Dockhand API (preferred over SSH for container lifecycle)
+
+Dockhand manages containers NOT owned by midclt (e.g. comicarr). Use this instead of SSH+docker.
+
+```bash
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+_isec() { infisical secrets get "$1" --env dev --path "$2" --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null; }
+DH="http://192.168.20.22:30328"
+
+# Login (session cookie)
+COOKIE_JAR=$(mktemp)
+curl -s -c "$COOKIE_JAR" -X POST "$DH/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\": \"$(_isec DOCKHAND_USER /TrueNAS)\", \"password\": \"$(_isec DOCKHAND_USER_PASSWORD /TrueNAS)\", \"provider\": \"local\"}" > /dev/null
+
+# Find container ID by name
+CONTAINER_ID=$(curl -s -b "$COOKIE_JAR" "$DH/api/containers?env=1" | \
+  python3 -c "import sys,json; data=json.load(sys.stdin); [print(c['id']) for c in data if c.get('name')=='comicarr']")
+
+# Restart / start / stop
+curl -s -b "$COOKIE_JAR" -X POST "$DH/api/containers/$CONTAINER_ID/restart?env=1"
+# curl -s -b "$COOKIE_JAR" -X POST "$DH/api/containers/$CONTAINER_ID/start?env=1"
+# curl -s -b "$COOKIE_JAR" -X POST "$DH/api/containers/$CONTAINER_ID/stop?env=1"
+
+rm -f "$COOKIE_JAR"
+```
+
+Known container names: `comicarr`
+Environment ID: `1` (TrueNAS)
 
 ---
 
