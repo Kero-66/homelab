@@ -614,6 +614,57 @@ curl -I http://jellyfin.home
 
 ---
 
+## AdGuard Home — DNS failures / apparent outages
+
+### Symptoms
+- DNS stops resolving for all LAN clients
+- AdGuard dashboard shows spike in failed queries
+- `i/o timeout` errors in AdGuard container logs
+
+### Diagnosis
+Pull logs and bucket errors by minute to distinguish a real outage from noise:
+
+```bash
+# Check container is actually running
+ssh kero66@192.168.20.22 "sudo docker ps --format '{{.Names}}\t{{.Status}}' | grep adguard"
+
+# Pull recent error logs
+ssh kero66@192.168.20.22 "sudo docker logs adguard-home --tail 200 2>&1 | grep -iE 'error|warn|failed|panic|upstream|timeout'"
+```
+
+### Interpreting the logs
+
+**Real internet outage** — errors arrive in dense bursts (dozens per minute) across ALL upstream servers simultaneously (1.1.1.1, 8.8.8.8, 94.140.14.14):
+```
+2026/06/30 14:27: 43 errors   ← outage starts
+2026/06/30 14:28: 122 errors
+2026/06/30 14:29: 123 errors
+2026/06/30 14:31: 58 errors   ← recovering
+2026/06/30 14:32: 0 errors    ← resolved
+```
+
+**Normal noise** — scattered single errors throughout the day; individual upstream momentary blips that AdGuard handles transparently. Browsing is unaffected:
+```
+2026/06/30 15:38: 1 error
+2026/06/30 18:03: 1 error
+2026/06/30 20:53: 1 error
+```
+
+**Watch for**: `[error] handling request proto=tcp err="selecting upstream: no upstream specified"` — this means AdGuard's upstream list is empty. Check Settings → DNS Settings in the AdGuard UI and verify upstreams are configured (may be lost after a config reset).
+
+### Root cause
+AdGuard itself rarely crashes — container uptime typically matches system uptime. DNS failures are almost always caused by the upstream internet connection dropping. The router losing WAN is the most common cause; AdGuard logs all upstream timeouts even when the outage is 100% external.
+
+### Resolution
+1. Check router WAN status first before investigating AdGuard
+2. If router looks fine, check AdGuard upstream config hasn't been reset
+3. If AdGuard container is actually down: `sudo midclt call app.start adguard` (via SSH)
+4. AdGuard container never needs manual restart for upstream failures — it recovers automatically when internet returns
+
+**Note**: Tailscale to TrueNAS goes via relay when the home internet is down — do not expect Tailscale SSH to work during an outage to diagnose it remotely.
+
+---
+
 ## Want this in a PR?
 - Adds this file to `.github/`
 - Adds a short README note pointing to it
