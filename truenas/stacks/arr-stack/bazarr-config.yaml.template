@@ -68,6 +68,11 @@ general:
   - animetosho
   - gestdown
   - bsplayer
+  - subf2m
+  - jimaku
+  - subsource
+  - subdl
+  - podnapisi
   flask_secret_key: <FLASK_SECRET_KEY>
   hi_extension: hi
   # true = skip .ass downloads. Prevents multi-line overlap in Jellyfin.
