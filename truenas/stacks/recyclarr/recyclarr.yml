@@ -590,6 +590,20 @@ sonarr:
           - name: "Anime (1080p)"
             score: -10000
 
+      # Language: Not Original — blocks any release whose audio isn't the
+      # series' original language (e.g. Russian-dubbed anime slipping through
+      # Nyaa's unenforced category tagging; Sonarr's language profile system
+      # is deprecated in v4 and no longer performs this rejection itself)
+      - trash_ids:
+          - ae575f95ab639ba5d15f663bf019e3e8 # Language: Not Original
+        assign_scores_to:
+          - name: "Standard (1080p)"
+            score: -10000
+          - name: "Ultra-HD (4K)"
+            score: -10000
+          - name: "Anime (1080p)"
+            score: -10000
+
       # ========== LOCAL CUSTOM FORMATS ==========
       # Multi-Subs — prefer releases with embedded English subtitles
       # Defined in custom-formats/multi-subs.json (trash_id: homelab-multi-subs)

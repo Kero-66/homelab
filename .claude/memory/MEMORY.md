@@ -11,6 +11,9 @@
 - [Check docs before fixing](feedback_check_docs_before_fixing.md) — verify docs and established patterns before applying fixes, especially permissions/ownership
 - [Jellyfin plugin repos](service_jellyfin_plugins.md) — non-official plugin repos (e.g. JellyBridge) tracked here so dashboard-only additions aren't lost
 - [Subtitle desync diagnosis](feedback_subtitle_desync_diagnosis.md) — check which stream index is actually playing and cue counts before touching timing; not every "out of sync" report is a sync bug
+- [Dockhand compose network names](feedback_dockhand_network_names.md) — TrueNAS native app networks are prefixed `ix-` (e.g. `ix-jellyfin_default`), not the bare compose name — Dockhand deploys silently "succeed" (job status done, no error) while creating zero containers if an external network name is wrong
+- [Never work around DNS with /etc/hosts](feedback_no_dns_workarounds.md) — if infisical.home or other `.home` domains fail to resolve in a shell, ask the user how to proceed; do not add hosts entries
+- [TRaSH-Guides: check primary source first](feedback_trash_guides_primary_source.md) — fetch raw JSON from github.com/TRaSH-Guides/Guides directly, not WebSearch summaries or trash-guides.info doc-page fetches, which can be stale/wrong on trash_id/guide-only status
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**
