@@ -33,7 +33,8 @@
 ## TrueNAS SSH — Secure Pattern
 **Use ssh-agent pattern from `ai/PATTERNS.md` — ALWAYS check before running SSH commands.**
 - kero66 cannot access Docker socket directly — use `sudo docker ...`
-- kero66 UID on TrueNAS: **72**
+- kero66 filesystem UID on TrueNAS: **1000** (verified live 2026-08-15 via `id kero66` — used for file ownership, Docker `PUID`/`user:`)
+- kero66's TrueNAS **API** user record id: **72** (different namespace — used in REST calls like `PUT /api/v2.0/user/id/72`, confirmed via `GET /api/v2.0/user?username=kero66`). Don't confuse the two.
 - API key: `truenas_admin_api` (env dev, path /TrueNAS)
 - API requires HTTPS — http returns 308 that drops auth header
 

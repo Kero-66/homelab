@@ -37,7 +37,7 @@ Owns all deployment, configuration, and operation of the homelab on TrueNAS Scal
 - New app: `midclt app.create` with `custom_compose_config_string` (compose as string, not dict)
 - Configs live at `/mnt/Fast/docker/<service>/` on TrueNAS
 - Networks: cross-stack via explicit joins; `ix-*` networks are TrueNAS built-in, separate from compose networks
-- kero66 UID on TrueNAS: **72** (not 1000)
+- kero66 filesystem UID on TrueNAS: **1000** (verified live 2026-08-15 via `id kero66`). Not to be confused with kero66's TrueNAS **API** user record id (**72**, used in REST calls like `PUT /api/v2.0/user/id/72`) — different namespace, both correct.
 
 ## Anti-patterns
 - DO NOT use REST API to update compose — midclt only
