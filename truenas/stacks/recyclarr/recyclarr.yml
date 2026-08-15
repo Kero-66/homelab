@@ -270,7 +270,8 @@ sonarr:
     base_url: http://sonarr:8989/sonarr
     api_key: !secret sonarr_main_api_key
 
-
+    quality_definition:
+      type: series
 
     custom_formats:
       # ========== STANDARD (1080p) & ULTRA-HD (4K) QUALITY TIERS ==========
