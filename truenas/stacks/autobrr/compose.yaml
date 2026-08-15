@@ -12,7 +12,6 @@ services:
     ports:
       - "7474:7474"
     networks:
-      - default
       - arr-stack_default
       - downloaders_default
     labels:

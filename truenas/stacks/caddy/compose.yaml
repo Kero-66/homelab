@@ -48,7 +48,6 @@ services:
     ports:
       - "80:80"         # HTTP only - port 443 is held by TrueNAS nginx
     networks:
-      - default
       - jellyfin_default
       - arr-stack_default
     healthcheck:

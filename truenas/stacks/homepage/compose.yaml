@@ -38,7 +38,6 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - default
       - arr-stack_default
       - jellyfin_default
     healthcheck:

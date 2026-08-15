@@ -53,7 +53,7 @@ services:
       - "6881:6881/tcp"
       - "6881:6881/udp"
     networks:
-      - default
+      - downloaders_default
       - arr-stack_default
     healthcheck:
       test: curl -sf http://localhost:8080 || exit 1
@@ -91,7 +91,7 @@ services:
     ports:
       - "8085:8080"
     networks:
-      - default
+      - downloaders_default
       - arr-stack_default
     healthcheck:
       test: ["CMD-SHELL", "curl -s http://localhost:8080/ > /dev/null || exit 1"]
