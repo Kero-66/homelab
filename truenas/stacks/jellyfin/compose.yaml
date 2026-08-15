@@ -61,12 +61,14 @@ services:
       start_period: 60s
 
   jellyseerr:
-    image: fallenbagel/jellyseerr:latest
+    # Jellyseerr is deprecated — merged into Seerr (seerr-team/seerr) in early 2026.
+    # Config auto-migrates on first start against the same /app/config volume.
+    # Seerr runs as a fixed non-root `node` user (UID 1000) — no PUID/PGID, needs init: true.
+    image: ghcr.io/seerr-team/seerr:latest
     container_name: jellyseerr
+    init: true
     restart: unless-stopped
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=Australia/Brisbane
       - LOG_LEVEL=debug
     labels:
@@ -88,7 +90,7 @@ services:
     depends_on:
       - jellyfin
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/status || exit 1
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
       interval: 30s
       timeout: 10s
       retries: 3
