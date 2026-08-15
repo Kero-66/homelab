@@ -57,6 +57,9 @@ declare -A REPOS=(
     
     # Theme songs for movies/shows
     ["LizardByte Plugins"]="https://app.lizardbyte.dev/jellyfin-plugin-repo/manifest.json"
+
+    # Trakt-powered personalized recommendations, per-user virtual libraries, Jellyseerr integration
+    ["JellyNext"]="https://raw.githubusercontent.com/luall0/jellyfin-luall0-plugins/refs/heads/main/manifest.json"
 )
 
 # Get current repositories
@@ -172,6 +175,9 @@ echo -e "     - Auto-create movie collections from TMDb"
 echo ""
 echo -e "  ${GREEN}🎵 Themerr${NC} (From LizardByte repo)"
 echo -e "     - Add theme songs to movies and TV shows"
+echo ""
+echo -e "  ${GREEN}🎯 JellyNext${NC} (From JellyNext repo)"
+echo -e "     - Trakt-powered personalized recommendations (per-user watch history), routes requests through Jellyseerr"
 echo ""
 
 # For anime users

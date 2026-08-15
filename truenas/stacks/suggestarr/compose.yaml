@@ -1,0 +1,42 @@
+# =============================================================================
+# SuggestArr Stack - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# Watch-history-based recommendation engine: analyzes recently watched content
+# on Jellyfin (with optional per-user Trakt linking) and auto-requests similar
+# titles to Jellyseerr. Deployed via Dockhand (docker compose), not midclt.
+#
+# Storage layout:
+#   Config → /mnt/Fast/docker/suggestarr/config_files/
+#
+# Networking:
+#   Joins jellyfin_default (external) to reach jellyfin:8096 and jellyseerr:5055
+#   by container name.
+# =============================================================================
+
+services:
+  suggestarr:
+    image: ciuse99/suggestarr:latest
+    container_name: suggestarr
+    restart: unless-stopped
+    mem_limit: 512m
+    labels:
+      - homepage.group=Media
+      - homepage.name=SuggestArr
+      - homepage.icon=mdi-movie-search
+      - homepage.href=http://suggestarr.home
+      - homepage.description=Watch-history-based media recommendations
+    ports:
+      - "5000:5000"
+    volumes:
+      - /mnt/Fast/docker/suggestarr/config_files:/app/config/config_files
+    environment:
+      - LOG_LEVEL=info
+      - SUGGESTARR_PORT=5000
+      - TZ=Australia/Brisbane
+    networks:
+      - jellyfin_default
+
+networks:
+  jellyfin_default:
+    name: ix-jellyfin_default
+    external: true

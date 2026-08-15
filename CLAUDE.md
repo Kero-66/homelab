@@ -41,7 +41,7 @@
 
 ### App managers: two separate systems
 - **TrueNAS native apps** (arr-stack, jellyfin, downloaders, caddy, recyclarr, etc.) — managed by **midclt**
-- **Dockhand-managed apps** (comicarr, and any future apps deployed via Dockhand UI) — managed by **docker compose**
+- **Dockhand-managed apps** (any future apps deployed via Dockhand UI) — managed by **docker compose**
 
 ### TrueNAS native apps (midclt)
 - **NEVER use REST API to update compose** — breaks running containers with port conflicts
@@ -110,7 +110,7 @@ If context is compacted, preserve these critical facts:
 - TrueNAS SSH: use ssh-agent pattern from `ai/PATTERNS.md` (NOT temp-file pattern)
 - `midclt REQUIRES sudo` — without sudo, calls silently fail as `.UNAUTHENTICATED`
 - TrueNAS native apps: NEVER use REST API to update compose — use midclt stop→update→start
-- Dockhand apps (comicarr): use `sudo docker compose up -d --force-recreate` — midclt does NOT apply
+- Dockhand apps: use `sudo docker compose up -d --force-recreate` — midclt does NOT apply
 - Infisical: ALL secrets are `--env dev`, NEVER run `infisical secrets` without targeting a key
 - Check logs first: `sudo docker logs <container> --tail 30` before any hypothesis
 - EVERY commit: run `/security-review` → if clean: `date +%s > ~/.claude/hooks/.security-review-timestamp` → then commit

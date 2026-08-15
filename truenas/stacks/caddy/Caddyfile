@@ -108,9 +108,9 @@ http://autobrr.home {
 	reverse_proxy autobrr:7474
 }
 
-# Comicarr (Comic and manga manager)
-http://comicarr.home {
-	reverse_proxy 192.168.20.22:8090
+# SuggestArr (Watch-history based recommendations)
+http://suggestarr.home {
+	reverse_proxy 192.168.20.22:5000
 }
 
 # Infisical (Secret Manager)
