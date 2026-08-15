@@ -1,7 +1,9 @@
 # Dockhand Migration Readiness Audit
 _Assessed: 2026-05-31, refreshed 2026-08-15_
 
-## Status: Proceeding
+## Status: Complete except adguard-home
+
+Every stack except `adguard-home` (deliberately deferred, see below) and `dockhand` (permanent exception, see below) is now Dockhand-managed and git-synced as of 2026-08-15.
 
 **`dockhand` itself stays on midclt, permanently — not a migration target.** It's infrastructure-for-the-infrastructure: deleting the midclt `dockhand` app to redeploy it "through Dockhand" would kill the only thing serving the API that could bring it back — a bootstrapping problem, not something to work around. If it's ever moved, it has to be a manual SSH + `docker compose` operation done completely outside its own API, equivalent to a fresh install, not a migration step in this plan.
 
@@ -25,13 +27,13 @@ Migration decision is settled — moving all remaining apps to Dockhand. `comica
 | infisical-agent | ✅ Migrated 2026-08-15 | Deleted via `midclt app.delete`, git-synced via `/api/git/stacks`. `autoUpdate: true` (non-critical, low blast radius) |
 | adguard-home | 🔄 Ready, deferred to last | No env_file, no external networks — but highest blast radius (sole DNS, no fallback). Will be created with `autoUpdate: false`. |
 | tailscale | ✅ Migrated 2026-08-15 | Git-synced via Dockhand's UI. `autoUpdate: false` (critical — remote access) |
-| arr-stack | 🔄 Ready | Owns `arr-stack_default`; others depend on it |
-| downloaders | 🔄 Ready | Owns `downloaders_default`; needs arr-stack_default |
+| arr-stack | ✅ Migrated 2026-08-15 | 7 containers, all healthy. First deploy attempt failed outright — `recyclarr/recyclarr:latest` no longer exists upstream, which aborted the *entire* compose deploy (all 7 containers down, not just recyclarr). Fixed by pinning `ghcr.io/recyclarr/recyclarr:8`. Redeployed successfully; verified `sonarr → jellyfin` reachable and Caddy proxy working. `autoUpdate: false`. |
+| downloaders | ✅ Migrated 2026-08-15 | qbittorrent + sabnzbd, healthy. First deploy failed (`- default` collision, see Key Architecture Notes) — fixed and redeployed. Confirmed `autobrr → qbittorrent` reachability restored (had been broken since autobrr's earlier git-sync redeploy, before downloaders itself had moved to the new network). `autoUpdate: false`. |
 | jellyfin | ✅ Migrated 2026-08-15 | 4 containers, all healthy, git-synced via `/api/git/stacks`. `autoUpdate: true` (non-critical) |
-| caddy | 🔄 Ready | Needs arr-stack_default + jellyfin_default. Will be created with `autoUpdate: false` (critical — reverse proxy for everything). |
-| homepage | ✅ Migrated 2026-08-15 | Deleted via `midclt app.delete`, git-synced, `autoUpdate: false`. No implicit-network risk (single service, explicit `networks:` already). Direct `IP:3000` access returns 400 (Next.js `HOMEPAGE_ALLOWED_HOSTS` host validation, pre-existing/expected) — verified working via `http://homepage.home` through Caddy instead. |
+| caddy | ✅ Migrated 2026-08-15 | Was the last container on both `ix-jellyfin_default` and `ix-arr-stack_default` — migrating it fully vacated both old networks, nothing else affected. Verified all `*.home` hostnames (jellyfin, sonarr, radarr, prowlarr, bazarr, qbittorrent, sabnzbd, autobrr, homepage, rss) responding correctly through it. `autoUpdate: false` (critical — reverse proxy for everything). |
+| homepage | ✅ Migrated 2026-08-15 | Deleted via `midclt app.delete`, git-synced, `autoUpdate: false`. Direct `IP:3000` access returns 400 (Next.js `HOMEPAGE_ALLOWED_HOSTS` host validation, pre-existing/expected) — verified working via `http://homepage.home` through Caddy instead. |
 | commafeed | ✅ Migrated 2026-08-15 | Deleted via `midclt app.delete`, git-synced, `autoUpdate: false`. No external networks at all — no implicit-network collision risk. |
-| fileflows | 🔄 Ready | Standalone (no external networks, no env_file) |
+| fileflows | ✅ Migrated 2026-08-15 | Fully standalone, no networks/env_file. Large image (ffmpeg-bundled), took longer to pull but deployed cleanly. `autoUpdate: false`. |
 
 ---
 
@@ -39,25 +41,29 @@ Migration decision is settled — moving all remaining apps to Dockhand. `comica
 
 Dockhand stacks must be deployed in this sequence due to network and secret dependencies:
 
+All steps done 2026-08-15 except adguard-home:
+
 ```
 0. (done) pre-create arr-stack_default, downloaders_default, jellyfin_default as real docker networks
-1. (done 2026-08-15) infisical-agent      ← renders .env files for all other stacks
-2. (done 2026-08-15) tailscale            ← remote access
-3. arr-stack            ← joins arr-stack_default + jellyfin_default (both pre-created, external)
-4. downloaders          ← joins downloaders_default + arr-stack_default (both pre-created, external)
-5. (done 2026-08-15) jellyfin  ← joins jellyfin_default + arr-stack_default (both pre-created, external)
-6. caddy                ← reverse proxy; needs arr-stack_default + jellyfin_default
-7. (done 2026-08-15) homepage  ← dashboard; needs arr-stack_default + jellyfin_default
-8. (done 2026-08-15) suggestarr — git-synced, redeploy picked up jellyfin_default
-9. (done 2026-08-15) commafeed — standalone
-10. fileflows           ← standalone
-11. (done 2026-08-15) autobrr, infisical — git-linked (were already Dockhand-managed, orphaned file copies)
-12. adguard-home        ← DEFERRED TO LAST, deliberately: highest blast radius (no fallback DNS, whole
-                           LAN affected), moved to the end until the migration pattern is proven on
-                           everything else. Decided 2026-08-15.
+1. (done) infisical-agent
+2. (done) tailscale
+3. (done) arr-stack       — hit a live outage (recyclarr:latest gone), fixed and redeployed
+4. (done) downloaders     — hit a deploy failure (- default collision), fixed and redeployed
+5. (done) jellyfin
+6. (done) caddy           — last container on old ix-jellyfin_default/ix-arr-stack_default; migrating it
+                             fully vacated both, nothing else affected
+7. (done) homepage
+8. (done) suggestarr      — git-synced, redeploy picked up jellyfin_default
+9. (done) commafeed
+10. (done) fileflows
+11. (done) autobrr, infisical — git-linked (were already Dockhand-managed, orphaned file copies)
+12. adguard-home          ← ONLY REMAINING STEP. DEFERRED, deliberately: highest blast radius (no
+                             fallback DNS, whole LAN affected), moved to the end until the migration
+                             pattern is proven on everything else. Decided 2026-08-15 — and now it has
+                             been, on everything else.
 ```
 
-Since all three shared networks are pre-created, steps 3–5 can now run in any order relative to each other — no more strict "owning stack must go first" requirement. Only the infisical-agent → everything-else and arr-stack/downloaders/jellyfin → caddy/homepage/suggestarr orderings still matter (secrets and network membership, respectively).
+`midclt call app.query` now returns only `adguard-home` and `dockhand` (permanent exception, see top of doc).
 
 ---
 
@@ -66,6 +72,7 @@ Since all three shared networks are pre-created, steps 3–5 can now run in any 
 | File | Fix |
 |------|-----|
 | `arr-stack/compose.yaml` | recyclarr healthcheck: `ps aux \| grep recyclarr` → `pgrep -f recyclarr` (old form always passed because grep matched itself) |
+| `arr-stack/compose.yaml` | recyclarr image: `recyclarr/recyclarr:latest` (no longer exists upstream, caused a full deploy failure) → `ghcr.io/recyclarr/recyclarr:8` |
 
 ---
 
