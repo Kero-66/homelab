@@ -14,6 +14,16 @@
 - [Dockhand compose network names](feedback_dockhand_network_names.md) — TrueNAS native app networks are prefixed `ix-` (e.g. `ix-jellyfin_default`), not the bare compose name — Dockhand deploys silently "succeed" (job status done, no error) while creating zero containers if an external network name is wrong
 - [Never work around DNS with /etc/hosts](feedback_no_dns_workarounds.md) — if infisical.home or other `.home` domains fail to resolve in a shell, ask the user how to proceed; do not add hosts entries
 - [TRaSH-Guides: check primary source first](feedback_trash_guides_primary_source.md) — fetch raw JSON from github.com/TRaSH-Guides/Guides directly, not WebSearch summaries or trash-guides.info doc-page fetches, which can be stale/wrong on trash_id/guide-only status
+- [Verify before asserting](feedback_verify_before_asserting.md) — check actual data (history, config, results) before stating an explanation as fact, even when it sounds plausible; frame unverified theories as questions instead
+- [Cleanuparr config lives in cleanuparr.db, not config.yml](service_cleanuparr_config.md) — the YAML file is stale/bootstrap-only; query the SQLite DB directly for real settings (queue_cleaner strike patterns, seeding rules, dry_run flag)
+- [Sonarr history `data` field leaks Prowlarr API key](feedback_sonarr_history_data_field.md) — never dump the full `data` object from `/api/v3/history`; select specific fields only, downloadUrl/guid embed the live apikey
+- [Never write secrets to disk, even scratchpad](feedback_no_secrets_to_disk_ever.md) — not a judgment call by key scope/severity; shell variables only
+- [Prefer NZB over torrent when both available](feedback_prefer_nzb_over_torrent.md) — standing preference for a grab, not a hard requirement if only torrent exists
+- [Robotech is not the same as its source shows](feedback_robotech_not_source_shows.md) — don't cross-reference Robotech against Macross/Southern Cross/Mospeada, it's a standalone release
+- [Sonarr `/queue` hides unmatched downloads](feedback_sonarr_queue_hides_unmatched.md) — pass `includeUnknownSeriesItems=true` or manually-grabbed "Unknown Series" downloads won't show as in-progress
+- [Answer questions, don't act on them](feedback_answer_questions_dont_act_on_them.md) — "how should we X" is not authorization to do X; reread terse messages literally, don't pattern-match to the prior topic
+- [Media library gap survey](project_media_gap_survey.md) — in-progress audit of missing Sonarr episodes/Radarr movies, see `media/docs/SONARR_STRUCTURAL_AUDIT.md` for the durable findings
+- [Sonarr↔Radarr movie migration](project_sonarr_radarr_movie_migration.md) — movies unmonitored in Sonarr specials still needing a file copy into Radarr
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**

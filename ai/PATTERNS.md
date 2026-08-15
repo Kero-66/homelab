@@ -662,7 +662,22 @@ curl -s -H "X-Api-Key: $SONARR_KEY" \
 
 # Step 4: check result
 curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/command/<COMMAND_ID>" | jq '{status, message}'
+
+# Step 5: clear the now-orphaned queue entry — manual import does NOT do this automatically
+# A forced ManualImport bypasses Sonarr's normal completion pipeline, so the queue entry
+# (matched to the download by downloadId) is never marked as resolved. It sits forever
+# with trackedDownloadState "importBlocked" / status message "Unable to parse download,
+# automatic import is not possible" — even though the files were correctly imported.
+# Cleanuparr's queue_cleaner does NOT catch this pattern (only catches things like "Not an
+# upgrade for existing episode file(s)"), so it will not self-clear. Verify the import
+# actually landed (episode/episodefile hasFile checks) before removing, then:
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/queue?pageSize=200&includeUnknownSeriesItems=true" | \
+  jq -r '.records[] | select(.downloadId=="<DOWNLOAD_ID>") | .id' | while read -r qid; do
+    curl -s -X DELETE -H "X-Api-Key: $SONARR_KEY" \
+      "http://192.168.20.22:8989/sonarr/api/v3/queue/$qid?removeFromClient=true&blocklist=false"
+  done
 ```
+**Never do this without confirming with the user first if the removal is more than a couple of items** — clearing the queue is easy to reverse-in-spirit (nothing is blocklisted, files aren't touched) but it's still an action on shared state, not a read.
 
 **When this fails (permanent blocks):**
 - `"Not an upgrade for existing episode file"` → existing file is better quality, don't import
@@ -670,19 +685,48 @@ curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/com
 - DVD ISO downloads → Sonarr cannot import ISOs at all; needs manual extraction first
 
 ### Grab a specific release for an episode (upgrade/fix)
+- **Use `http://sonarr.home` (Caddy vhost), not the IP:port** — that's the intended access pattern
+- **POST calls MUST use the `/sonarr/` prefix directly** (`http://sonarr.home/sonarr/api/v3/release`) — hitting the bare `/api/v3/release` path returns a 307 redirect to the `/sonarr/`-prefixed path, and curl silently drops the POST body when following that redirect even with `-L`. GET requests don't have this problem (empty body, nothing to lose), only POST/PUT do.
 ```bash
 # Find available releases for an episode
-curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/release?episodeId=<EPISODE_ID>" | \
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://sonarr.home/sonarr/api/v3/release?episodeId=<EPISODE_ID>" | \
   jq 'sort_by(-.customFormatScore) | .[:10] | .[] | "\(.customFormatScore) | \(.quality.quality.name) | \(.size/1048576 | floor)MB | \(.title)"'
 
 # Grab a specific release by guid+indexerId
-curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/release?episodeId=<EPISODE_ID>" | \
+curl -s -H "X-Api-Key: $SONARR_KEY" "http://sonarr.home/sonarr/api/v3/release?episodeId=<EPISODE_ID>" | \
   jq '.[] | select(.title | contains("keyword")) | {guid, indexerId, title}'
 
 curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" \
   -d '{"guid": "<GUID>", "indexerId": <INDEXER_ID>}' \
-  "http://192.168.20.22:8989/sonarr/api/v3/release"
+  "http://sonarr.home/sonarr/api/v3/release"
 ```
+- **Never `cat`/`jq`-print the `guid` or `.data.downloadUrl` fields from release/history responses** — they embed the live Prowlarr API key in cleartext. Extract into a shell variable and pipe straight into the next curl call instead.
+- Release cache: Sonarr caches the release-to-episode decision server-side for 30 min, keyed by `IndexerId_Guid` (`ReleaseController.GetCacheKey`). A grab can 404 if that entry expired — re-fetch the release list immediately before grabbing rather than reusing an old search result.
+
+### "Unable to parse release" — two different problems, two different fixes
+Sonarr's episode-matching can fail for two structurally different reasons. Check the release title shape first to know which one applies:
+
+**1. Release HAS episode markers, but they map to the wrong season** (e.g. `S01E48` when Sonarr's season 1 only goes to E25) — usually an old show where the release group numbers continuously but TVDB split it into artificial seasons. This is a **persistent** fix, done once per series:
+- Check `https://thexem.info/map/single?id=<TVDB_ID>&origin=tvdb&destination=scene` first — if a community scene mapping already exists, Sonarr can use it automatically via `useSceneNumbering`. XEM registration for adding new shows may be closed; check before assuming you can contribute one.
+- If no XEM mapping exists, set it manually per episode: `PUT /api/v3/episode/{id}` with `sceneSeasonNumber` and `sceneEpisodeNumber` added to the existing episode object (send the full episode resource, not a partial patch), then set `useSceneNumbering: true` on the series. Requires the absolute episode numbering to line up 1:1 with the release group's continuous numbering — verify this first (compare first/last episode of each season against the release group's numbering) rather than assuming.
+- **Get explicit user confirmation before bulk-writing scene numbers** — this is inferred metadata, not sourced from a third party, and the auto-mode classifier will block unattended bulk writes to production series data anyway.
+
+**2. Release has NO episode markers at all** (e.g. a "Complete Series" pack with no season/episode info in the title) — scene numbering can't help since there's no encoded number to translate. This needs a **one-time manual override at grab time**, not a persistent config change — the next similarly-unparseable release will need the same treatment again:
+```bash
+# Requires: seriesId, full list of episodeIds the pack covers, a quality id (GET /api/v3/qualitydefinition
+# for the id matching the release's stated quality), and the series' originalLanguage id.
+jq -n --slurpfile rel release.json --slurpfile eps episode_ids.json '
+  ($rel[0][] | select(.title | test("KEYWORD"))) as $r |
+  {guid: $r.guid, indexerId: $r.indexerId, protocol: $r.protocol,
+   shouldOverride: true, seriesId: <SERIES_ID>, episodeIds: $eps[0],
+   quality: {quality: {id: <QUALITY_ID>, name: "<QUALITY_NAME>"}, revision: {version: 1, real: 0, isRepack: false}},
+   languages: [{id: <LANG_ID>, name: "<LANG_NAME>"}]}
+' > grab_body.json
+curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" \
+  --data-binary @grab_body.json "http://sonarr.home/sonarr/api/v3/release"
+```
+- Verify success via `GET /api/v3/history?seriesId=<ID>&pageSize=5` (look for fresh `grabbed` events) — the response body from the POST itself can come back with `null` fields even on a genuine `200` success, don't treat that as failure.
+- After download completes, use Sonarr's Manual Import (`GET /api/v3/manualimport?downloadId=<ID>`) to map the pack's actual files to individual episodes.
 
 ---
 
@@ -1117,6 +1161,19 @@ ssh -i "$TMPKEY" kero66@192.168.20.22 "sudo docker exec recyclarr recyclarr sync
 - `min_format_score` on quality profiles controls the grab threshold (0 = grab anything not explicitly blocked)
 - Radarr Anime (1080p): `min_format_score: 0` — allows niche/fansub releases to be grabbed
 - German blocking formats (score -10000): `German LQ`, `German LQ (release title)`, `German DL`
+- Language blocking (score -10000): `Language: Not Original` (trash_id `ae575f95ab639ba5d15f663bf019e3e8`) — rejects any release whose audio isn't the series' original language, verified real/syncable via primary source, not "guide-only"
+
+---
+
+## Cleanuparr (Queue/Download Cleanup)
+
+- **Live config lives in `cleanuparr.db` (SQLite), NOT `config.yml`** — the YAML file on disk is a stale bootstrap/sample and does not reflect settings changed via the web UI (confirmed: file said `dry_run: true`, live DB had it `0`/false)
+- **Own API requires web-login/JWT auth** (not `X-Api-Key` like Sonarr/Radarr) — use SSH + sqlite3 for read-only inspection instead
+```bash
+sudo sqlite3 -header -column /mnt/Fast/docker/cleanuparr/cleanuparr.db 'SELECT * FROM <table>;'
+```
+- Key tables: `general_configs` (dry_run, log_level), `queue_cleaner_configs` (strike-based, `failed_import_patterns` JSON list matched against Sonarr/Radarr import failure messages — e.g. `"Not an upgrade for existing episode file(s)"`, `failed_import_max_strikes`), `download_cleaner_configs` (enable/cron only), `q_bit_seeding_rules`/`r_torrent_seeding_rules`/etc. (per-client seed time/ratio rules by category), `content_blocker_configs` (blocklist sync)
+- Two independent cleanup paths — don't conflate: (1) queue_cleaner strikes stuck import-pending/failed items by message pattern match, (2) per-client seeding rules reap torrents by seed time/ratio regardless of Sonarr/Radarr import state
 
 ---
 
@@ -1235,6 +1292,8 @@ Reports: files needing manual attention with rejection reason
 | `python3 -m json.tool` | Not as reliable, doesn't handle all edge cases | Use `jq` |
 | Bazarr partial settings POST | API requires full settings object | GET settings, modify, POST full object back |
 | Trust embedded subs in MKV releases | Encoders sometimes ship wrong subs (e.g. wrong show) | Use `use_embedded_subs: false` in Bazarr; verify with ffmpeg |
+| Backgrounding a sequential loop of `curl`/API calls (e.g. per-series Sonarr fetches) | Hangs indefinitely with near-zero CPU — confirmed 2026-08-15, root cause not identified, happens even with the secret pre-resolved outside the loop | Run the loop in the foreground, in batches small enough to fit the ~2min command timeout (e.g. 15-20 series per call) |
+| Trust Sonarr's search results for a franchise show with a generic/reused name (e.g. "GUN×SWORD") without checking `.seriesTitle`/alias fields | Sonarr's TVDB alias table can silently map a show's search terms onto a *different* unrelated show's TVDB ID, returning dozens of wrong-show releases mixed in with real ones (confirmed: GUN×SWORD search returned mostly "Sword Art Online Alternative: Gun Gale Online" releases) | Check `mappedSeriesId` / the alias-match rejection message before grabbing; don't assume title-relevance in results means correct-show |
 | Use `192.168.20.22:PORT` for service API calls | Bypasses Caddy, causes IP bans (qBittorrent), misses host verification | Use `http://service.home` — routes through Caddy as intended |
 | `curl http://sonarr.home/api/...` (Sonarr without -L) | Returns 307 redirect with empty body | Always use `curl -sL` for Sonarr |
 | Pipe SSH output through local `base64` for auth headers | Variable expansion breaks across SSH boundary | Use `curl -u 'user:pass'` instead |
