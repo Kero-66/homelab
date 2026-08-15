@@ -1,5 +1,7 @@
 services:
   autobrr:
+    # Deliberately pinned — a prior upgrade attempt past this version caused issues.
+    # Current upstream is v1.84.0+ as of 2026-08-15. Test carefully before bumping (see ai/todo.md).
     image: ghcr.io/autobrr/autobrr:v1.79.0
     container_name: autobrr
     restart: unless-stopped

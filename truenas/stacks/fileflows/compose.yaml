@@ -19,6 +19,9 @@
 
 services:
   fileflows:
+    # Deliberately pinned — a prior upgrade attempt past this version caused issues.
+    # This is the user's main video-editing asset pipeline — do NOT bump without explicit
+    # go-ahead and a maintenance window. Current upstream is 26.07+ as of 2026-08-15.
     image: revenz/fileflows:26.04
     container_name: fileflows
     restart: unless-stopped
