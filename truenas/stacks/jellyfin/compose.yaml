@@ -51,6 +51,8 @@ services:
     ports:
       - "8096:8096"
       - "8920:8920"
+    networks:
+      - jellyfin_default
     healthcheck:
       test: curl -sf http://localhost:8096/health || exit 1
       interval: 30s
@@ -81,7 +83,7 @@ services:
     ports:
       - "5055:5055"
     networks:
-      - default
+      - jellyfin_default
       - arr-stack_default
     depends_on:
       - jellyfin
@@ -105,6 +107,8 @@ services:
       - /mnt/Fast/databases/jellystat/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - jellyfin_default
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -137,6 +141,8 @@ services:
       - /mnt/Fast/docker/jellyfin/jellystat-backup:/app/backend/backup-data
     ports:
       - "3002:3000"
+    networks:
+      - jellyfin_default
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1"]
       interval: 30s
@@ -146,6 +152,6 @@ services:
 
 networks:
   jellyfin_default:
-    name: jellyfin_default
+    external: true
   arr-stack_default:
     external: true

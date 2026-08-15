@@ -1,5 +1,5 @@
 # TrueNAS State Assessment
-_Captured: 2026-05-31_
+_Captured: 2026-05-31, refreshed 2026-08-15_
 
 ## Hardware
 
@@ -58,54 +58,31 @@ _Captured: 2026-05-31_
 
 ## TrueNAS Native Apps (midclt-managed)
 
-| App | Version | State |
-|-----|---------|-------|
-| adguard-home | v1.0.0 | RUNNING |
-| arcane | v1.0.59 | RUNNING |
-| arr-stack | v1.0.0 | RUNNING |
-| caddy | v1.0.0 | RUNNING |
-| commafeed | v1.0.0 | RUNNING |
-| dockhand | v1.1.10 | RUNNING |
-| downloaders | v1.0.0 | RUNNING |
-| fileflows | v1.0.0 | RUNNING |
-| homepage | v1.0.0 | RUNNING |
-| infisical-agent | v1.0.0 | RUNNING |
-| jellyfin | v1.0.0 | RUNNING |
-| portainer | v1.7.1 | RUNNING |
-| tailscale | v1.0.0 | RUNNING |
+| App | State |
+|-----|-------|
+| adguard-home | RUNNING |
+| arr-stack | RUNNING |
+| caddy | RUNNING |
+| commafeed | RUNNING |
+| dockhand | RUNNING |
+| downloaders | RUNNING |
+| fileflows | RUNNING |
+| homepage | RUNNING |
+| infisical-agent | RUNNING |
+| jellyfin | RUNNING |
+| tailscale | RUNNING |
 
-Note: `autobrr` and `comicarr` are running as containers but NOT listed as TrueNAS native apps — deployed directly via Dockhand.
+11 apps, unchanged since 2026-05-31 — live migration to Dockhand has not progressed on this set. `arcane` and `portainer` are gone entirely (no container, no midclt entry) — removed deliberately, not doc drift.
+
+Note: `autobrr`, `suggestarr`, and `infisical` (self-hosted secrets server) run as containers but are NOT TrueNAS native apps — deployed directly via Dockhand. `comicarr` (the previous Dockhand-managed app in this slot) was replaced by `suggestarr` on 2026-08-xx (commit `fbcecec`).
 
 ## Running Containers
 
-| Container | Uptime | Ports |
-|-----------|--------|-------|
-| infisical-agent | 12h (healthy) | — |
-| tailscale | 36h (healthy) | — |
-| comicarr | 39h | 8090 |
-| qbittorrent | 4d (healthy) | 8080, 6881 |
-| flaresolverr | 4d (healthy) | 8191 |
-| jellyfin | 5d (healthy) | 8096, 8920 |
-| sonarr | 5d (healthy) | 8989 |
-| adguard-home | 8d (healthy) | 53, 3080, 4443, 5443, 853 |
-| sabnzbd | 9d (healthy) | 8085 |
-| autobrr | 9d | 7474 |
-| bazarr | 9d (healthy) | 6767 |
-| cleanuparr | 9d (healthy) | 11011 |
-| recyclarr | 9d (healthy) | — |
-| radarr | 9d (healthy) | 7878 |
-| prowlarr | 9d (healthy) | 9696 |
-| jellystat-db | 2w (healthy) | 5432 |
-| commafeed-db | 2w (healthy) | 5432 (internal) |
-| caddy | 2w (healthy) | 80 |
-| homepage | 2w (healthy) | 3000 |
-| jellystat | 6w (healthy) | 3002 |
-| commafeed | 6w (healthy) | 8088 |
-| fileflows | 7w (healthy) | 19200 |
-| dockhand | 7w (healthy) | 30328 |
-| portainer | 7w | 31015 |
-| arcane | 7w (healthy) | 30258 |
-| jellyseerr | 2mo (healthy) | 5055 |
+_As of 2026-08-15 (names only — ports/uptime not re-captured, see Port Map below):_
+
+adguard-home, autobrr, bazarr, caddy, cleanuparr, commafeed, commafeed-db, fileflows, flaresolverr, homepage, infisical, infisical-agent, infisical-db, infisical-redis, ix-dockhand-dockhand-1, jellyfin, jellyseerr, jellystat, jellystat-db, prowlarr, qbittorrent, radarr, recyclarr, sabnzbd, sonarr, suggestarr, tailscale
+
+Changes since 2026-05-31: `comicarr` → `suggestarr` (replaced, commit `fbcecec`); `arcane` and `portainer` removed entirely; `infisical`/`infisical-db`/`infisical-redis` added (self-hosted Infisical migrated from workstation, commit `9e64e8a`).
 
 ## Port Map
 
@@ -144,20 +121,30 @@ Note: `autobrr` and `comicarr` are running as containers but NOT listed as TrueN
 | 30328 | dockhand | Container manager |
 | 31015 | portainer | Container UI |
 
-## Docker Networks (live)
+## Docker Networks (live, 2026-08-15)
 
-ix-* networks are TrueNAS auto-generated. Plain named networks are Dockhand-managed.
+ix-* networks are TrueNAS auto-generated (midclt). Plain named networks are Dockhand-managed.
 
-| Network | Type | Status |
-|---------|------|--------|
-| ix-arr-stack_default | TrueNAS | Active (to be removed post-Dockhand) |
-| ix-jellyfin_default | TrueNAS | Active (to be removed post-Dockhand) |
-| ix-downloaders_default | TrueNAS | Active (to be removed post-Dockhand) |
-| autobrr_default | Dockhand | Active |
-| comicarr_default | Dockhand | Active |
-| rendered_default | Unknown | Active |
+| Network | Type |
+|---------|------|
+| ix-adguard-home_default | TrueNAS |
+| ix-arr-stack_default | TrueNAS |
+| ix-caddy_default | TrueNAS |
+| ix-commafeed_default | TrueNAS |
+| ix-dockhand_default | TrueNAS |
+| ix-downloaders_default | TrueNAS |
+| ix-fileflows_default | TrueNAS |
+| ix-homepage_default | TrueNAS |
+| ix-infisical-agent_default | TrueNAS |
+| ix-jellyfin_default | TrueNAS |
+| autobrr_default | Dockhand |
+| infisical_default | Dockhand |
+| arr-stack_default | Pre-created (empty) |
+| downloaders_default | Pre-created (empty) |
+| jellyfin_default | Pre-created (empty) |
+| rendered_default | Unknown |
 
-Note: arr-stack_default, jellyfin_default, downloaders_default networks (from new compose files) will be created when stacks are migrated to Dockhand.
+`comicarr_default` is gone (comicarr removed). `arr-stack_default`, `downloaders_default`, `jellyfin_default` were created ahead of migration (2026-08-15, via `docker network create`) so dependent stacks can target final names immediately — currently empty, no containers joined yet. The corresponding `ix-*` networks still exist and are still in active use by the midclt-managed apps.
 
 ## Secrets Management
 
@@ -166,15 +153,18 @@ Note: arr-stack_default, jellyfin_default, downloaders_default networks (from ne
 - **All secrets**: `--env dev`, paths `/TrueNAS` and `/media` and `/networking`
 - **Infisical agent**: running on TrueNAS, renders `.env` files to `/mnt/Fast/docker/<stack>/`
 - **Bitwarden**: personal passwords (not infrastructure)
-- **Stack**: Dockhand-managed (`infisical` stack), env vars inlined in compose (env_file not supported through Dockhand)
+- **Stack**: Dockhand-managed (`infisical` stack), uses `env_file:` with an absolute path (`/mnt/Fast/docker/infisical/.env`) — works fine through Dockhand
 
-## Dockhand Migration Status (2026-05-31)
+## Dockhand Migration Status (refreshed 2026-08-15)
 
-- **Dockhand**: already installed as TrueNAS native app v1.1.10, port 30328
-- **Currently Dockhand-managed**: autobrr, comicarr (confirmed by no ix-* network prefix)
-- **Currently midclt-managed**: all other apps (13 apps)
-- **Compose files**: updated — all ix-* network references renamed to plain names (commit 3d98525)
-- **Live migration**: NOT started — stacks still running under midclt
+- **Dockhand**: installed as TrueNAS native app, port 30328
+- **Currently Dockhand-managed**: autobrr, suggestarr (comicarr's replacement), infisical (new — migrated for an unrelated reason, not part of this migration plan)
+- **Currently midclt-managed**: 11 apps (adguard-home, arr-stack, caddy, commafeed, dockhand, downloaders, fileflows, homepage, infisical-agent, jellyfin, tailscale) — unchanged since 2026-05-31
+- **Compose files**: ix-* network references renamed to plain names (commit 3d98525, 2026-05-31)
+- **Live migration**: proceeding — decision made 2026-08-15 to move the remaining 11 apps to Dockhand. `arr-stack`/`downloaders`/`jellyfin` keep their current multi-container grouping (not splitting into one-service-per-stack — see `DOCKHAND_READINESS.md`).
+- **Networks pre-created 2026-08-15**: `arr-stack_default`, `downloaders_default`, `jellyfin_default` exist now, ahead of any stack migrating — removes the need for a follow-up redeploy once dependent stacks (`arr-stack`'s jellyfin join, `suggestarr`) reference them. `suggestarr`'s compose file was updated to point at `jellyfin_default` but it hasn't been redeployed yet — still live on `ix-jellyfin_default` until that happens.
+- **`DOCKHAND_GITOPS_GUIDE.md` is stale**: describes git-push-triggers-auto-deploy; current pattern is manual `scp` + `docker compose up -d --force-recreate` per `CLAUDE.md`. Needs reconciling or archiving — not a blocker for migration, just doc drift.
+- See `DOCKHAND_READINESS.md` for the current per-stack status and deployment order.
 
 ### Migration order when proceeding:
 1. infisical-agent (already running — verify .env files present before proceeding)

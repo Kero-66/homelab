@@ -38,5 +38,4 @@ services:
 
 networks:
   jellyfin_default:
-    name: ix-jellyfin_default
     external: true

@@ -39,6 +39,8 @@ services:
     dns:
       - 1.1.1.1
       - 8.8.8.8
+    networks:
+      - arr-stack_default
     ports:
       - "8191:8191"
     healthcheck:
@@ -72,6 +74,8 @@ services:
       - 8.8.8.8
     volumes:
       - /mnt/Fast/docker/prowlarr:/config
+    networks:
+      - arr-stack_default
     ports:
       - "9696:9696"
     depends_on:
@@ -111,7 +115,7 @@ services:
       - /mnt/Data/media:/data
       - /mnt/Data/downloads:/data/downloads
     networks:
-      - default
+      - arr-stack_default
       - jellyfin_default
     ports:
       - "8989:8989"
@@ -148,7 +152,7 @@ services:
       - /mnt/Data/media:/data
       - /mnt/Data/downloads:/data/downloads
     networks:
-      - default
+      - arr-stack_default
       - jellyfin_default
     ports:
       - "7878:7878"
@@ -184,7 +188,7 @@ services:
       - /mnt/Fast/docker/bazarr:/config
       - /mnt/Data/media:/data
     networks:
-      - default
+      - arr-stack_default
       - jellyfin_default
     ports:
       - "6767:6767"
@@ -212,6 +216,8 @@ services:
       - CRON_SCHEDULE=@daily
     volumes:
       - /mnt/Fast/docker/recyclarr/config:/config
+    networks:
+      - arr-stack_default
     depends_on:
       - sonarr
       - radarr
@@ -233,6 +239,8 @@ services:
       - /mnt/Fast/docker/cleanuparr:/config
       - /mnt/Data/media:/data
       - /mnt/Data/downloads:/data/downloads
+    networks:
+      - arr-stack_default
     ports:
       - "11011:11011"
     depends_on:
@@ -247,7 +255,6 @@ services:
 
 networks:
   arr-stack_default:
-    name: ix-arr-stack_default  # TrueNAS ix- prefix — update to arr-stack_default after dockhand cutover
+    external: true
   jellyfin_default:
-    name: ix-jellyfin_default   # TrueNAS ix- prefix — update to jellyfin_default after dockhand cutover
     external: true

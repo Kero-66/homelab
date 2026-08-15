@@ -130,6 +130,6 @@ services:
 
 networks:
   downloaders_default:
-    name: downloaders_default
+    external: true
   arr-stack_default:
     external: true
