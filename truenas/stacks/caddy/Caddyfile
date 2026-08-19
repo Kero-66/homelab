@@ -113,6 +113,11 @@ http://suggestarr.home {
 	reverse_proxy 192.168.20.22:5000
 }
 
+# Maintainerr (Watched-media cleanup automation)
+http://maintainerr.home {
+	reverse_proxy 192.168.20.22:6246
+}
+
 # Infisical (Secret Manager)
 http://infisical.home {
 	redir / /login 302

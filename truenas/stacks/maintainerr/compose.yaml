@@ -1,0 +1,46 @@
+# =============================================================================
+# Maintainerr Stack - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# Library maintenance tool for Jellyfin: rule-based cleanup of watched media,
+# with per-item exclusion. Configured entirely via its own UI post-deploy —
+# no active rules are shipped in this compose, deploy-only.
+#
+# Storage layout:
+#   Config → /mnt/Fast/docker/maintainerr/data (container /opt/data)
+#   Media (optional, for leftover-folder cleanup) → /mnt/Data/Servarr (container /data,
+#   matches Sonarr/Radarr's own root folder path convention — see
+#   .claude/plans/eager-mixing-floyd.md)
+#
+# Networking:
+#   Joins jellyfin_default (external) to reach jellyfin:8096
+#   Joins arr-stack_default (external) to reach sonarr:8989 / radarr:7878
+# =============================================================================
+
+services:
+  maintainerr:
+    image: ghcr.io/maintainerr/maintainerr:latest
+    container_name: maintainerr
+    restart: unless-stopped
+    user: "1000:1000"
+    labels:
+      - homepage.group=Media
+      - homepage.name=Maintainerr
+      - homepage.icon=mdi-broom
+      - homepage.href=http://maintainerr.home
+      - homepage.description=Watched-media cleanup automation
+    ports:
+      - "6246:6246"
+    volumes:
+      - /mnt/Fast/docker/maintainerr/data:/opt/data
+      - /mnt/Data/Servarr:/data
+    environment:
+      - TZ=Australia/Brisbane
+    networks:
+      - jellyfin_default
+      - arr-stack_default
+
+networks:
+  jellyfin_default:
+    external: true
+  arr-stack_default:
+    external: true
