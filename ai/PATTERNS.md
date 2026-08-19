@@ -1208,6 +1208,32 @@ curl -s -H "X-Api-Key: $RADARR_KEY" "http://192.168.20.22:7878/radarr/api/v3/his
   jq '[.records[].data.indexer // "unknown"] | group_by(.) | map({indexer: .[0], grabs: length}) | sort_by(-.grabs)[]'
 ```
 
+### Escape hatch: searching directly via Prowlarr when Sonarr/Radarr's own search finds nothing
+
+Sonarr/Radarr query indexers with fairly narrow, structured terms (series+episode number, movie+year). Prowlarr's own `/search` endpoint accepts a free-text query and can surface releases those narrower queries miss — this is how a release found by hand on an indexer's own site can exist even when Sonarr/Radarr interactive search comes back empty (confirmed 2026-08-18, Trigun 1998 season pack on Treasure Maps/SceneNZB).
+
+**Prowlarr indexer IDs are a different namespace from Sonarr/Radarr's synced indexer IDs — do not reuse one for the other.** Get Prowlarr's own id from `GET /api/v1/indexer` (matched by name), not from Sonarr/Radarr's `/api/v3/indexer` list, or the search call fails with a generic "all selected indexers being unavailable" error that looks like an indexer outage but is actually just the wrong ID.
+
+```bash
+PROWLARR_KEY=$(infisical secrets get PROWLARR_API_KEY --env dev --path /media --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
+
+# Get the indexer's own Prowlarr id (NOT Sonarr/Radarr's proxy id for the same indexer)
+curl -sL "http://prowlarr.home/api/v1/indexer?apikey=$PROWLARR_KEY" | jq '.[] | select(.name | test("<indexer name>")) | {id, name}'
+
+# Free-text search against one indexer
+curl -sL -G "http://prowlarr.home/api/v1/search" \
+  --data-urlencode "query=<broad search terms>" \
+  --data-urlencode "indexerIds=<prowlarr id from above>" \
+  --data-urlencode "type=search" \
+  --data-urlencode "apikey=$PROWLARR_KEY" | jq '.[] | {title, guid, indexerId, seeders}'
+```
+
+**A guid found this way is not directly grabbable through Sonarr/Radarr's `/release` POST endpoint** — that endpoint requires the guid to already be in Sonarr/Radarr's own release cache (populated by *their* search), and returns `404 "Couldn't find requested release in cache, try searching again"` otherwise. Two ways to actually use the find:
+
+1. **Try to get Sonarr/Radarr's own search to surface the same release** with broader query scope (e.g. season-level search instead of per-episode) — if it lands in their cache, the normal grab/manual-override flow works and you keep automatic episode/movie mapping. Preferred when it works.
+2. **Manual download + Manual Import** — download the release directly (via Prowlarr's own download action, or the indexer site), let it land in the download client under the right category, then use Sonarr/Radarr's Manual Import UI/API to map files to episodes/movie by hand. This fully bypasses both trash-guides custom-format scoring *and* Sonarr/Radarr's automated release parsing — necessary for genuinely unparseable or narrowly-unsearchable content, but loses the automated mapping/validation both apps normally provide.
+
 ---
 
 ## Radarr API
