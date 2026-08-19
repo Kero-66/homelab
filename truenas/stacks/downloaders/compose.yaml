@@ -9,7 +9,10 @@
 #
 # Prerequisites:
 #   - Infisical Agent running (renders secrets to /mnt/Fast/docker/downloaders/.env)
-#   - Download mount: /mnt/Data/downloads mapped to /data/downloads
+#   - Download mount: /mnt/Data/Servarr/downloads mapped to /data/downloads (part of the
+#     unified Servarr dataset — see arr-stack/compose.yaml header and
+#     .claude/plans/eager-mixing-floyd.md — same dataset as Sonarr/Radarr's /data so
+#     hardlinks work on import)
 #   - Config mount: /mnt/Fast/docker/<service> mapped to /config
 #
 # Notes:
@@ -47,7 +50,7 @@ services:
       - homepage.widget.password=${QBITTORRENT_PASS}
     volumes:
       - /mnt/Fast/docker/qbittorrent:/config
-      - /mnt/Data/downloads:/data/downloads
+      - /mnt/Data/Servarr/downloads:/data/downloads
     ports:
       - "8080:8080"
       - "6881:6881/tcp"
@@ -87,7 +90,7 @@ services:
       - homepage.widget.key=${SABNZBD_API_KEY}
     volumes:
       - /mnt/Fast/docker/sabnzbd:/config
-      - /mnt/Data/downloads:/data/downloads
+      - /mnt/Data/Servarr/downloads:/data/downloads
     ports:
       - "8085:8080"
     networks:

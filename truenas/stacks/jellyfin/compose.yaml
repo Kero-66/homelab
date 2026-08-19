@@ -5,7 +5,9 @@
 #
 # Storage layout:
 #   Configs → /mnt/Fast/docker/jellyfin/             (NVMe pool - Docker configs)
-#   Media   → /mnt/Data/media/                       (HDD pool - bulk storage)
+#   Media   → /mnt/Data/Servarr/                     (HDD pool - unified dataset, see
+#             .claude/plans/eager-mixing-floyd.md — arr-managed shows/movies/music plus
+#             manga/webtoons/books folded in too, single mount, all under one dataset)
 #   DB      → /mnt/Fast/databases/jellystat/postgres/ (NVMe pool - Database)
 #
 # Secrets:
@@ -43,8 +45,8 @@ services:
     volumes:
       # Config on NVMe pool
       - /mnt/Fast/docker/jellyfin/config:/config
-      # Media on HDD pool
-      - /mnt/Data/media:/data
+      # Media on HDD pool — unified Data/Servarr dataset
+      - /mnt/Data/Servarr:/data
     # Hardware acceleration - Beelink Mini S Pro has Intel QuickSync
     devices:
       - /dev/dri:/dev/dri

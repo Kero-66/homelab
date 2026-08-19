@@ -14,8 +14,9 @@
 #
 # Prerequisites:
 #   - Infisical Agent running (renders secrets to /mnt/Fast/docker/arr-stack/.env)
-#   - Media mount: /mnt/Data/media mapped to /data
-#   - Download mount: /mnt/Data/downloads mapped to /data/downloads
+#   - Servarr mount: /mnt/Data/Servarr mapped to /data (unified dataset — downloads,
+#     movies, shows, music all under one ZFS filesystem so hardlinks work between
+#     downloads and the library, per ai/todo.md #92 / .claude/plans/eager-mixing-floyd.md)
 #   - Config mount: /mnt/Fast/docker/<service> mapped to /config
 #
 # =============================================================================
@@ -112,8 +113,7 @@ services:
       - homepage.widget.key=${SONARR_API_KEY}
     volumes:
       - /mnt/Fast/docker/sonarr:/config
-      - /mnt/Data/media:/data
-      - /mnt/Data/downloads:/data/downloads
+      - /mnt/Data/Servarr:/data
     networks:
       - arr-stack_default
       - jellyfin_default
@@ -149,8 +149,7 @@ services:
       - homepage.widget.key=${RADARR_API_KEY}
     volumes:
       - /mnt/Fast/docker/radarr:/config
-      - /mnt/Data/media:/data
-      - /mnt/Data/downloads:/data/downloads
+      - /mnt/Data/Servarr:/data
     networks:
       - arr-stack_default
       - jellyfin_default
@@ -186,7 +185,7 @@ services:
       - homepage.widget.key=${BAZARR_API_KEY}
     volumes:
       - /mnt/Fast/docker/bazarr:/config
-      - /mnt/Data/media:/data
+      - /mnt/Data/Servarr:/data
     networks:
       - arr-stack_default
       - jellyfin_default
@@ -237,8 +236,7 @@ services:
       - TZ=Australia/Brisbane
     volumes:
       - /mnt/Fast/docker/cleanuparr:/config
-      - /mnt/Data/media:/data
-      - /mnt/Data/downloads:/data/downloads
+      - /mnt/Data/Servarr:/data
     networks:
       - arr-stack_default
     ports:
