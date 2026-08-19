@@ -59,15 +59,16 @@ Generated 2026-08-15 by pulling every Season 0 episode across all 67 Sonarr seri
 | Gurren Lagann | Gurren Lagann the Movie - Childhood's End | true | Gurren Lagann The Movie: Childhood's End (2008) | covered | none — duplicate, unmonitor optional |
 | MF GHOST | MF GHOST BATTLE DIGEST | false | MF Ghost Battle Digest (2024) | missing | Same content missing on both sides — grab attempts already exhausted (dead seeders, see [[project_media_gap_survey]]); try Radarr search independently, may have different indexer luck |
 | Macross | Do You Remember Love | false | Macross: Do You Remember Love? (1984) | covered | none |
-| Macross Frontier | Galaxy Tour FINAL in Budokan | false | Macross Frontier Galaxy Tour Final in Budokan (2009) | missing | Missing on both sides — needs a fresh grab (concert film, may be hard to find) |
-| Macross Frontier | Macross Frontier The Movie - The False Songstress | true | Macross Frontier: The False Songstress (2009) | missing | **Copy Sonarr file → Radarr** (already flagged in [[project_sonarr_radarr_movie_migration]]) |
-| Macross Frontier | Macross Frontier The Movie - The Wings of Goodbye | true | Macross Frontier: The Wings of Farewell (2011) | missing | **Copy Sonarr file → Radarr** (already flagged in [[project_sonarr_radarr_movie_migration]]) |
-| Macross Frontier | Macross FB7: Listen to My Song! | false | Macross FB7: Listen to My Song! (2012) | missing | Missing on both sides — needs fresh grab |
+| Macross Frontier | Galaxy Tour FINAL in Budokan | false | Macross Frontier Galaxy Tour Final in Budokan (2009) | missing | Grabbed 2026-08-18 (`[Hi10P][Covad]` release, 1 seeder, clean parse) — downloading |
+| Macross Frontier | Choujikuu SUPER LIVE cosmic nyaan | false | (no Radarr entry — concert film, TV special only) | n/a | Grabbed 2026-08-18 (`[랑이-Raws]` release, 1 seeder, clean parse) — downloading |
+| Macross Frontier | Macross Frontier The Movie - The False Songstress | true | Macross Frontier: The False Songstress (2009) | covered (copied 2026-08-18) | none — done |
+| Macross Frontier | Macross Frontier The Movie - The Wings of Goodbye | true | Macross Frontier: The Wings of Farewell (2011) | covered (copied 2026-08-18) | none — done |
+| Macross Frontier | Macross FB7: Listen to My Song! | false | Macross FB7: Listen to My Song! (2012) | missing | Missing on both sides — needs fresh grab. Re-checked 2026-08-18: zero results on Prowlarr (Nyaa.si) and AnimeTosho — this title is legally streaming (Hulu/Disney+/Plex per public listings) which likely explains the total lack of fansub/scene coverage. TMDB id 258156 confirmed correct (real 2012 crossover film blending Macross 7 archival footage into Frontier, not a mismatch). May need a non-indexer acquisition path if this is wanted. |
 | Steins;Gate | Steins;Gate the Movie: Load Region of Déjà Vu | false | Steins;Gate: The Movie - Load Region of Déjà Vu (2013) | covered | none |
 | .hack | .hack//The Movie | false | .hack//The Movie (2012) | missing | Missing on both sides — needs fresh grab |
 | .hack | .hack//G.U. Trilogy | false | .hack//G.U. Trilogy (2007) | missing | Missing on both sides — needs fresh grab |
 
-Also confirmed from earlier this session (already actioned, not re-listed above in full): **Macross 7** — "The Galaxy Is Calling Me!" already copied logic pending (see [[project_sonarr_radarr_movie_migration]] — 4 movies total unmonitored in Sonarr, awaiting the actual copy step), and **The Super Dimension Fortress Macross: Flash Back 2012** likewise.
+**Macross 7** — "The Galaxy Is Calling Me!" and **The Super Dimension Fortress Macross: Flash Back 2012** — both copied into Radarr 2026-08-18 (same batch as the two Macross Frontier movies above). All 4 movies from [[project_sonarr_radarr_movie_migration]] are now done.
 
 ## Needs manual check (fuzzy match unreliable — generic titles caused false positives)
 
@@ -85,6 +86,26 @@ Sometimes a Sonarr special's title is a genuinely different historical release n
 - **Macross (series 70) "Clash of the Bionoids"** (episode id 3082) — this is the 1980s-90s US theatrical/video re-edit of "Do You Remember Love?" (Radarr already has, `hasFile: true`) with ~20-40 minutes cut for content (gore/nudity). Not a distinct film — same underlying movie, different historical dub/cut name. No TMDB entry exists under "Clash of the Bionoids" at all. **Unmonitored** 2026-08-15, same treatment as the "Do You Remember Love" duplicate itself.
 - **Macross Plus (series 73) "Macross Plus: Movie Edition"** (episode id 3104, 115min) — confirmed via Radarr/TMDB lookup (not web search) to be the exact same film as "Macross Plus: The Movie (1995)" (TMDB id 18837, Radarr already has, `hasFile: true`) — just catalogued under a different title. **Unmonitored** 2026-08-15.
 
+## VOTOMS — repass findings (2026-08-18)
+
+Full repass of all Season 0 specials requested by user to verify nothing was incorrectly unmonitored and movie coverage is accurate. Found one real miss:
+
+- **"The Grey Witch, Part One"** (episode id 3897) was unmonitored in Sonarr under the assumption it was covered by Radarr — it wasn't. Radarr entry "Die Graue Hexe - Part 1" (id 127) also has `hasFile: false`. **Re-monitored in Sonarr 2026-08-18.** Checked Radarr release search: zero indexer results anywhere. TMDB confirms why — release year is **2026**, i.e. this is a brand-new release, not yet available on any indexer. Not a dead-end, just too new; revisit later. No "Part 2" exists in TMDB or Sonarr's episode list yet either.
+- All other unmonitored Season 0 specials verified correct: "The Last Red Shoulder", "The Big Battle", "Red Shoulder Document", "Pailsen Files the Movie", "Case;Irvine", "Votoms Finder" all confirmed `hasFile: true` in their matching Radarr entries.
+- "Chirico's Return" (Sonarr title) confirmed to be the same film as Radarr's "Alone Again" (2011 OVA, both titles used interchangeably per [IMDb](https://www.imdb.com/title/tt8965474/)/[Blu-ray.com](https://www.blu-ray.com/movies/Armored-Trooper-Votoms-Chiricos-Return-Blu-ray/291178/)) — correctly matched, `hasFile: true`.
+- Numbered TV season: 0 monitored gaps — fully complete.
+
+## VOTOMS — recap specials confirmed not real gaps (2026-08-18)
+
+| Series | Special | Runtime | What it actually is |
+|---|---|---|---|
+| Armored Trooper VOTOMS (97) | Stage I: Woodo City | 25min (Sonarr; actual ~55min) | 1985-86 compilation OVA — condensed recap of the already-owned 52-episode TV series, covering the Woodo City arc. Not new content. |
+| Armored Trooper VOTOMS (97) | Stage II: Kummen Jungle Wars | 25min (Sonarr; actual ~56min) | Same compilation series, Kummen Jungle Wars arc recap. |
+| Armored Trooper VOTOMS (97) | Stage III: Deadworld Sunsa | 25min | Same compilation series, Deadworld Sunsa arc recap. |
+| Armored Trooper VOTOMS (97) | Stage IV: God Planet Quaint | 25min | Same compilation series, God Planet Quaint arc recap. |
+
+Matches the "recap/alternate-cut specials" structural pattern (see intro) — same underlying story already owned via the numbered TV season. Left monitored but deprioritized, same treatment as the Macross niche specials below. Source: publisher listings (Sunrise official work pages) confirm ~55min/episode runtime and recap nature.
+
 ## Macross franchise — niche/bonus specials researched and confirmed low-priority (not core story content)
 
 These were flagged as monitored-but-missing but confirmed via web research (2026-08-15) to be bonus/promotional/historical-curiosity material, not story content worth actively pursuing. Documented here so this research doesn't need repeating. All left monitored (not unmonitored — they're genuinely missing, just deprioritized) unless noted.
@@ -97,6 +118,10 @@ These were flagged as monitored-but-missing but confirmed via web research (2026
 | Macross (70) | Mech Graffiti | 40min | 1984 rare VHS-only music-video-style compilation: existing TV mecha/character scenes re-cut to Macross BGM and Lynn Minmay songs, plus alternate title-card versions. No new footage. | [Macross World Forums](https://www.macrossworld.com/mwf/topic/26524-macross-mech-graffiti/) |
 | Macross (70) | 30th Anniversary Special | 25min | Part of the 2012 "Macross 30th Anniversary Project" — bonus-disc featurette bundled with Blu-ray box sets (behind-the-scenes/celebration material alongside concerts, exhibitions, a stage musical). Not story content. | [Macross Wiki](https://macross.fandom.com/wiki/Macross_30th_Anniversary_Project) |
 | Macross Plus (73) | Macross A Future Chronicle | 17min | A narrated clip-show retrospective covering the entire Macross franchise's story so far, bundled as a video special with the first Macross Plus OVA volume (Aug 1994) — not part of Macross Plus's own story. | [gubabablog rewatch](https://gubabablog.wordpress.com/2016/01/31/the-great-macross-rewatch-a-future-chronicle/) |
+| Macross Zero (71) | Macross 25th Anniversary Special Air Show Macross Zero version | 30min (Sonarr metadata; actual runtime ~2min) | "ALL THAT Variable Fighter" — a 2008 web-exclusive CG promo short unlocked via a code bundled with first-press Blu-ray volume 1. VF-0 air-show demo set to a Yoko Kanno orchestral track, no story content. Not indexed anywhere (checked Sonarr/Prowlarr release search — zero results, not even mismatched). | [AniList](https://anilist.co/anime/5164/ALL-THAT-VF-Macross-25th-Anniversary-Air-Show--VerZERO), [gubabablog rewatch](https://gubabablog.wordpress.com/2016/05/22/the-great-macross-rewatch-25th-anniversary-special/) |
+| Macross Frontier (68) | Macross 25th Anniversary Special Air Show | 25min (Sonarr metadata; actual ~2min per the Zero-version precedent) | Frontier's counterpart to the Macross Zero Air Show promo above — same 2008 25th-anniversary web-exclusive CG short campaign, Frontier-side VF-25 demo. Same non-story bonus content, same expected zero-indexer-coverage pattern. | (inferred from the Zero-version precedent; not independently re-verified) |
+| Macross Frontier (68) | Macross Frontier Music Clip Collection - Nyan Kuri | 38min | Music video compilation bonus disc, not story content — same pattern as the other franchise "clip collection"/"mech graffiti" bonus discs already documented. | (inferred from pattern; not independently verified) |
+| Macross Frontier (68) | Macross Fufonfia 1-20 + Specials 1-3 (23 episodes total, ids 2976-2995, 2997-2999) | 2-4min each | **Macross Fufonfia** — a real 2008 ONA web-short series (Satelight, aired on MBS) placing the Frontier cast as comedy office-AU employees at a fictional software company. Non-canon spinoff comedy, not part of Frontier's actual story. Confirmed via [AniList](https://anilist.co/anime/4939/Macross-fufonfia) and [Anime News Network](https://www.animenewsnetwork.com/encyclopedia/anime.php?id=11484). **Unmonitored 2026-08-18** — 23 individual 2-4min shorts, not worth chasing one-by-one. |
 
 ## Not movies — confirmed short-form content (excluded from action)
 

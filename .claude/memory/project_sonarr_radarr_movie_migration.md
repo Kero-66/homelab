@@ -10,7 +10,7 @@ metadata:
 
 Several movies exist as completed files under Sonarr TV series "Season 0 / Specials" instead of proper Radarr movie entries. Radarr already has matching monitored-but-missing entries for these — they just need the file copied over (Sonarr `/data/shows` and Radarr `/data/movies` are separate ZFS datasets, so this is a real copy, not a free hardlink, ~10-15GB total).
 
-**Status as of 2026-08-08:** the 4 confirmed matches below have been **unmonitored in Sonarr** already (so Sonarr won't re-grab them), but the files have **NOT yet been copied into Radarr** — Radarr still shows them as missing/monitored.
+**Status as of 2026-08-18: DONE.** All 4 files copied from Sonarr's `/data/shows/.../Specials/` paths into their Radarr movie folders under `/mnt/Data/media/movies/`, ownership fixed to kero66:kero66, Radarr `RescanMovie` triggered for each — all 4 confirmed `hasFile: true` in Radarr. This memory can be considered resolved; kept for the path/ID reference below in case the same pattern recurs elsewhere.
 
 | Radarr entry (still missing) | Source file location in Sonarr |
 |---|---|
