@@ -2,7 +2,7 @@
 
 **Goal**: Manage TrueNAS containers via git-based deployments using Dockhand
 
-**Status**: Active - Homepage stack in progress
+**Status**: ✅ Complete — all 13 stacks migrated 2026-08-19, auto-sync enabled daily @ 3am
 
 ---
 
@@ -75,44 +75,50 @@ infisical secrets get DOCKHAND_GITHUB_DEPLOY_KEY_PUBLIC --env dev --path /TrueNA
 - Access: Read-only
 - Key type: ed25519
 
-### Step 2: Configure Repository in Dockhand
+### Step 2: Repository already registered
 
-1. **Access Dockhand Web UI**
-   - URL: http://192.168.20.22:30328/
-   - Login with credentials from Infisical
+`homelab` is registered once as `repositoryId: 1` (confirmed live via `GET /api/git/repositories`) — SSH auth, credential id 1. This is a one-time setup; every stack references this same `repositoryId`, no need to re-add the repo per stack.
 
-2. **Add Git Repository** (if not already configured)
-   - Navigate to: Settings → Git Integration → Add Repository
-   - **Repository URL**: `git@github.com:<username>/homelab.git` (SSH) or `https://github.com/<username>/homelab.git` (HTTPS)
-   - **Branch**: `main`
-   - **Auth Method**: SSH Deploy Key (paste private key from Infisical)
+```bash
+DOCKHAND_USER=$(infisical secrets get DOCKHAND_USER --env dev --path /TrueNAS --plain --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081)
+DOCKHAND_PASS=$(infisical secrets get DOCKHAND_USER_PASSWORD --env dev --path /TrueNAS --plain --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081)
+curl -s -c cookies.txt -X POST "http://192.168.20.22:30328/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"$DOCKHAND_USER\",\"password\":\"$DOCKHAND_PASS\",\"provider\":\"local\"}"
+curl -s -b cookies.txt "http://192.168.20.22:30328/api/git/repositories" | jq
+```
 
-### Step 3: Create Stack from Git
+**IMPORTANT — do not use `curl -c <file>` for the cookie jar.** That writes a live session credential to disk, even briefly. Capture it in memory instead — e.g. Python's `http.cookiejar` + `urllib.request.HTTPCookieProcessor`, or `curl -c -` (stdout) piped into a variable and fed back via process substitution.
 
-**Example: Homepage Stack**
+### Step 3: Create a stack from git — the real API
 
-1. **Create New Stack in Dockhand UI**
-   - Name: `homepage`
-   - Source: **Git Repository**
-   - Repository: Select `homelab` repo
-   - **Git Path**: `truenas/stacks/homepage`
-   - **Compose File**: `compose.yaml`
-   - **Sync Interval**: 60 seconds (or use webhook)
+The web UI has a "Source: Git Repository" option (`GitStackModal.svelte`), but the REST API is fully scriptable and this is the proven path (used for all 13 stacks):
 
-2. **Environment Variables**
-   - Dockhand will use `env_file` directives from compose.yaml
-   - Infisical Agent continues to render `.env` files to `/mnt/Fast/docker/<stack>/.env`
-   - No additional configuration needed
+**`POST /api/git/repositories`** — register a repo (one-time, already done for `homelab`):
+```json
+{"name": "homelab", "url": "https://github.com/<user>/homelab", "branch": "main", "credentialId": 1}
+```
 
-3. **Networks**
-   - External networks are referenced in compose.yaml
-   - Ensure they exist before deploying:
-     - `ix-jellyfin_default`
-     - `ix-arr-stack_default`
+**`POST /api/git/stacks`** — create a git-linked stack:
+```json
+{
+  "stackName": "homepage",
+  "repositoryId": 1,
+  "environmentId": 1,
+  "composePath": "/truenas/stacks/homepage/compose.yaml",
+  "autoUpdate": true,
+  "autoUpdateSchedule": "daily",
+  "autoUpdateCron": "0 3 * * *",
+  "deployNow": true
+}
+```
+Note `composePath` is a **single full path from repo root** (leading slash), not split into a directory + filename. Response is `{"jobId": "..."}` — poll `GET /api/jobs/<jobId>` for the deploy result.
 
-4. **Deploy Stack**
-   - Click "Deploy" or enable auto-sync
-   - Dockhand pulls compose.yaml from git and deploys
+**`PUT /api/git/stacks/{id}`** — update an existing git stack's config (autoUpdate, deployNow to trigger a sync now, composePath, etc).
+
+**No conversion endpoint exists.** If a stack already exists as an `internal` stack (created via plain `POST /api/stacks`), `POST /api/git/stacks` rejects it with `409 Conflict` — confirmed by reading the actual validation code (`getStackSource()` checks across all stack types). The only path is `DELETE /api/stacks/<name>` (safe — only removes the container + Dockhand's record; bind-mounted host data is untouched unless `?volumes=true` is passed, and that only targets named volumes anyway) followed by the `POST /api/git/stacks` create above. This is exactly what was needed for `maintainerr`, which had been deployed ad-hoc outside the repo.
+
+Full endpoint list discovered by reading Dockhand's source at `github.com/Finsys/dockhand` (`src/routes/api/git/{repositories,stacks}/+server.ts` etc) — there's no public OpenAPI spec yet (planned per upstream issue #814).
 
 ### Step 4: Test GitOps Workflow
 
@@ -338,20 +344,9 @@ docker network ls | grep ix-
 
 ---
 
-## Migration Path for Other Stacks
+## Migration Path — Complete
 
-Once Homepage GitOps is working, migrate other stacks in priority order:
-
-### Priority Order:
-1. 🔄 **Homepage** (in progress - test case)
-2. **Caddy** (critical infrastructure, simple compose)
-3. **AdGuard Home** (DNS - test with simple network config)
-4. **Jellyfin** (single stack, well-tested)
-5. **Arr-stack** (complex - multiple services in one compose)
-6. **Downloaders** (depends on arr-stack network)
-7. **Tailscale** (network complexity, test last)
-
-### Migration Steps per Stack:
+All stacks are migrated (2026-08-19). For any *new* stack added to the repo going forward:
 
 **1. Verify compose.yaml is ready**
 ```bash
@@ -359,13 +354,13 @@ cd truenas/stacks/<stack-name>
 docker compose config  # Validates syntax
 ```
 
-**2. Create stack in Dockhand UI**
-- Name: `<stack-name>`
-- Source: Git Repository
-- Repository: `homelab`
-- Git Path: `truenas/stacks/<stack-name>`
-- Compose File: `compose.yaml`
-- Sync: 60 seconds or webhook
+**2. Create the git stack via API** (see Step 3 above for full request shape):
+```bash
+curl -s -b cookies.txt -X POST "http://192.168.20.22:30328/api/git/stacks" \
+  -H "Content-Type: application/json" \
+  -d '{"stackName":"<stack-name>","repositoryId":1,"environmentId":1,"composePath":"/truenas/stacks/<stack-name>/compose.yaml","autoUpdate":true,"autoUpdateSchedule":"daily","autoUpdateCron":"0 3 * * *","deployNow":true}'
+```
+If a stack of that name already exists as `internal` (deployed ad-hoc, not via git), this returns `409 Conflict` — `DELETE /api/stacks/<name>` first, then retry.
 
 **3. Test deployment**
 ```bash
@@ -442,25 +437,26 @@ jobs:
 - **Deploy Key**: Stored in Infisical at `/TrueNAS/DOCKHAND_GITHUB_DEPLOY_KEY_PRIVATE`
 
 ### Stack Configuration Template
-```yaml
-Name: <stack-name>
-Source: Git Repository
-Repository: homelab
-Git Path: truenas/stacks/<stack-name>
-Compose File: compose.yaml
-Sync Interval: 60 seconds
+### Create-stack request shape
+```json
+{
+  "stackName": "<stack-name>",
+  "repositoryId": 1,
+  "environmentId": 1,
+  "composePath": "/truenas/stacks/<stack-name>/compose.yaml",
+  "autoUpdate": true,
+  "autoUpdateSchedule": "daily",
+  "autoUpdateCron": "0 3 * * *",
+  "deployNow": true
+}
 ```
 
 ### Current Status
 - ✅ Dockhand deployed and accessible
 - ✅ Git authentication configured (SSH deploy key)
 - ✅ Keys stored in Infisical (never on disk)
-- 🔄 Homepage stack - ready for configuration in UI
-- ⏸️ Other stacks - pending Homepage success
+- ✅ All 13 stacks migrated to git-sourced, `autoUpdate: true`, daily @ 3am (2026-08-19)
 
 ### Next Steps
-1. Access Dockhand UI (http://192.168.20.22:30328/)
-2. Configure git repository connection
-3. Create Homepage stack from git
-4. Test GitOps workflow with test commit
-5. Migrate other stacks following priority order
+- New stacks: follow "Migration Path" above (`POST /api/git/stacks`).
+- Consider webhook-based sync instead of the daily cron for faster deploy turnaround, if desired.
