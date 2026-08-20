@@ -62,9 +62,9 @@ RADARR_KEY=$(_isec RADARR_API_KEY /media)
 PROWLARR_KEY=$(_isec PROWLARR_API_KEY /media)
 ```
 
-### Get Jellyfin API key (root path)
+### Get Jellyfin API key
 ```bash
-infisical secrets get JELLYFIN_API_KEY --env dev --path / --plain
+infisical secrets get JELLYFIN_API_KEY --env dev --path /media --plain
 ```
 
 ### List all secrets in a path

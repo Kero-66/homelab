@@ -19,7 +19,11 @@ curl -sL "http://sonarr.home/api/v3/episode?seriesId=<ID>&apikey=$SONARR_KEY" | 
 ```
 Numbered seasons (1+) are usually where the real, worth-chasing gaps are. Season 0 (specials) is where all three structural-flaw patterns above hide — triage those separately from real gaps.
 
-**2. For each Season 0 gap, check runtime first** — this alone tells you which pattern you're likely looking at:
+**Critical: "Season 0 = specials" is not the same as "Season 0 = movies."** Every monitored+missing Season 0 item needs to go through this workflow, not just the ones ≥60min. Runtime is a triage *signal* for which pattern you're probably looking at (step 2b below), not a filter for what counts as worth checking — a 4-minute purchaser-bonus OVA short is just as real a gap as a 90-minute film, and gets missed entirely if you only ever query `runtime>=60`. (Confirmed miss 2026-08-20: Gundam 0083's "The Mayfly of Space 1/2" bonus shorts, 4min/12min, were skipped this way across an entire audit pass — see the numbered-season-gap-diagnosis section below for the full scope of what else this blind spot hit.)
+
+**2. Check `monitored` status before anything else.** An unmonitored Season 0 special is a signal someone already decided it's not wanted (bonus content, deprioritized, or otherwise not worth chasing) — don't treat "no Radarr entry" as sufficient justification to add one on its own. **Known gap (2026-08-20): this step was skipped for the entire 2026-08-20 batch-add session** (Overlord, Made in Abyss, Bleach, Black Butler, Robotech, Battlestar Galactica, Kizumonogatari, and the earlier AoT/Gundam/JJK/Macross Delta round) — none of those were checked for Sonarr `monitored` status before adding Radarr entries and searching. Confirmed at least Overlord's 3 specials (Sonarr eps 1266/1276/1277) were `monitored:false` the whole time. Left as-is per user decision (2026-08-20) rather than unwound, but **any future pass through this doc's "Verified matches" or the newly-added Radarr entries should re-check monitored status** before trusting the earlier reasoning.
+
+**2b. For each Season 0 gap, check runtime next** — this tells you which pattern you're likely looking at:
 - **≥60min** → probably a movie. Check the Movie audit cross-reference method below.
 - **<60min** → probably NOT core story content (bonus feature, alt broadcast cut, anniversary featurette, promotional short). Don't assume it's junk though — verify via research (step 4) before deprioritizing, since some short specials genuinely matter to the user.
 
@@ -70,14 +74,16 @@ Generated 2026-08-15 by pulling every Season 0 episode across all 67 Sonarr seri
 
 **Macross 7** — "The Galaxy Is Calling Me!" and **The Super Dimension Fortress Macross: Flash Back 2012** — both copied into Radarr 2026-08-18 (same batch as the two Macross Frontier movies above). All 4 movies from [[project_sonarr_radarr_movie_migration]] are now done.
 
-## Needs manual check (fuzzy match unreliable — generic titles caused false positives)
+## Needs manual check — RESOLVED 2026-08-20
 
-These series have movie-length specials where the automated cross-reference could not be trusted (common words like "Attack", "Titan", "Gundam" produced spurious matches across unrelated entries). Each needs a human or a careful manual grep-by-hand before acting:
+Previously flagged as unreliable fuzzy matches. All four resolved by pulling exact Sonarr special IDs + Radarr entries directly (no more fuzzy matching needed):
 
-- **Attack on Titan** — 7 movie-length specials (Final Season events, Part I/II/III, Chronicle, 2 live-action films) vs. 2 Radarr entries (`Crimson Bow and Arrow`, `The Roar of Awakening`, both missing). Likely partial overlap, not 1:1 — verify each title individually.
-- **Mobile Suit Gundam 0083: Stardust Memory** ("Afterglow of Zeon") and **Mobile Suit Gundam Wing** ("Endless Waltz: The Movie") both fuzzy-matched to a single junk Radarr entry titled "Gundam (0)" (year 0 — likely a placeholder/bad metadata entry, not real). Check what "Gundam (0)" actually is in Radarr before trusting any match here.
-- **JUJUTSU KAISEN** — "Jujutsu Kaisen: Hidden Inventory / Premature Death - The Movie" and "Jujutsu Kaisen 0" (Sonarr specials) vs. "Jujutsu Kaisen 0 (2021)" [covered] and "JUJUTSU KAISEN: Execution (2025)" [missing] in Radarr — these are likely two different movies, not the same one twice; verify before merging.
-- **Macross Delta** ("Passionate Walkure", "Absolute Live!!!!!!") and **Macross Plus** ("Movie Edition") all fuzzy-matched to "Macross Plus: The Movie (1995)" [covered] — that Radarr entry can only be one of these three at most; the other two need their own check (Macross Delta has separate Radarr entries "Macross Delta: Passionate Walküre (2018)" and "Macross Delta: Zettai Live!!!!!!" — likely the real matches, algorithm just picked wrong candidate).
+- **JUJUTSU KAISEN** — confirmed genuinely two different movies, not a duplicate pair. "Jujutsu Kaisen 0" (Sonarr ep 1848) is covered by Radarr id 85 (`hasFile:true`) — **unmonitored** in Sonarr. "Hidden Inventory / Premature Death - The Movie" (Sonarr ep 1852) is covered by Radarr id 153 (`hasFile:true`) — **unmonitored** in Sonarr. "JUJUTSU KAISEN: Execution" (Sonarr ep 1851) is genuinely missing on both sides (Radarr id 2) — search triggered, **zero indexer results**, still open.
+- **Mobile Suit Gundam Wing** "Endless Waltz: The Movie" (Sonarr ep 1192) — no Radarr entry at all (not a real match to junk "Gundam (0)"). Search triggered in Sonarr directly, **zero indexer results**, still open. Needs a Radarr entry added if pursuing a copy-in later, or keep chasing via Sonarr.
+- **Mobile Suit Gundam 0083: Stardust Memory** "Afterglow of Zeon" (Sonarr ep 5445) — same as above, no real Radarr match. Search triggered in Sonarr, **zero indexer results**, still open.
+- **"Gundam (0)" Radarr entry (id 11)** — confirmed junk: TMDB id 534083 resolves to a nonsense placeholder (year 0, generic "rival mech pilots" overview). Not a real film, not a match for anything. Flagged for user to delete manually (not deleted automatically).
+- **Macross Delta / Macross Plus** — "Movie Edition" (Macross Plus special) confirmed already resolved as a duplicate of "Macross Plus: The Movie" (see Resolved-via-web-research section below). Macross Delta's own two specials — "Passionate Walkure" (Sonarr ep 3038) and "Absolute Live!!!!!!" (Sonarr ep 3041) — have their own correct Radarr entries (ids 54, 63, both `hasFile:false`) — genuinely missing on both sides, not duplicates of the Plus movie. Search triggered on both Radarr ids, **zero indexer results**, still open.
+- **Attack on Titan** — of the 7 movie-length specials, only 2 have Radarr entries: "Part I: Crimson Bow and Arrow" (Radarr id 138) and "Part III: The Roar of Awakening" (Radarr id 140). Search triggered 2026-08-20 — **both grabbed** (German BluRay releases via `MARTYRS`, downloading as of this writing). "Part II: Wings of Freedom" (Sonarr ep 2012) has no Radarr entry — search triggered in Sonarr directly, zero results, still open. The remaining specials (live-action films, Chronicle, THE LAST ATTACK, No Regrets OVA, Final Season SPECIAL EVENT, Chibi Theatre/4-Koma shorts, Special Omnibus recap episodes) are out of scope — not yet individually researched, likely a mix of recap/bonus content per the pattern established elsewhere in this doc.
 
 ## Resolved via web research (title didn't match anything in Sonarr/Radarr/TMDB)
 
@@ -125,7 +131,39 @@ These were flagged as monitored-but-missing but confirmed via web research (2026
 
 ## Not movies — confirmed short-form content (excluded from action)
 
-Runtime ≥60min but confirmed to be behind-the-scenes/panel/OVA-short content, not theatrical/OVA movies: **The Mighty Nein** (all entries are "Inside the Mighty Nein" behind-the-scenes panels), **Black Butler** "Book of Murder Part 1/2" (60min OVA episodes, not a movie), **Initial D** "Legend 1/2/3" (recap/compilation OVAs, not new content), **Overlord**, **Made in Abyss**, **Monogatari**, **Full Metal Panic!**, **Bleach**, **JoJo's Bizarre Adventure**, **Battlestar Galactica (2003)**, **Robotech**, **Farscape**, **Fallout**, **Is It Wrong to Pick Up Girls in a Dungeon?**, **Andor** — spot-checked and either already correctly categorized elsewhere, franchise films likely already covered by existing Radarr entries under a Radarr-native search, or too ambiguous to auto-classify; **not audited in depth this pass** — re-run the same runtime/fuzzy-match query (see below) if picking this up again, these were simply out of scope for the first pass.
+Runtime ≥60min but confirmed to be behind-the-scenes/panel/OVA-short content, not theatrical/OVA movies: **The Mighty Nein** (all entries are "Inside the Mighty Nein" behind-the-scenes panels), **Black Butler** "Book of Murder Part 1/2" (60min OVA episodes, not a movie — but see "Book of the Atlantic" below, which *is* a real movie), **Initial D** "Legend 1/2/3" (recap/compilation OVAs, not new content), **Andor** ("Rogue One" Season 0 entry — it's the parent film for the show, not a gap to chase separately), **Is It Wrong to Pick Up Girls in a Dungeon?** — not audited this pass (title didn't match the search pattern used, revisit separately).
+
+## Previously "not audited in depth" — resolved 2026-08-20
+
+Full runtime≥60 pull done for Mighty Nein, Fallout, Black Butler, Overlord, Initial D, Monogatari, Farscape, JoJo's Bizarre Adventure, Robotech, Full Metal Panic!, Made in Abyss, Battlestar Galactica (2003), Bleach. Result: **zero of these ~30 movie-length specials had any pre-existing Radarr entry** — this franchise cluster had never been cross-referenced before.
+
+**Added to Radarr + search triggered (18 new entries, ids 162-179), all `monitored:true`, `searchForMovie:true` on add:**
+
+| Franchise | Movies added | Result so far |
+|---|---|---|
+| Overlord | The Sacred Kingdom (162), The Undead King (163), The Dark Hero (164) | **All 3 grabbed** (RUDY BD Remux / [Moxie] BD Remux) |
+| Made in Abyss | Dawn of the Deep Soul (165), Journey's Dawn (166), Wandering Twilight (167) | **All 3 grabbed** ([eldon]/[PL3X] BD releases) |
+| Bleach | Memories of Nobody (168), The DiamondDust Rebellion (169), Fade to Black (170), Hell Verse (171) | 3 of 4 grabbed ([nekotan] BD). **169 (DiamondDust Rebellion) had a bad match** — Radarr grabbed "The Rebel (1961)" (unrelated French film, matched on the word "Rebel"/"Rebellion") — caught, removed from queue + blocklisted before completion, movie still open/monitored, needs a manual re-check |
+| Black Butler | Book of the Atlantic (172) | **Grabbed** (German BluRay, ANiMEHD) |
+| Robotech | The Movie (173), II: The Sentinels (174), The Shadow Chronicles (175), Love Live Alive (176), Codename: Robotech (177) | No match yet, left monitored in Radarr. Sonarr side (eps 3108-3112) was still monitored — **unmonitored 2026-08-20** so Sonarr stops duplicating the search |
+| Battlestar Galactica (2003) | The Plan (178), Blood & Chrome (179) | **Wrong quality profile caught 2026-08-20**: added with profile 14 (Anime) copied from the batch template — BSG is live-action Western sci-fi, should be profile 13 (Standard). Fixed, re-searched under correct profile, no match yet |
+| Monogatari (Kizumonogatari trilogy) | Part 1: Tekketsu (180), Part 2: Nekketsu (181), Part 3: Reiketsu (182) | No match yet, left monitored |
+
+**Sonarr-side monitoring check (2026-08-20):** verified all 21 corresponding Sonarr specials — only the 5 Robotech ones were still monitored (now fixed, above). Overlord, Made in Abyss, Bleach, Black Butler, Battlestar Galactica, and Kizumonogatari specials were already `monitored:false` in Sonarr (Season 0 defaults), so no action was needed there.
+
+**Bad-match incident:** always spot-check grabbed release titles against the intended movie after any batch add+search — Radarr's title matching can seize on a generic word (here "Rebel"/"Rebellion") and grab something totally unrelated. Caught this time via a full title sanity pass across the queue after grabs settled.
+
+**Deliberately not added — recap/alternate-cut, not new content (same pattern as VOTOMS Stage I-IV):**
+- **JoJo's Bizarre Adventure** "Re-Edited Part 1/2/3" (Sonarr eps 2731-2733) — title says "Re-Edited," these are compilation re-cuts of the TV series, not standalone films.
+- **Full Metal Panic!** "Director's Cut Part 1/2/3" (Sonarr eps 4395-4397, titled "Boy Meets Girl"/"One Night Stand"/"Into the Blue") — same pattern, extended-cut versions of existing TV episodes, not separate movies.
+- **Monogatari** "Kizumonogatari I/II/III" (Sonarr eps 1737/1754/1755) — these ARE real theatrical films (not recaps), but not added this pass — **needs follow-up**, they were missed in the batch-add above.
+- **Initial D** "Battle Stage 2/3", "Project D to the Next Stage" (Sonarr, `hasFile:true` already) — real theatrical films but already owned as Sonarr files; not a gap, no Radarr action needed unless de-duplication is wanted later.
+
+**Ambiguous, needs a judgment call before adding:**
+- **Fallout** "A Special LIVE Report from Galaxy News" (Sonarr ep 899, 60min) — likely an in-universe faux-newscast bonus feature bundled with the show, not a real standalone film. Not researched further; not added.
+- **Battlestar Galactica** "The Miniseries" Part 1/2 (Sonarr eps 4591/4592) — the show's pilot TV movie; arguably part of the series itself rather than a separate film. Not added — flag for user to decide whether it belongs in Radarr.
+
+**Kizumonogatari trilogy (Monogatari)** — added same session, ids 180-182 (Part 1: Tekketsu, Part 2: Nekketsu, Part 3: Reiketsu), `searchForMovie:true` on add.
 
 ## Duplicate series (whole season/series duplicates another series entry)
 
@@ -148,6 +186,12 @@ Once content lands via either path, unmonitor the losing side (same as the fixes
 
 **How to find more**: group series by a normalized franchise-name stem (strip numerals/subtitles) and check for episode-count collisions between a season in one series and a whole separate series of the same stem. Checked 2026-08-15 for the Macross family (6 series), Gundam family (3 series), Star Trek (2 series) — no further duplicates found; those are genuinely distinct shows within the same franchise, not the same content twice. Re-check any newly-added series against this list.
 
+**The reverse direction (2026-08-20): a Sonarr Season 0 special can also duplicate a whole separate standalone series**, not just a season-within-a-series. Same underlying root cause (TVDB tracks the same real-world content in more than one place), opposite shape: instead of "series B is really a season of series A," it's "this special under series A is really the same content as all of series B." Confirmed case: `.hack` (55)'s Season 0 special "Let's Meet Offline" (id 2393) is the exact same film as `.hack//Legend of the Twilight` (146)'s own Season 0 "Offline Meeting Special" — both are ".hack//Legend of the Twilight: Let's Meet Offline (2003)" per [TMDB](https://themoviedb.org/movie/364369-hack-legend-of-the-twilight-offline-meeting-special), which also has a matching Radarr entry (id 40). All three copies are missing, so no unmonitor-as-duplicate action was needed here, but it means don't chase the same content three times once one copy lands.
+
+**Bigger finding from the same check**: `.hack//Roots` (145) and `.hack//Legend of the Twilight` (146) exist as full standalone Sonarr series (added by the user 2026-08-20, prompted by spotting this exact pattern) and were **completely missing — 0/27 and 0/13 episodes, never surfaced in any prior gap list** because they didn't exist in Sonarr until now. Season searches triggered for both — **zero results on both**, no releases found on any indexer. Given how often searches this session came back completely empty (Robotech S2/S3, Zoids S1, these two), see `ai/todo.md` #94 — worth rechecking these once Prowlarr's indexer sync-category scoping is reviewed, since 100%-empty results this consistently is suspicious of a scoping problem rather than genuine unavailability across every indexer.
+
+**How to find more of this direction**: for any franchise with a parent series that has Season 0 specials, check whether a same-named-or-clearly-related standalone series also exists in Sonarr (or should exist, per franchise research) — the `.hack` franchise alone has 3 separate Sonarr entries (`.hack`, `.hack//Roots`, `.hack//Legend of the Twilight`) that could easily have looked like "just Season 0 bonus content" under the main series if the standalone entries hadn't existed. Not yet swept across the rest of the library — worth a dedicated pass grouping series by franchise stem and checking whether any Season 0 special title matches another existing (or plausible-but-missing) standalone series.
+
 ## Recap/alternate-cut specials (different title, same underlying content as a numbered-season episode)
 
 Distinct from the duplicate-series case above — these are *individual* specials whose title differs from the season episode they overlap with (so exact-title matching won't catch them), typically theatrical "Stage"/compilation releases of TV episodes repackaged under new names.
@@ -161,6 +205,45 @@ Distinct from the duplicate-series case above — these are *individual* special
 These are very likely alternate/theatrical titles for content already owned via the numbered seasons, not real gaps — treat as low-priority even though Sonarr shows them as monitored-and-missing. **Not fully verified** (word-overlap only, not confirmed by watching/checking runtime-exact overlap) — worth a final confirmation pass before unmonitoring, but strong enough evidence to deprioritize searching for them.
 
 **How to find more**: for each series with Season 0 content, compare Season 0 episode titles against numbered-season episode titles for significant shared words (not exact match) — the query used in the movie audit's regeneration section pulls the raw data; do the word-overlap comparison per-series rather than exact-string match, which found zero hits library-wide when tried 2026-08-15.
+
+## Numbered-season gap diagnosis (2026-08-20) — closing the loop on the movie-audit-only series
+
+The movie/specials audit above never checked actual numbered-season gaps for most series — only Season 0. Ran that check now for every series still showing a monitored gap:
+
+**Closed — zero numbered-season gaps, entire "gap" was Season 0 specials already resolved:** Attack on Titan, Gundam Wing, Gundam 0083, .hack, Macross 7, Macross Frontier, Macross, Macross Zero, Macross Plus, Tekkaman Blade, Gurren Lagann. 11 series fully closed out.
+
+**Real numbered-season gaps found and searched:**
+- **Gasaraki** (96) — 1 episode (S1E12 "Unravel", id 3795). This is the previously-confirmed dead magnet from the 2026-08-18 session (0 bytes, stalled) — re-searched again, still zero results.
+- **The Big O** (106) — 2 episodes (S1E12/13, ids 4043/4044). Searched, zero results so far.
+- **Macross II** (72) — 1 episode (S1E6 "Sing Along", id 3098). Searched, zero results so far.
+- **Robotech** (74) — 49 episodes, entire Season 2 (Southern Cross, 24 eps) + Season 3 (Mospeada, 25 eps). Ran `SeasonSearch` per season instead of 49 individual searches — both completed, **zero results**. Matches the known content-scarcity diagnosis from the 2026-08-07 session (SacReD/SceneNZB source doesn't have these seasons currently indexed) — not a new finding, confirms the prior one still holds.
+- **Zoids: Chaotic Century** (112) — 29 episodes (S1E6-34, near-continuous block). `SeasonSearch` triggered, took several minutes and was still running as of last check — no result confirmed yet, needs a follow-up check next session.
+
+**Confirmed blind spot (2026-08-20): the "closed, zero numbered-season gaps" series above were never checked for short (<60min) Season 0 specials either** — only movie-length (≥60min) specials were ever audited. User caught this on Gundam 0083 specifically ("Afterglow of Zeon" was checked, but "The Mayfly of Space 1/2" — 4min and 12min bonus OVA content, confirmed via [Gundam Wiki](https://gundam.fandom.com/wiki/Mobile_Suit_Gundam_0083:_Stardust_Memory_-_The_Mayfly_of_Space)/[IMDb](https://www.imdb.com/title/tt6460664/) to be real purchaser-bonus animated shorts, not junk — were not). Both now searched.
+
+Ran the same short-special check across all 10 other "closed" series. Result:
+- **Already correctly documented as bonus/non-core** (no new action needed): all of Macross (70)'s and Macross Frontier (68)/Macross Zero (71)/Macross Plus (73)'s short specials — these match the existing "Macross franchise — niche/bonus specials" table above, already researched and deprioritized.
+- **Real gap, had a Radarr entry but zero file, never searched**: `.hack//G.U. Trilogy`, `.hack//G.U. Returner`, `.hack//Versus: The Thanatos Report`, `.hack//Legend of the Twilight: Let's Meet Offline` (ids 36/38/39/40), and all 5 Tekkaman Blade movies (`Missing Link`, `Twin Blood`, `The Prelude to a Long Battle`, `Burning Clock`, `Virgin Memory` — ids 68-72) — Sonarr's Season 0 runtime metadata for the Tekkaman Blade ones is wrong (shows 25min, same "bad metadata" pattern as VOTOMS Stage I-IV) which is likely why they were missed by any runtime filter. **Searched 2026-08-20**, result pending.
+- **New, not yet triaged — needs research before acting**: Gundam Wing (29) "30th Anniversary Video" + "Introducing Gundam Wing from ZERO" (promo content, likely non-core); Macross 7 (67) "Let's Bomber" (2min, likely non-core).
+- **Gurren Lagann "Parallel Works" — RESOLVED 2026-08-20, same pattern as `.hack//Roots`/`.hack//Legend of the Twilight` below**: confirmed via TVDB lookup that "Tengen Toppa Gurren Lagann: Parallel Works" is a real standalone anthology series (tvdbId 423104, 2 seasons), not bonus content. **Added to Sonarr as series id 147**, search triggered on add — zero results, 0/15 episodes, same pattern as the other zero-hit searches this session (see `ai/todo.md` #94). The 7 corresponding specials under the parent Gurren Lagann series (118) — Parallel Works 2-1 through 2-7 — unmonitored as duplicates of the new standalone entry. ("Yoko Goes To Gainax: Behind The Scenes Of Gurren Lagann", id 4471, is unrelated making-of content, left as-is.)
+- **Not yet re-checked at all**: Attack on Titan, Gundam Wing, Gundam 0083 (now done), .hack (now fully done, see below), Macross 7/Frontier/Macross/Zero/Plus (done above), Tekkaman Blade (done above), Gurren Lagann (flagged above).
+
+### .hack (series 55) — full Season 0 assessment (2026-08-20)
+
+Full 28-item monitored+missing Season 0 list researched and resolved:
+
+| Item(s) | Finding | Action |
+|---|---|---|
+| `.hack//GIFT` (2336) | Radarr already has it, `hasFile:true` | **Unmonitored** — duplicate |
+| `.hack//Quantum` main episodes: "Walking Party" (2379), "Wired Prisoner" (2380), "The Worldend Pallbearer" (2381) | These ARE the 3 core .hack//Quantum episodes (confirmed via [IMDb](https://www.imdb.com/title/tt3954404/)) — Radarr's single `.hack//Quantum` entry (`hasFile:true`) is the compiled release covering all 3 | **Unmonitored** — duplicates, same pattern as VOTOMS Stage/Macross Dynamite |
+| `.hack//G.U. Trilogy` (2382), `.hack//G.U. Returner` (2384), `.hack//Versus: The Thanatos Report` (2386), `Let's Meet Offline` (2393), `.hack//The Movie` (2385) | Real content, Radarr entries exist, `hasFile:false` | Searched (this session + earlier round) |
+| "In the Case of Mai Minase" (2375), "In the Case of Yuki Aihara" (2376), "In the Case of Kyoko Tohno" (2377), "Trismegistus" (2378) | The 4 real episodes of **.hack//Liminality** OVA (confirmed via [.hack Wiki](https://dothack.fandom.com/wiki/In_the_Case_of_Mai_Minase), [.hack Wiki](https://dothack.fandom.com/wiki/Trismegistus)) — no Radarr equivalent needed, correctly modeled as Sonarr TV content (it's an anthology OVA series, not a single film) | **Genuine gap — searched 2026-08-20** |
+| `.hack//G.U. Trilogy (Parody Mode)` (2383, 6min) | Confirmed bonus gag-reel feature bundled with the G.U. Trilogy game/movie release, not story content ([AniSearch](https://www.anisearch.com/anime/4664,hack-g-u-trilogy-parody-mode)) | Left monitored, deprioritized — bonus content |
+| `.hack//Quantum: Go, Our Chim Chims!!` Parts 1-3 (2387-2389) | Confirmed DVD/Blu-ray bonus featurette shorts (chibi-style character banter), not story content, per web search | Left monitored, deprioritized — bonus content |
+| `.hack//Quantum: Ogura Yui's YuiYui...` x3 (2390-2392) | Same DVD-bonus-extras pattern as Chim Chims (Ogura Yui = a voice actor doing character bits) — not independently confirmed with a source, but same category | Left monitored, deprioritized — bonus content |
+| `Online Jack` 01-09 (2394-2396, 3944-3949, 2-4min each) | Confirmed to be a real distinct .hack franchise piece running parallel to G.U., but exact format/significance not pinned down by research | **Not resolved** — flagged for further research or explicit deprioritization decision, left monitored |
+
+**Maison Ikkoku** (144, new series from this session) — first grab attempt (pack covering eps 1-6) stalled with zero torrent connections for ~2 hours, blocklisted and re-searched. Second attempt landed episodes 3-6 individually ([Pizza] BD 720p HEVC); episodes 1-2 not found this round, needs a follow-up search. Episodes 22-26 (later in S1) still uncovered, never searched this pass.
 
 ## How to regenerate this data
 

@@ -24,6 +24,22 @@
 - [Answer questions, don't act on them](feedback_answer_questions_dont_act_on_them.md) — "how should we X" is not authorization to do X; reread terse messages literally, don't pattern-match to the prior topic
 - [Media library gap survey](project_media_gap_survey.md) — in-progress audit of missing Sonarr episodes/Radarr movies, see `media/docs/SONARR_STRUCTURAL_AUDIT.md` for the durable findings
 - [Sonarr↔Radarr movie migration](project_sonarr_radarr_movie_migration.md) — movies unmonitored in Sonarr specials still needing a file copy into Radarr
+- [Verify queue before reporting zero results](feedback_verify_queue_before_reporting_zero_results.md) — don't trust one immediate post-search queue check, grabs can lag
+- [Spot-check grab titles](feedback_spot_check_grab_titles.md) — after batch grabs, eyeball queue release titles against intended target, Radarr can mis-grab on a shared word
+- [Unmonitor Sonarr after Radarr add](feedback_unmonitor_sonarr_after_radarr_add.md) — when adding a Radarr entry for a Sonarr special, unmonitor the Sonarr side proactively
+- [Check quality profile per title](feedback_check_quality_profile_per_title.md) — batch-adding Radarr movies: pick qualityProfileId per title's genre, don't template from one movie
+- [Check monitored before Radarr action](feedback_check_sonarr_monitored_before_radarr_action.md) — unmonitored Sonarr special means already deprioritized, not overlooked
+- [Season 0 is not just movies](feedback_season0_not_just_movies.md) — Sonarr specials include short bonus/promo/recap content too; runtime is a triage signal, not a filter for what to check
+- [Check correct config files](feedback_check_correct_files.md) — live TrueNAS configs are in `truenas/stacks/`, never push from `networking/.config/` (reference only)
+- [Dockhand apps: no raw docker commands](feedback_dockhand_apps_no_raw_docker_commands.md) — use Dockhand API/docker compose for restarts, never bare `docker restart`
+- [Movie specials: solve in Radarr first](feedback_movie_specials_solve_in_radarr_first.md) — for Sonarr movie-length (≥60min) specials, add/search in Radarr first, don't grab through Sonarr
+- [Never dump full records with secret fields](feedback_never_dump_full_records_with_secret_fields.md) — don't jq-dump whole Sonarr objects when a nested field carries a live Prowlarr key
+- [No OpenSubtitles](feedback_no_opensubtitles.md) — no longer free/personally usable, don't suggest it
+- [No secrets to disk applies to session cookies](feedback_no_secrets_to_disk_applies_to_session_cookies.md) — Dockhand's cookie-jar pattern writes a live session cookie to disk; capture in a shell var instead
+- [Queue cleanup respects seeding](feedback_queue_cleanup_respects_seeding.md) — don't removeFromClient/blocklist arr queue items unless genuinely dead; kills seeding
+- [SSH pattern](feedback_ssh_pattern.md) — always use ssh-agent pattern from PATTERNS.md, never improvise SSH key handling
+- [Never print secret fragments](feedback_never_print_secret_fragments.md) — no partial output of a secret is safe; not length, not a tail, not a hash — capture to a variable and use it directly, never display it
+- [Check Sonarr monitored before Radarr action](feedback_check_sonarr_monitored_before_radarr_action.md) — unmonitored Sonarr special means already deprioritized, not overlooked; check before adding a Radarr entry
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**
