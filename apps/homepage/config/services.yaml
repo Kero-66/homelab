@@ -109,6 +109,24 @@
               type: cleanuparr
               url: http://cleanuparr:11011
               key: "{{HOMEPAGE_VAR_CLEANUPARR_API_KEY}}"
+        - Maintainerr:
+            icon: mdi-broom
+            href: http://maintainerr.home
+            description: Media library cleanup rules
+        - FileFlows:
+            icon: mdi-file-video
+            href: http://fileflows.home
+            description: Video processing
+
+- Automation:
+    - Autobrr:
+        icon: mdi-magnet
+        href: http://autobrr.home
+        description: Torrent filter automation
+    - SuggestArr:
+        icon: mdi-lightbulb-on
+        href: http://suggestarr.home
+        description: Media recommendation engine
 
 # Services below are not currently deployed — uncomment when available
 
@@ -150,13 +168,3 @@
 #           url: http://glances:61208
 #           version: 4
 #           metric: process
-
-# - Status:
-#   - Maintenance:
-#     - FileFlows:
-#         icon: mdi-file-video
-#         href: http://fileflows.home
-#         description: Video processing
-#         widget:
-#           type: fileflows
-#           url: http://fileflows:5000
