@@ -13,7 +13,7 @@
 #   Source: Infisical /media path (same as arr-stack)
 #
 # Network Access:
-#   - Joins arr-stack and jellyfin networks to access service APIs
+#   - Joins arr-stack, jellyfin, and fileflows networks to access service APIs
 #   - Accesses services via container names (sonarr, radarr, etc.)
 #
 # =============================================================================
@@ -40,6 +40,7 @@ services:
     networks:
       - arr-stack_default
       - jellyfin_default
+      - fileflows_default
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
       interval: 30s
@@ -51,4 +52,6 @@ networks:
   arr-stack_default:
     external: true
   jellyfin_default:
+    external: true
+  fileflows_default:
     external: true

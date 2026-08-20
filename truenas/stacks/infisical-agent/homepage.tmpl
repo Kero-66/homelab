@@ -34,6 +34,9 @@ HOMEPAGE_VAR_JELLYSTAT_API_KEY={{ .Value }}
 {{- if eq .Key "CLEANUPARR_API_KEY" }}
 HOMEPAGE_VAR_CLEANUPARR_API_KEY={{ .Value }}
 {{- end }}
+{{- if eq .Key "AUTOBRR_API_KEY" }}
+HOMEPAGE_VAR_AUTOBRR_API_KEY={{ .Value }}
+{{- end }}
 {{- if eq .Key "QBITTORRENT_USER" }}
 HOMEPAGE_VAR_QBITTORRENT_USER={{ .Value }}
 {{- end }}

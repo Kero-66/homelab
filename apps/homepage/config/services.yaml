@@ -113,16 +113,26 @@
             icon: mdi-broom
             href: http://maintainerr.home
             description: Media library cleanup rules
+            widget:
+              type: maintainerr
+              url: http://maintainerr:6246
         - FileFlows:
             icon: mdi-file-video
             href: http://fileflows.home
             description: Video processing
+            widget:
+              type: fileflows
+              url: http://fileflows:5000
 
 - Automation:
     - Autobrr:
         icon: mdi-magnet
         href: http://autobrr.home
         description: Torrent filter automation
+        widget:
+          type: autobrr
+          url: http://autobrr:7474
+          key: "{{HOMEPAGE_VAR_AUTOBRR_API_KEY}}"
     - SuggestArr:
         icon: mdi-lightbulb-on
         href: http://suggestarr.home
