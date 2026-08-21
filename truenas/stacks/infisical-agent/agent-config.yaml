@@ -66,3 +66,9 @@ templates:
     destination-path: /output/signoz/.env
     config:
       polling-interval: 5m
+
+  # Grafana Alloy observability stack secrets
+  - source-path: /config/grafana-alloy.tmpl
+    destination-path: /output/grafana-alloy/.env
+    config:
+      polling-interval: 5m

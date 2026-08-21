@@ -1,0 +1,12 @@
+# Grafana Alloy stack secrets - rendered by Infisical Agent
+# DO NOT EDIT - this file is auto-generated every 5 minutes
+# Source: Infisical project, dev environment, /observability path
+#
+# Services: grafana-alloy-grafana
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/observability" }}
+{{- range . }}
+{{- if eq .Key "GRAFANA_ADMIN_PASSWORD" }}
+GF_SECURITY_ADMIN_PASSWORD={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}

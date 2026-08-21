@@ -102,9 +102,12 @@ services:
       - homepage.icon=mdi-chart-areaspline
       - homepage.href=http://grafana.home
       - homepage.description=Observability - Loki logs + Prometheus metrics (trial 2)
+    env_file:
+      - /mnt/Fast/docker/grafana-alloy/.env
     environment:
       - TZ=Australia/Brisbane
       - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SECURITY_ADMIN_USER=admin
     entrypoint:
       - sh
       - -euc
