@@ -90,8 +90,29 @@ receivers:
   docker_stats:
     endpoint: unix:///var/run/docker.sock
     collection_interval: 30s
+    # Metric set matches SigNoz's official "Docker Container Metrics" dashboard
+    # (signoz.io/docs/metrics-management/docker-container-metrics) exactly —
+    # these are the metric names that dashboard's panels query. Don't rename
+    # or remove without checking the dashboard JSON's query builder metric
+    # names first.
     metrics:
-      container.cpu.usage.percent:
+      container.cpu.utilization:
+        enabled: true
+      container.memory.percent:
+        enabled: true
+      container.memory.usage.limit:
+        enabled: true
+      container.memory.usage.total:
+        enabled: true
+      container.network.io.usage.rx_bytes:
+        enabled: true
+      container.network.io.usage.tx_bytes:
+        enabled: true
+      container.network.io.usage.rx_dropped:
+        enabled: true
+      container.network.io.usage.tx_dropped:
+        enabled: true
+      container.blockio.io_service_bytes_recursive:
         enabled: true
   filelog/docker:
     # Standard SigNoz-documented pattern (signoz.io/docs/userguide/collect_docker_logs)
