@@ -1,0 +1,179 @@
+# =============================================================================
+# Grafana Alloy + Loki + Prometheus + Grafana - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# Self-hosted observability, trial 2 of 3 (see
+# .claude/plans/look-at-the-observability-md-fluffy-popcorn.md). Adapted from
+# Grafana's OWN official reference stack:
+#   github.com/grafana/alloy-scenarios/tree/main/docker-monitoring
+# (docker-compose.yml, config.alloy, loki-config.yaml pulled and diffed
+# against this file — not invented from a summary).
+#
+# Deviations from that upstream reference, and why:
+#   - Ports remapped to avoid live collisions: Grafana UI 3000->3010 (3000
+#     is taken by commafeed on this host — verified via ss -tlnp).
+#   - Loki's storage path changed from the reference's /tmp/loki to
+#     /var/lib/loki (bind-mounted, see below) — /tmp would lose all log
+#     data on every container restart.
+#   - Prometheus given a persistent data bind mount — the reference has
+#     none, meaning metrics history is lost on every restart otherwise.
+#   - cAdvisor's /var/lib/docker mount points at TrueNAS's actual docker
+#     root (/mnt/.ix-apps/docker), NOT the Linux-standard /var/lib/docker —
+#     same TrueNAS-specific gotcha hit with the SigNoz filelog receiver.
+#   - Container names, homepage labels, TZ, bind-mount data layout under
+#     /mnt/Fast/docker/grafana-alloy/ to match this repo's conventions.
+#
+# KEPT from upstream despite being broad (not narrowed without verification,
+# per this repo's "research first, don't guess" rule — cAdvisor's actual
+# minimum required mount surface isn't independently confirmed):
+#   - Alloy runs `privileged: true` with host /proc, /sys, /, device access.
+#     This is cAdvisor's standard mount set for host+container introspection
+#     (even with docker_only=true) as shipped in Grafana's own reference — a
+#     real, broad grant, same class of tradeoff as SigNoz's docker.sock/root
+#     access. Flagging explicitly rather than silently accepting.
+#
+# Storage layout:
+#   /mnt/Fast/docker/grafana-alloy/data/loki        (Loki chunks/index)
+#   /mnt/Fast/docker/grafana-alloy/data/prometheus   (Prometheus TSDB)
+#   /mnt/Fast/docker/grafana-alloy/data/grafana      (Grafana DB/plugins)
+#   /mnt/Fast/docker/grafana-alloy/data/alloy        (Alloy's own storage.path)
+#   Config files (config.alloy, loki-config.yaml) are scp'd from this repo to
+#   /mnt/Fast/docker/grafana-alloy/config/ before each Dockhand deploy — same
+#   pattern as SigNoz (Dockhand's git-stack API only tracks compose.yaml
+#   itself, not sibling config files).
+#
+# Ports (verified free via `ss -tlnp` on TrueNAS 2026-08-21):
+#   Grafana UI:      3010  LAN-exposed (remapped from reference's 3000 -
+#                          taken). This is the only port meant for outside
+#                          access; Caddy proxies grafana.home to it.
+#   Loki:            3100  loopback-only — push/query API has no auth
+#   Prometheus:      9090  loopback-only — remote-write receiver has no auth
+#   Alloy UI/API:    12345  loopback-only — exposes pipeline/component internals
+#   OTLP gRPC/HTTP:  4317 / 4318  loopback-only, unused by anything currently
+# All four loopback-only services are reached by other containers over the
+# internal grafana-alloy-network instead (Alloy pushes to Loki/Prometheus
+# that way already) — the host port publish exists only for occasional
+# manual debugging from the TrueNAS box itself.
+# =============================================================================
+
+name: grafana-alloy
+
+services:
+  loki:
+    image: grafana/loki:3.7.3
+    container_name: grafana-alloy-loki
+    restart: unless-stopped
+    environment:
+      - TZ=Australia/Brisbane
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - /mnt/Fast/docker/grafana-alloy/config/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - /mnt/Fast/docker/grafana-alloy/data/loki:/var/lib/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - grafana-alloy-network
+
+  prometheus:
+    image: prom/prometheus:v3.13.1
+    container_name: grafana-alloy-prometheus
+    restart: unless-stopped
+    environment:
+      - TZ=Australia/Brisbane
+    command:
+      - --web.enable-remote-write-receiver
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - /mnt/Fast/docker/grafana-alloy/data/prometheus:/prometheus
+    networks:
+      - grafana-alloy-network
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    container_name: grafana-alloy-grafana
+    restart: unless-stopped
+    user: "1000:1000"
+    labels:
+      - homepage.group=Infrastructure
+      - homepage.name=Grafana
+      - homepage.icon=mdi-chart-areaspline
+      - homepage.href=http://grafana.home
+      - homepage.description=Observability - Loki logs + Prometheus metrics (trial 2)
+    environment:
+      - TZ=Australia/Brisbane
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+        - name: Loki
+          type: loki
+          access: proxy
+          orgId: 1
+          url: http://grafana-alloy-loki:3100
+          basicAuth: false
+          isDefault: false
+          version: 1
+          editable: false
+        - name: Prometheus
+          type: prometheus
+          orgId: 1
+          url: http://grafana-alloy-prometheus:9090
+          basicAuth: false
+          isDefault: true
+          version: 1
+          editable: false
+        EOF
+        /run.sh
+    ports:
+      - "3010:3000"
+    volumes:
+      - /mnt/Fast/docker/grafana-alloy/data/grafana:/var/lib/grafana
+    networks:
+      - grafana-alloy-network
+    depends_on:
+      - loki
+      - prometheus
+
+  alloy:
+    image: grafana/alloy:v1.18.1
+    container_name: grafana-alloy-alloy
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - TZ=Australia/Brisbane
+      - ALLOY_DEPLOY_MODE=docker
+    ports:
+      - "127.0.0.1:12345:12345"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - /mnt/Fast/docker/grafana-alloy/config/config.alloy:/etc/alloy/config.alloy:ro
+      - /mnt/Fast/docker/grafana-alloy/data/alloy:/var/lib/alloy/data
+      - /proc:/rootproc:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /sys:/sys:ro
+      - /:/rootfs:ro
+      - /dev/disk/:/dev/disk:ro
+      - /mnt/.ix-apps/docker:/var/lib/docker:ro
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    devices:
+      - /dev/kmsg
+    networks:
+      - grafana-alloy-network
+    depends_on:
+      - loki
+      - prometheus
+
+networks:
+  grafana-alloy-network:
+    name: grafana-alloy-network

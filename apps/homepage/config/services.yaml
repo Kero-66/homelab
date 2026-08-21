@@ -129,6 +129,10 @@
         icon: mdi-chart-line
         href: http://signoz.home
         description: Observability - metrics, logs, traces, alerting
+    - Grafana:
+        icon: mdi-chart-areaspline
+        href: http://grafana.home
+        description: Observability trial 2 - Loki logs + Prometheus metrics
 
 - Automation:
     - Autobrr:

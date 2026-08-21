@@ -54,6 +54,13 @@ http://signoz.home {
 	reverse_proxy 192.168.20.22:3301
 }
 
+# Grafana (Observability trial 2 - Loki logs + Prometheus metrics via Alloy)
+# Proxies to the host-exposed port, same pattern as signoz.home above —
+# Caddy doesn't join grafana-alloy-network to avoid unnecessary coupling.
+http://grafana.home {
+	reverse_proxy 192.168.20.22:3010
+}
+
 # Bazarr (Subtitles) - note the /bazarr URL base
 http://bazarr.home {
 	reverse_proxy bazarr:6767
