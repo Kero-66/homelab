@@ -1,0 +1,5 @@
+.tools/
+foundry-gen/
+docs/
+pours/
+casting.yaml.lock

@@ -1,0 +1,166 @@
+connectors:
+  signozmeter:
+    dimensions:
+    - name: service.name
+    - name: deployment.environment
+    - name: host.name
+    metrics_flush_interval: 1h
+exporters:
+  clickhouselogsexporter:
+    dsn: tcp://signoz-telemetrystore-clickhouse-0-0:9000/signoz_logs
+    sending_queue:
+      enabled: false
+    timeout: 45s
+    use_new_schema: true
+  clickhousetraces:
+    datasource: tcp://signoz-telemetrystore-clickhouse-0-0:9000/signoz_traces
+    low_cardinal_exception_grouping: ${env:LOW_CARDINAL_EXCEPTION_GROUPING}
+    sending_queue:
+      enabled: false
+    timeout: 45s
+    use_new_schema: true
+  metadataexporter:
+    cache:
+      provider: in_memory
+    dsn: tcp://signoz-telemetrystore-clickhouse-0-0:9000/signoz_metadata
+    enabled: true
+    timeout: 45s
+  signozclickhousemeter:
+    dsn: tcp://signoz-telemetrystore-clickhouse-0-0:9000/signoz_meter
+    sending_queue:
+      enabled: false
+    timeout: 45s
+  signozclickhousemetrics:
+    dsn: tcp://signoz-telemetrystore-clickhouse-0-0:9000/signoz_metrics
+    sending_queue:
+      enabled: false
+    timeout: 45s
+extensions:
+  pprof:
+    endpoint: 0.0.0.0:1777
+  signoz_health_check:
+    endpoint: 0.0.0.0:13133
+processors:
+  batch:
+    send_batch_max_size: 55000
+    send_batch_size: 50000
+    timeout: 5s
+  batch/meter:
+    send_batch_max_size: 25000
+    send_batch_size: 20000
+    timeout: 5s
+  signozspanmetrics/delta:
+    aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA
+    dimensions:
+    - default: default
+      name: service.namespace
+    - default: default
+      name: deployment.environment
+    - name: signoz.collector.id
+    - name: service.version
+    dimensions_cache_size: 100000
+    enable_exp_histogram: true
+    latency_histogram_buckets:
+    - 100us
+    - 1ms
+    - 2ms
+    - 6ms
+    - 10ms
+    - 50ms
+    - 100ms
+    - 250ms
+    - 500ms
+    - 1000ms
+    - 1400ms
+    - 2000ms
+    - 5s
+    - 10s
+    - 20s
+    - 40s
+    - 60s
+    metrics_exporter: signozclickhousemetrics
+    metrics_flush_interval: 60s
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+    metrics:
+      container.cpu.usage.percent:
+        enabled: true
+  filelog/docker:
+    # Standard SigNoz-documented pattern (signoz.io/docs/userguide/collect_docker_logs)
+    # — wildcard glob across ALL containers, container.id extracted from the
+    # file path via regex, no hardcoded per-container IDs. Requires the
+    # collector to run as root (see `user: "0:0"` on the ingester service in
+    # compose.yaml) because /mnt/.ix-apps/docker/containers on TrueNAS is
+    # mode 710 (execute-only for non-owner) — a non-root uid cannot list
+    # directory contents to resolve the glob, only root bypasses that.
+    include:
+    - /host-docker-containers/*/*-json.log
+    include_file_path: true
+    start_at: end
+    operators:
+    - type: json_parser
+      timestamp:
+        parse_from: attributes.time
+        layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+    - type: move
+      from: attributes.log
+      to: body
+    - type: regex_parser
+      parse_from: attributes["log.file.path"]
+      regex: '^.*\/(?P<container_id>[a-f0-9]{64})\/[a-f0-9]{64}-json\.log$'
+    - type: move
+      from: attributes.container_id
+      to: resource["container.id"]
+service:
+  extensions:
+  - signoz_health_check
+  - pprof
+  pipelines:
+    logs:
+      exporters:
+      - clickhouselogsexporter
+      - signozmeter
+      - metadataexporter
+      processors:
+      - batch
+      receivers:
+      - otlp
+      - filelog/docker
+    metrics:
+      exporters:
+      - signozclickhousemetrics
+      - signozmeter
+      - metadataexporter
+      processors:
+      - batch
+      receivers:
+      - otlp
+      - docker_stats
+    metrics/meter:
+      exporters:
+      - signozclickhousemeter
+      processors:
+      - batch/meter
+      receivers:
+      - signozmeter
+    traces:
+      exporters:
+      - clickhousetraces
+      - signozmeter
+      - metadataexporter
+      processors:
+      - signozspanmetrics/delta
+      - batch
+      receivers:
+      - otlp
+  telemetry:
+    logs:
+      encoding: json

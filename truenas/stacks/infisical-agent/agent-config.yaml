@@ -60,3 +60,9 @@ templates:
     destination-path: /output/commafeed/.env
     config:
       polling-interval: 5m
+
+  # SigNoz observability stack secrets
+  - source-path: /config/signoz.tmpl
+    destination-path: /output/signoz/.env
+    config:
+      polling-interval: 5m

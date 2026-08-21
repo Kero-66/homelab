@@ -1,0 +1,266 @@
+# =============================================================================
+# SigNoz Stack - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# Self-hosted observability (metrics + logs + traces, OTel-native ingestion,
+# ClickHouse-backed). Trial 1 of 3 observability options being evaluated
+# (see .claude/plans/look-at-the-observability-md-fluffy-popcorn.md) — chosen
+# first for simplicity and its official first-party MCP server
+# (SigNoz/signoz-mcp-server), which lets an AI agent query metrics/logs/
+# traces/alerts directly for RCA.
+#
+# Generated via SigNoz's official `foundryctl` tool (docker-compose deploy
+# via docker-compose.yaml is deprecated upstream as of 2026 — replaced by
+# Foundry). Foundry itself is NOT a standing dependency — it was used once,
+# locally (gitignored .tools/, pours/), to produce a correct baseline. This
+# file is hand-adapted from that output (port remap, bind mounts, absolute
+# config paths, Infisical-sourced secret, homepage labels) and is the sole
+# source of truth going forward — edit it directly like any other stack.
+# Regenerate a fresh baseline only for a future SigNoz version bump with:
+#   cd truenas/stacks/signoz && ./.tools/foundryctl forge -f casting.yaml
+#
+# Config subdirs (ingester/, telemetrykeeper/, telemetrystore/) are used AS
+# GENERATED (unedited) but referenced via ABSOLUTE /mnt/Fast paths (not
+# Foundry's relative ./ paths) — deploy by scp'ing them to
+# /mnt/Fast/docker/signoz/config/ BEFORE posting compose.yaml to Dockhand,
+# so there's no ordering dependency on Dockhand's stack-creation step.
+#
+# Storage layout:
+#   Data    → /mnt/Fast/docker/signoz/data/{postgres,clickhouse,
+#             clickhouse-keeper,clickhouse-user-scripts} (bind-mounted, not
+#             Docker-managed named volumes — matches repo convention).
+#             NOTE: bind mounts do NOT inherit image-expected ownership the
+#             way named volumes do — postgres/clickhouse will refuse to
+#             start on a root-owned data dir. Before first deploy: run
+#             `docker run --rm postgres:16 id postgres` and
+#             `docker run --rm clickhouse/clickhouse-server:25.12.5 id clickhouse`
+#             to get the real uid/gid, then mkdir+chown each data dir to
+#             match (clickhouse-user-scripts must be writable by the
+#             clickhouse uid — mounted rw by the init container).
+#   Config  → /mnt/Fast/docker/signoz/config/{ingester,telemetrykeeper,
+#             telemetrystore}/... (read-only bind mounts, scp'd from repo)
+#   Secrets → /mnt/Fast/docker/signoz/.env (POSTGRES_PASSWORD, sourced from
+#             Infisical /observability path — not committed to repo)
+#
+# Ports (remapped from Foundry defaults to avoid live collisions — verified
+# via `ss -tlnp` on TrueNAS 2026-08-21; 8080/8081 are taken, TrueNAS nginx
+# owns 80/443/8082):
+#   SigNoz UI:        3301  (Foundry default 8080 — conflicts, remapped)
+#   OTel gRPC:         4317  (loopback-only — no auth on OTLP ingestion,
+#                             don't expose to the LAN without adding one)
+#   OTel HTTP:          4318  (loopback-only, same reason)
+#   ClickHouse/Postgres/Keeper: internal network only, no host port exposure
+#
+# Ingestion beyond OTLP push (added post-initial-deploy, for the rightsizing
+# + RCA use cases):
+#   - docker_stats receiver reads /var/run/docker.sock for per-container
+#     CPU/mem/network metrics — SigNoz's default Foundry output does NOT
+#     include this (unlike cAdvisor-based stacks), added manually.
+#   - filelog/docker receiver tails ALL containers' json logs via the
+#     standard SigNoz-documented pattern (signoz.io/docs/userguide/
+#     collect_docker_logs) — wildcard glob, container.id extracted from the
+#     file path by regex, no hardcoded per-container IDs (see
+#     ingester/ingester.yaml).
+#   - Both require `user: "0:0"` on the ingester service: TrueNAS's
+#     /mnt/.ix-apps/docker/containers is mode 710 (execute-only for
+#     non-owner) — a non-root uid cannot list it to resolve the glob, only
+#     root bypasses that. The docker.sock mount is intentionally NOT `:ro` —
+#     that flag only restricts the bind, not what the Docker API itself
+#     allows once connected, so it would imply a safety property that
+#     doesn't exist. Socket access is inherently root-equivalent on this
+#     host regardless of mount flags; Dockhand itself already has the same
+#     unrestricted access to manage every container here, so this isn't a
+#     new class of exposure being introduced.
+#
+# SECURITY NOTE: ClickHouse's config-0-0.yaml (Foundry vendor default, NOT
+# hand-edited) ships an unauthenticated `default` user with
+# access_management: 1 and networks.ip: ::/0 — full unauthenticated admin
+# access to anything reachable on signoz-network. Deliberately NOT fixed by
+# adding credentials (would require touching every service's DSN); instead,
+# Caddy proxies to SigNoz's host-exposed port (192.168.20.22:3301) and does
+# NOT join signoz-network, keeping this exposure contained to the stack's
+# own containers. Do not add other services to signoz-network without
+# reconsidering this.
+# =============================================================================
+
+name: signoz
+networks:
+  signoz-network:
+    name: signoz-network
+    enable_ipv6: false
+services:
+  ingester:
+    container_name: signoz-ingester
+    user: "0:0"
+    command:
+    - -c
+    - |
+      /signoz-otel-collector migrate sync check &&
+      /signoz-otel-collector --config=/etc/otel-collector-config.yaml --manager-config=/etc/opamp-config.yaml --copy-path=/var/tmp/collector-config.yaml
+    entrypoint:
+    - /bin/sh
+    environment:
+    - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://signoz-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    - TZ=Australia/Brisbane
+    image: signoz/signoz-otel-collector:latest
+    networks:
+      signoz-network:
+        aliases:
+        - signoz-ingester
+    ports:
+    - "127.0.0.1:4317:4317"
+    - "127.0.0.1:4318:4318"
+    restart: unless-stopped
+    volumes:
+    - /mnt/Fast/docker/signoz/config/ingester/ingester.yaml:/etc/otel-collector-config.yaml:ro
+    - /mnt/Fast/docker/signoz/config/ingester/opamp.yaml:/etc/opamp-config.yaml:ro
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /mnt/.ix-apps/docker/containers:/host-docker-containers:ro
+  signoz-metastore-postgres-0:
+    container_name: signoz-metastore-postgres-0
+    env_file:
+    - /mnt/Fast/docker/signoz/.env
+    environment:
+    - POSTGRES_DB=signoz
+    - POSTGRES_USER=signoz
+    - TZ=Australia/Brisbane
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 30s
+      test:
+      - CMD-SHELL
+      - pg_isready -U signoz -d signoz
+      timeout: 10s
+    image: postgres:16
+    networks:
+    - signoz-network
+    restart: unless-stopped
+    volumes:
+    - /mnt/Fast/docker/signoz/data/postgres:/var/lib/postgresql/data
+  signoz-signoz-0:
+    container_name: signoz-signoz-0
+    env_file:
+    - /mnt/Fast/docker/signoz/.env
+    environment:
+    - SIGNOZ_SQLSTORE_PROVIDER=postgres
+    - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://signoz-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_TELEMETRYSTORE_PROVIDER=clickhouse
+    - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Infrastructure
+      - homepage.name=SigNoz
+      - homepage.icon=mdi-chart-line
+      - homepage.href=http://signoz.home
+      - homepage.description=Observability - metrics, logs, traces, alerting
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 60s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - http://localhost:8080/api/v1/health
+      timeout: 10s
+    image: signoz/signoz:latest
+    networks:
+    - signoz-network
+    ports:
+    - "3301:8080"
+    restart: unless-stopped
+  signoz-telemetrykeeper-clickhousekeeper-0:
+    container_name: signoz-telemetrykeeper-clickhousekeeper-0
+    entrypoint:
+    - /usr/bin/clickhouse-keeper
+    - --config-file=/etc/clickhouse-keeper/keeper.yaml
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 40s
+      test:
+      - CMD
+      - clickhouse-keeper-client
+      - -h
+      - localhost
+      - -p
+      - "9181"
+      - -q
+      - ls
+      timeout: 10s
+    image: clickhouse/clickhouse-keeper:25.12.5
+    networks:
+    - signoz-network
+    restart: unless-stopped
+    volumes:
+    - /mnt/Fast/docker/signoz/data/clickhouse-keeper:/var/lib/clickhouse-keeper
+    - /mnt/Fast/docker/signoz/config/telemetrykeeper/clickhousekeeper/keeper-0.yaml:/etc/clickhouse-keeper/keeper.yaml:ro
+  signoz-telemetrystore-clickhouse-0-0:
+    container_name: signoz-telemetrystore-clickhouse-0-0
+    depends_on:
+      signoz-telemetrykeeper-clickhousekeeper-0:
+        condition: service_healthy
+      signoz-telemetrystore-clickhouse-user-scripts:
+        condition: service_completed_successfully
+    environment:
+    - CLICKHOUSE_SKIP_USER_SETUP=1
+    - CLICKHOUSE_CONFIG=/etc/clickhouse-server/config-0-0.yaml
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 40s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - -q
+      - http://localhost:8123/ping
+      timeout: 10s
+    image: clickhouse/clickhouse-server:25.12.5
+    networks:
+    - signoz-network
+    restart: unless-stopped
+    volumes:
+    - /mnt/Fast/docker/signoz/data/clickhouse:/var/lib/clickhouse
+    - /mnt/Fast/docker/signoz/data/clickhouse-user-scripts:/var/lib/clickhouse/user_scripts:ro
+    - /mnt/Fast/docker/signoz/config/telemetrystore/clickhouse/config-0-0.yaml:/etc/clickhouse-server/config-0-0.yaml:ro
+    - /mnt/Fast/docker/signoz/config/telemetrystore/clickhouse/functions.yaml:/etc/clickhouse-server/functions.yaml:ro
+  signoz-telemetrystore-clickhouse-user-scripts:
+    command:
+    - bash
+    - -c
+    - |-
+      version="v0.0.1"
+      node_os=$$(uname -s | tr '[:upper:]' '[:lower:]')
+      node_arch=$$(uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
+      echo "Fetching histogram-binary for $${node_os}/$${node_arch}"
+      cd /tmp
+      wget -O histogram-quantile.tar.gz "https://github.com/SigNoz/signoz/releases/download/histogram-quantile%2F$${version}/histogram-quantile_$${node_os}_$${node_arch}.tar.gz"
+      tar -xvzf histogram-quantile.tar.gz
+      mv histogram-quantile /var/lib/clickhouse/user_scripts/histogramQuantile
+    container_name: signoz-telemetrystore-clickhouse-user-scripts
+    image: clickhouse/clickhouse-server:25.12.5
+    networks:
+    - signoz-network
+    restart: on-failure
+    volumes:
+    - /mnt/Fast/docker/signoz/data/clickhouse-user-scripts:/var/lib/clickhouse/user_scripts
+  signoz-telemetrystore-migrator:
+    command:
+    - -c
+    - |
+      /signoz-otel-collector migrate ready &&
+      /signoz-otel-collector migrate bootstrap &&
+      /signoz-otel-collector migrate sync up &&
+      /signoz-otel-collector migrate async up
+    container_name: signoz-telemetrystore-migrator
+    entrypoint:
+    - /bin/sh
+    environment:
+    - SIGNOZ_OTEL_COLLECTOR_CLICKHOUSE_DSN=tcp://signoz-telemetrystore-clickhouse-0-0:9000
+    - SIGNOZ_OTEL_COLLECTOR_TIMEOUT=10m
+    image: signoz/signoz-otel-collector:latest
+    networks:
+    - signoz-network
+    restart: on-failure

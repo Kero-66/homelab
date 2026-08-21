@@ -124,6 +124,12 @@
               type: fileflows
               url: http://fileflows:5000
 
+- Infrastructure:
+    - SigNoz:
+        icon: mdi-chart-line
+        href: http://signoz.home
+        description: Observability - metrics, logs, traces, alerting
+
 - Automation:
     - Autobrr:
         icon: mdi-magnet
