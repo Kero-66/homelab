@@ -238,6 +238,18 @@ Pulled every series in Sonarr (109 total) and diffed `episodeFileCount` vs `epis
 - **Attack on Titan** (48) — the doc's last untriaged item, "THE LAST ATTACK" (Sonarr ep 2035, 145min), is now confirmed via web research to be the franchise's 5th compilation movie — a recap retelling Final Chapters Specials parts 3-4 (already-owned content), not new material. Same pattern as VOTOMS Stage I-IV. Left monitored, deprioritized, not searched.
 - **Also checked, both clean, no action needed**: Mazinkaiser (114) vs Mazinkaiser SKL (115) — a crude franchise-stem clustering pass flagged these as a possible duplicate pair, but both are 100% complete and genuinely distinct (SKL is an alternate-continuity spinoff, not the same content). Mobile Suit Gundam 0080: War in the Pocket (134) — never individually audited before, but confirmed 100% complete on its numbered season with Season 0 correctly unmonitored already; no gap.
 
+## Season 0 sweep, full library (2026-08-22)
+
+Pulled monitored+missing Season 0 episodes across all 77 Sonarr series with any Season 0 content (grew from 67 since the last full pass) — 92 items total. All but two series were already covered by prior audit sections in this doc (Macross family, Gundam Wing/0083, `.hack` family, Tekkaman Blade, VOTOMS, Gurren Lagann, Robotech, Attack on Titan). Two series had never been individually triaged:
+
+- **Lord of Mysteries** (16) — 6 items, all titled `TBA` with no air date. **Not a gap** — these are unreleased future episode placeholders (the show is presumably still airing/not yet fully released), not missing content. No action needed, nothing to search for.
+- **Monogatari** (42) — 16 items, two distinct groups:
+  - **Kizumonogatari I/II/III** (Sonarr eps 1737/1754/1755) — these are the same 3 films already grabbed into Radarr (ids 180-182, confirmed `hasFile:true`) back in the 08-20 batch, but the corresponding Sonarr specials were never unmonitored as duplicates — a leftover from that session. **Unmonitored 2026-08-22.**
+  - **Koyomimonogatari** (12 items: Koyomi Stone/Flower/Sand/Water/Wind/Tree/Tea/Mountain/Torus/Seed/Nothing/Dead) — confirmed via [NISIOISIN Wiki](https://nisioisin.fandom.com/wiki/Koyomimonogatari)/[Bakemonogatari Wiki](https://bakemonogatari.fandom.com/wiki/Koyomimonogatari) to be the 11th official part of the Monogatari series — 12 real, legitimate short stories, not bonus/promotional content. **Genuine gap.** Sonarr's own `SeasonSearch` found nothing; escape hatch found `[RH] Koyomimonogatari [BDRip] [Hi10] [1080p]` (18 seeders, not on the LQ blacklist) — **grabbed 2026-08-22**, downloading, needs Manual Import.
+  - **"Episode 5.5 (Recap)"** and **"Summary I/II/III"** (4 items, all 25min) — self-evidently recap/clip-show content by title alone (no further research needed given the explicit naming). Left monitored, deprioritized, not searched — same treatment as the rest of the recap-content pattern in this doc.
+
+**Full-library Season 0 sweep is now complete** — every series with any Season 0 content has been individually triaged at least once.
+
 ## Numbered-season gap diagnosis (2026-08-20) — closing the loop on the movie-audit-only series
 
 The movie/specials audit above never checked actual numbered-season gaps for most series — only Season 0. Ran that check now for every series still showing a monitored gap:
