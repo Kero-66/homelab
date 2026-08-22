@@ -169,9 +169,9 @@ The escape hatch bypasses Sonarr/Radarr's normal Custom Format scoring entirely 
 - **Monogatari** "Kizumonogatari I/II/III" (Sonarr eps 1737/1754/1755) — these ARE real theatrical films (not recaps), but not added this pass — **needs follow-up**, they were missed in the batch-add above.
 - **Initial D** "Battle Stage 2/3", "Project D to the Next Stage" (Sonarr, `hasFile:true` already) — real theatrical films but already owned as Sonarr files; not a gap, no Radarr action needed unless de-duplication is wanted later.
 
-**Ambiguous, needs a judgment call before adding:**
-- **Fallout** "A Special LIVE Report from Galaxy News" (Sonarr ep 899, 60min) — likely an in-universe faux-newscast bonus feature bundled with the show, not a real standalone film. Not researched further; not added.
-- **Battlestar Galactica** "The Miniseries" Part 1/2 (Sonarr eps 4591/4592) — the show's pilot TV movie; arguably part of the series itself rather than a separate film. Not added — flag for user to decide whether it belongs in Radarr.
+**Resolved 2026-08-22 — user decision: not wanted at this time.**
+- **Fallout** "A Special LIVE Report from Galaxy News" (Sonarr ep 899, 60min) — in-universe faux-newscast bonus feature. Confirmed already `monitored:false`. Left as-is, not added to Radarr.
+- **Battlestar Galactica** "The Miniseries" Part 1/2 (Sonarr eps 4591/4592) — the show's pilot TV movie. Confirmed already `monitored:false`. Left as-is, not added to Radarr.
 
 **Kizumonogatari trilogy (Monogatari)** — added same session, ids 180-182 (Part 1: Tekketsu, Part 2: Nekketsu, Part 3: Reiketsu), `searchForMovie:true` on add. **All 3 confirmed grabbed** (`hasFile:true`) as of 2026-08-22.
 
