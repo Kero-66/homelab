@@ -734,8 +734,8 @@ curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" 
 
 ### Setup
 ```bash
-QBIT_USER=$(infisical secrets get QBITTORRENT_USER --env dev --path /TrueNAS --plain 2>/dev/null)
-QBIT_PASS=$(infisical secrets get QBITTORRENT_PASS --env dev --path /TrueNAS --plain 2>/dev/null)
+QBIT_USER=$(infisical secrets get QBITTORRENT_USER --env dev --path /media --plain 2>/dev/null)
+QBIT_PASS=$(infisical secrets get QBITTORRENT_PASS --env dev --path /media --plain 2>/dev/null)
 QBIT_BASE="http://qbittorrent.home"
 # Use .home hostname via Caddy — avoids IP ban issues from direct port access
 ```
@@ -1351,8 +1351,8 @@ Root folders (run `infisical secrets folders get --env dev --path /` to list):
 | `DOCKHAND_USER` | dev | `/TrueNAS` | Dockhand username |
 | `DOCKHAND_USER_PASSWORD` | dev | `/TrueNAS` | Dockhand password |
 | `DOCKHAND_GITHUB_DEPLOY_KEY_PRIVATE` | dev | `/TrueNAS` | Dockhand GitHub deploy key |
-| `QBITTORRENT_USER` | dev | `/TrueNAS` | qBittorrent username |
-| `QBITTORRENT_PASS` | dev | `/TrueNAS` | qBittorrent password |
+| `QBITTORRENT_USER` | dev | `/media` | qBittorrent username |
+| `QBITTORRENT_PASS` | dev | `/media` | qBittorrent password |
 | `CLEANUPARR_API_KEY` | dev | `/media` | Cleanuparr API key |
 | `JELLYFIN_API_KEY` | dev | `/media` | NOT /TrueNAS, NOT root / |
 | `JELLYSEERR_API_KEY` | dev | `/media` | Base64-encoded |
