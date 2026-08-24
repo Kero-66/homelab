@@ -31,6 +31,7 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: unless-stopped
+    mem_limit: 4g
     env_file:
       - /mnt/Fast/docker/downloaders/.env
     environment:
