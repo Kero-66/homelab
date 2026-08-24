@@ -1,11 +1,11 @@
 # Claude Code Instructions — Homelab Project
 
 ## Start Every Session
-1. Read `.claude/memory/MEMORY.md` — accumulated feedback, gotchas, service-specific decisions
-2. Read `ai/SESSION_NOTES.md` — current work in progress
-3. Read `ai/todo.md` — pending tasks
-4. Before any command, check `ai/PATTERNS.md` — verified copy-paste commands
-5. Run `mempalace wake-up` — load memory palace context (past decisions, known failures, session history)
+`.claude/memory/MEMORY.md` is auto-injected into context every session via a `SessionStart` hook (`.claude/setup/hooks/session-start-memory.sh`) — do not re-read it, it's already there. That hook also prints a headings index for `ai/PATTERNS.md` and an open-item count for `ai/todo.md`, since both are too large to auto-inject in full.
+1. Read `ai/SESSION_NOTES.md` — current work in progress
+2. Grep `ai/PATTERNS.md` for the relevant section before any unfamiliar command — don't guess an API shape
+3. Read `ai/todo.md` if picking up backlog work
+4. Run `mempalace wake-up` — load memory palace context (past decisions, known failures, session history)
 
 ## Infrastructure Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66) — Version 25.10.1
