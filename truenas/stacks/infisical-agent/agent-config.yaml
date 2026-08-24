@@ -72,3 +72,9 @@ templates:
     destination-path: /output/grafana-alloy/.env
     config:
       polling-interval: 5m
+
+  # Shoko stack secrets
+  - source-path: /config/shokoanime.tmpl
+    destination-path: /output/shokoanime/.env
+    config:
+      polling-interval: 5m

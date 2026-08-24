@@ -1,0 +1,40 @@
+version: "3"
+services:
+  shoko_server:
+    shm_size: 256m
+    container_name: shoko_server
+    image: ghcr.io/shokoanime/server:latest
+    restart: unless-stopped
+    env_file:
+      - /mnt/Fast/docker/shokoanime/.env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Arr Apps
+      - homepage.name=Shoko
+      - homepage.icon=shoko.png
+      - homepage.href=http://shoko.home
+      - homepage.description=Anime library management
+    ports:
+      - "8111:8111"
+    volumes:
+      - /mnt/Fast/docker/shokoanime/config:/home/shoko/.shoko
+      - /mnt/Data/Servarr:/data
+    networks:
+      - arr-stack_default
+      - jellyfin_default
+    healthcheck:
+      test: curl -sf http://localhost:8111/api/v3/ping || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  arr-stack_default:
+    external: true
+  jellyfin_default:
+    external: true
+
