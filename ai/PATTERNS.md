@@ -544,7 +544,7 @@ for path in doc['paths'].keys(): print(path)
 
 ### Setup
 ```bash
-SABKEY=$(infisical secrets get SABNZBD_API_KEY --env dev --path /TrueNAS --plain 2>/dev/null)
+SABKEY=$(infisical secrets get SABNZBD_API_KEY --env dev --path /media --plain 2>/dev/null)
 SAB_BASE="http://sabnzbd.home"
 ```
 
@@ -654,9 +654,10 @@ curl -s -H "X-Api-Key: $SONARR_KEY" \
 
 # Step 3: force import (pipe jq-built payload directly to curl — no temp files)
 # Imports only files with zero rejections; skips downgrades/unexpected episodes automatically
+# importMode MUST be "copy", not "move" — see "Manual Import importMode" note below for why.
 curl -s -H "X-Api-Key: $SONARR_KEY" \
   "http://192.168.20.22:8989/sonarr/api/v3/manualimport?downloadId=<DOWNLOAD_ID>&filterExistingFiles=false" | \
-  jq '[.[] | select(.rejections | length == 0)] | {name: "ManualImport", importMode: "move", files: [.[] | {path, seriesId: .series.id, episodeIds: [.episodes[0].id], quality, languages, downloadId}]}' | \
+  jq '[.[] | select(.rejections | length == 0)] | {name: "ManualImport", importMode: "copy", files: [.[] | {path, seriesId: .series.id, episodeIds: [.episodes[0].id], quality, languages, downloadId}]}' | \
   curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" \
     --data-binary @- "http://192.168.20.22:8989/sonarr/api/v3/command" | jq '{id, status}'
 
@@ -1290,14 +1291,27 @@ Scans qBittorrent and SABnzbd completed dirs, auto-imports clean matches into So
 # Dry run — shows what would be imported without doing anything
 ./truenas/scripts/import_downloads.sh --dry-run
 
-# Live run — moves matched files into media library
+# Live run — copies matched files into media library (hardlinked, same dataset — see note below)
 ./truenas/scripts/import_downloads.sh
 ```
 
 Requirements: `jq`, `curl`, `infisical` CLI authenticated.
 Scan dirs: `/data/downloads/qbittorrent/completed`, `/data/downloads/sabnzbd/complete`
-Auto-imports: files with series/movie match and zero rejections (importMode: move)
+Auto-imports: files with series/movie match and zero rejections (importMode: copy)
 Reports: files needing manual attention with rejection reason
+
+### Manual Import `importMode` — always use `"copy"`, never `"move"`
+Since the `Data/Servarr` unified-dataset migration (#92, confirmed live 2026-08-24), downloads and
+the media library share one ZFS dataset, so Sonarr/Radarr's normal import genuinely hardlinks —
+`importMode: "copy"` in the Manual Import API respects that (creates a hardlink when the media
+manager's "Use Hardlinks" setting is on, same as automatic import), keeping the file in the
+download folder too so the torrent stays seedable and Cleanuparr's seeding-rules can clean it up
+on schedule. `importMode: "move"` physically relocates the file out of the download folder —
+breaks the torrent (qBittorrent can no longer find its data, shows `checkingUP`/`missingFiles`
+after the next recheck) even though the import itself succeeds. If a `move` import already broke
+a torrent, it's fixable without re-downloading: match qBittorrent's original per-file name+size
+(`GET /api/v2/torrents/files?hash=<hash>`) against the imported library file by exact byte size,
+recreate a hardlink at the original download path (`os.link`), then `POST /api/v2/torrents/recheck`.
 
 ---
 
@@ -1359,7 +1373,7 @@ Root folders (run `infisical secrets folders get --env dev --path /` to list):
 | `SONARR_API_KEY` | dev | `/media` | NOT /TrueNAS |
 | `RADARR_API_KEY` | dev | `/media` | |
 | `PROWLARR_API_KEY` | dev | `/media` | |
-| `SABNZBD_API_KEY` | dev | `/TrueNAS` | NOT /media |
+| `SABNZBD_API_KEY` | dev | `/media` | Corrected 2026-08-24 — confirmed at /media, not /TrueNAS as previously documented here |
 | `BAZARR_API_KEY` | dev | `/media` | |
 | `JELLYSTAT_DB_PASS` | dev | `/media` | |
 | `JELLYSTAT_JWT_SECRET` | dev | `/media` | |

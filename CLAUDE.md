@@ -41,8 +41,8 @@
 ## TrueNAS App Management — CRITICAL
 
 ### App managers: two separate systems
-- **TrueNAS native apps** (arr-stack, jellyfin, downloaders, caddy, recyclarr, etc.) — managed by **midclt**
-- **Dockhand-managed apps** (any future apps deployed via Dockhand UI) — managed by **docker compose**
+- **Everything is Dockhand-managed (git-sourced) except Dockhand itself and AdGuard Home (for now)** — as of 2026-08-19: arr-stack, autobrr, caddy, commafeed, downloaders, fileflows, homepage, infisical, infisical-agent, jellyfin, maintainerr, suggestarr, tailscale, plus any app added since. Managed by **docker compose** via Dockhand's git-stacks feature (`autoUpdate: true` on a daily cron). Confirm current list via `GET /api/git/stacks` on Dockhand (`http://192.168.20.22:30328`) if in doubt.
+- **midclt** — reserved for Dockhand itself and AdGuard Home only, until those migrate too. Don't assume any other app still uses this path — this doc previously (incorrectly) listed `downloaders` here after it had already moved to Dockhand on 2026-08-19 (caught 2026-08-24, see `ai/COMPLETED.md` #77).
 
 ### TrueNAS native apps (midclt)
 - **NEVER use REST API to update compose** — breaks running containers with port conflicts

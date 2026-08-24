@@ -123,7 +123,7 @@ scan_and_import() {
           quality,
           languages,
           releaseGroup,
-          importMode: "move"
+          importMode: "copy"
         }]')
         result=$(sonarr_api "manualimport" \
           -X POST \
@@ -136,7 +136,7 @@ scan_and_import() {
           quality,
           languages,
           releaseGroup,
-          importMode: "move"
+          importMode: "copy"
         }]')
         result=$(radarr_api "manualimport" \
           -X POST \
