@@ -134,6 +134,11 @@ http://maintainerr.home {
 	reverse_proxy 192.168.20.22:6246
 }
 
+# Shoko (Anime Library Management)
+http://shoko.home {
+	reverse_proxy shoko_server:8111
+}
+
 # Infisical (Secret Manager)
 http://infisical.home {
 	redir / /login 302
