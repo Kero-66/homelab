@@ -1,10 +1,9 @@
 # =============================================================================
 # Infisical Agent Configuration
 # =============================================================================
-# This file is mounted into the agent container at /config/agent-config.yaml
+# This file is mounted into the agent container at /config/agent-config.yaml,
+# read from Dockhand's git clone of this directory (see compose.yaml).
 # It defines how the agent authenticates and what secrets to render.
-#
-# Deployed to: /mnt/Fast/docker/infisical-agent/config/agent-config.yaml
 # =============================================================================
 
 infisical:
@@ -13,16 +12,17 @@ infisical:
 auth:
   type: "universal-auth"
   config:
-    # These files are created by setup_agent.sh (one-time setup)
-    client-id: "/config/client-id"
-    client-secret: "/config/client-secret"
+    # These files are created by setup_agent.sh (one-time setup) and live on
+    # /auth (NOT git-synced) - see compose.yaml's second volume mount
+    client-id: "/auth/client-id"
+    client-secret: "/auth/client-secret"
     # Remove client-secret from disk after first read for extra security
     remove_client_secret_on_read: false
 
 sinks:
   - type: "file"
     config:
-      path: "/config/access-token"
+      path: "/auth/access-token"
 
 templates:
   # Jellyfin stack secrets

@@ -25,6 +25,10 @@ services:
       # git clone of this stack's directory, so agent-config.yaml and every
       # *.tmpl come straight from git on each sync+deploy (no scp needed)
       - ./:/config:ro
+      # Machine identity credentials (client-id/client-secret, created once by
+      # setup_agent.sh) and the access-token sink - NOT in git, kept on the
+      # Fast pool separately from the git-synced template directory above
+      - /mnt/Fast/docker/infisical-agent/config:/auth
       # Output directory - agent writes .env files here
       - /mnt/Fast/docker:/output
     # No ports needed - agent only makes outbound HTTPS calls to Infisical
