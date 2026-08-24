@@ -4,7 +4,8 @@
 # Reverse proxy for all homelab services with automatic HTTPS
 #
 # Storage layout:
-#   Config     → /mnt/Fast/docker/caddy/Caddyfile     (NVMe - Caddy config)
+#   Config     → Dockhand's git clone of this directory (see compose.yaml volumes;
+#                edits come from git on sync+deploy, no scp needed)
 #   Data       → /mnt/Fast/docker/caddy/data/         (NVMe - certificates)
 #   Config cache → /mnt/Fast/docker/caddy/config/     (NVMe - Caddy cache)
 #
@@ -39,8 +40,10 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     volumes:
-      # Caddyfile configuration
-      - /mnt/Fast/docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Caddyfile - relative path resolves inside Dockhand's git clone of this
+      # stack's directory, so edits come straight from git on sync+deploy
+      # (no scp needed, same pattern as infisical-agent's config mount)
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # Certificate storage (for HTTPS)
       - /mnt/Fast/docker/caddy/data:/data
       # Caddy config cache
