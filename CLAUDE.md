@@ -139,3 +139,4 @@ If context is compacted, preserve these critical facts:
 - `.github/TROUBLESHOOTING.md` — troubleshooting
 - `ai/SESSION_NOTES.md` — current session
 - `ai/todo.md` — task backlog
+- `docs/CLAUDE_SELF_HOSTED_RUNNER.md` — run Claude Code web/mobile sessions on the workstation so they can reach the LAN (TrueNAS, Infisical)
