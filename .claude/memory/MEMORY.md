@@ -39,9 +39,9 @@
 - [Queue cleanup respects seeding](feedback_queue_cleanup_respects_seeding.md) — don't removeFromClient/blocklist arr queue items unless genuinely dead; kills seeding
 - [SSH pattern](feedback_ssh_pattern.md) — always use ssh-agent pattern from PATTERNS.md, never improvise SSH key handling
 - [Never print secret fragments](feedback_never_print_secret_fragments.md) — no partial output of a secret is safe; not length, not a tail, not a hash — capture to a variable and use it directly, never display it
-- [Check Sonarr monitored before Radarr action](feedback_check_sonarr_monitored_before_radarr_action.md) — unmonitored Sonarr special means already deprioritized, not overlooked; check before adding a Radarr entry
 - [Read memory at session start](feedback_read_memory_at_session_start.md) — CLAUDE.md step 1 is not optional; skipping it caused repeat violations of 5+ already-documented lessons in one session (2026-08-24)
 - [Verify API before calling](feedback_verify_api_before_calling.md) — check swagger/OpenAPI spec or source for correct method+body before guessing; a failed call's error response has no data, don't misparse it as an empty result
+- [Shoko manual linking](service_shoko_manual_linking.md) — the working API sequence for unrecognized files: AniDB search → Refresh `?createSeriesEntry=true` (the easy-to-miss flag) → wait for queue → get episodes with `includeMissing=true` → Link with local (not AniDB) episode IDs
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**
