@@ -1,0 +1,151 @@
+{
+  "_comment": "Macross watch-order definitions. Add new content by inserting an entry in the right position under the appropriate list, then re-run build_playlist.py -- no need to redo the research each time, just decide where the new item slots in. Entry shapes: {series, season} = all episodes of that season in order; {series, season, name_contains} = one special/OVA episode; {movie} = one movie. Sources (2026-08-24): epicdope.com Macross watch order guide, anime-planet Macross Watch Order list. Community disagreement is specifically on where Macross Zero goes -- kept as two variants rather than picking one.",
+  "release_order": [
+    {
+      "series": "Super Dimension Fortress Macross",
+      "season": 1
+    },
+    {
+      "movie": "Macross: Do You Remember Love?"
+    },
+    {
+      "movie": "The Super Dimension Fortress Macross: Flash Back 2012"
+    },
+    {
+      "series": "Macross Zero",
+      "season": 1
+    },
+    {
+      "series": "Macross Plus",
+      "season": 1
+    },
+    {
+      "movie": "Macross Plus: The Movie"
+    },
+    {
+      "series": "Macross 7",
+      "season": 1
+    },
+    {
+      "season": 0,
+      "name_contains": "Encore 1",
+      "episode": "Macross 7"
+    },
+    {
+      "season": 0,
+      "name_contains": "Encore 2",
+      "episode": "Macross 7"
+    },
+    {
+      "season": 0,
+      "name_contains": "Encore 3",
+      "episode": "Macross 7"
+    },
+    {
+      "movie": "Macross 7: The Galaxy is Calling Me!"
+    },
+    {
+      "series": "Macross Frontier",
+      "season": 1
+    },
+    {
+      "movie": "Macross Frontier: The False Songstress"
+    },
+    {
+      "movie": "Macross Frontier: The Wings of Farewell"
+    },
+    {
+      "season": 0,
+      "name_contains": "Listen to My Song",
+      "episode": "Macross Frontier"
+    },
+    {
+      "series": "Macross Δ",
+      "season": 1
+    },
+    {
+      "season": 0,
+      "name_contains": "Passionate Walkure",
+      "episode": "Macross Δ"
+    },
+    {
+      "season": 0,
+      "name_contains": "Absolute Live",
+      "episode": "Macross Δ"
+    }
+  ],
+  "chronological_order": [
+    {
+      "series": "Macross Zero",
+      "season": 1
+    },
+    {
+      "series": "Super Dimension Fortress Macross",
+      "season": 1
+    },
+    {
+      "movie": "Macross: Do You Remember Love?"
+    },
+    {
+      "movie": "The Super Dimension Fortress Macross: Flash Back 2012"
+    },
+    {
+      "series": "Macross Plus",
+      "season": 1
+    },
+    {
+      "movie": "Macross Plus: The Movie"
+    },
+    {
+      "series": "Macross 7",
+      "season": 1
+    },
+    {
+      "season": 0,
+      "name_contains": "Encore 1",
+      "episode": "Macross 7"
+    },
+    {
+      "season": 0,
+      "name_contains": "Encore 2",
+      "episode": "Macross 7"
+    },
+    {
+      "season": 0,
+      "name_contains": "Encore 3",
+      "episode": "Macross 7"
+    },
+    {
+      "movie": "Macross 7: The Galaxy is Calling Me!"
+    },
+    {
+      "series": "Macross Frontier",
+      "season": 1
+    },
+    {
+      "movie": "Macross Frontier: The False Songstress"
+    },
+    {
+      "movie": "Macross Frontier: The Wings of Farewell"
+    },
+    {
+      "season": 0,
+      "name_contains": "Listen to My Song",
+      "episode": "Macross Frontier"
+    },
+    {
+      "series": "Macross Δ",
+      "season": 1
+    },
+    {
+      "season": 0,
+      "name_contains": "Passionate Walkure",
+      "episode": "Macross Δ"
+    },
+    {
+      "season": 0,
+      "name_contains": "Absolute Live",
+      "episode": "Macross Δ"
+    }
+  ]
+}
