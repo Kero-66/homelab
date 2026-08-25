@@ -32,7 +32,7 @@
 - [Season 0 is not just movies](feedback_season0_not_just_movies.md) — Sonarr specials include short bonus/promo/recap content too; runtime is a triage signal, not a filter for what to check
 - [Check correct config files](feedback_check_correct_files.md) — live TrueNAS configs are in `truenas/stacks/`, never push from `networking/.config/` (reference only)
 - [Dockhand apps: no raw docker commands](feedback_dockhand_apps_no_raw_docker_commands.md) — use Dockhand API/docker compose for restarts, never bare `docker restart`
-- [Movie specials: solve in Radarr first](feedback_movie_specials_solve_in_radarr_first.md) — for Sonarr movie-length (≥60min) specials, add/search in Radarr first, don't grab through Sonarr
+- [Movie specials: solve in Radarr first](feedback_movie_specials_solve_in_radarr_first.md) — for Sonarr movie-length (≥50min) specials, check Radarr/TMDB not Sonarr/TVDB for identity — TVDB gives false negatives on real films; also: don't classify from title alone, don't skip a "not committed" franchise's classification
 - [Never dump full records with secret fields](feedback_never_dump_full_records_with_secret_fields.md) — don't jq-dump whole Sonarr objects when a nested field carries a live Prowlarr key
 - [No OpenSubtitles](feedback_no_opensubtitles.md) — no longer free/personally usable, don't suggest it
 - [No secrets to disk applies to session cookies](feedback_no_secrets_to_disk_applies_to_session_cookies.md) — Dockhand's cookie-jar pattern writes a live session cookie to disk; capture in a shell var instead
