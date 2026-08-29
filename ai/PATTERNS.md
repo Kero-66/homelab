@@ -1357,12 +1357,50 @@ queued (`[DownloadCleaner] skip | download is used by an arr`), regardless of `m
   `{path, movieId, downloadId, ...}` for Radarr). This is schema-correct per Sonarr's own
   `ManualImportFile`/`ManualImportItem` models regardless, and costs nothing to include.
 
-**Still open / not independently verified:** whether `POST /api/v3/command` (ManualImport) via the
-API — as opposed to the UI's Interactive Import specifically — actually clears these particular 9
-queue items, and whether `downloadId` is necessary or just correct-but-inert for that to happen.
-`import_downloads.sh` now uses the command endpoint with `downloadId` included; the real test is
-running it against one of the 9 stuck items and checking `GET /api/v3/queue` afterward — don't
-assume it's fixed until that's actually been observed.
+**Confirmed working end-to-end (2026-08-29, later same session):** `POST /api/v3/command`
+(ManualImport) via the API, with explicit `seriesId`/`episodeIds`/`downloadId`, does clear an
+already-imported `importBlocked` queue item — no UI Interactive Import needed. Verified live for
+Robotech (24 episodes, seriesId=74), Mospeada (25 episodes — turned out to be Robotech's Season 3
+"New Generation" arc under one shared Sonarr series), and RWBY (118/123 files auto-matched by
+Sonarr itself, only 5 unmonitored specials needed manual mapping — the queue item still cleared
+once the 118 real episodes were in, the unmapped specials didn't block it). Also confirmed on disk
+(`stat` inode/link-count check) that re-importing an already-`hasFile:true` episode via this path
+is a genuine hardlink to the same inode, not a duplicate copy — Sonarr treats it as an "upgrade"
+(deletes the old episodefile DB record, creates a new one) but touches no extra disk or seed data.
+5 of the original 9 remain open as of this session: Koyomimonogatari, Maison Ikkoku (Sonarr),
+Tekkaman Blade BD-BOX, `.hack` Legend of the Twilight, `.hack` G.U. Trilogy (the last three are
+Radarr-tracked, not Sonarr — discovered via `--plan`, not previously in this list).
+
+**Real bug found and fixed in `import_downloads.sh` while testing this:** `SONARR_URL`/`RADARR_URL`
+were missing the `/sonarr`, `/radarr` path prefix Caddy requires (see "POST calls MUST use the
+`/sonarr/` prefix directly" above) — every POST from the script was silently dropping its body on
+the 307 redirect. Also, `manualimport?folder=<completed-dir>` (the script's old default scanning
+method) does not reliably recurse into every download subfolder — a full-`completed`-dir scan
+returned only 104 items and silently missed Robotech's subfolder entirely, while
+`manualimport?downloadId=<id>` for that same download correctly returned all 38 files. Since every
+file in a download folder got there via a Sonarr/Radarr-initiated grab in the first place
+(automatic search, or the manual Prowlarr "escape hatch" via `POST /api/v3/release` — still
+Sonarr/Radarr's own grab call, still queue-tracked), the queue is a complete, reliable index and
+folder-scanning was solving a problem the queue already answers better. `import_downloads.sh`'s
+default mode now walks the queue (`trackedDownloadState` `importPending`/`importBlocked`) instead
+of scanning directories; folder-scan survives only as an explicit `--scan-folder <dir>` fallback
+for a file that reached the download folder completely outside any *arr-initiated grab (rare, and
+even then it has no `downloadId` to correlate against so it can only report "needs manual
+attention", never auto-import).
+
+**`--plan` / `--apply` — the safe path for series/episode matching a title-match failed on:**
+`import_downloads.sh --plan` walks both apps' queues for `importBlocked` items, pulls
+`manualimport?downloadId=<id>&filterExistingFiles=false` per stuck download, and writes a plan file
+to `truenas/scripts/stuck_plans/<run_id>.json`: files Sonarr/Radarr auto-matched are pre-filled,
+anything with a null series/movie is left with empty `seriesId`/`episodeIds` (or `movieId`) for a
+human to fill in by hand before `--apply` will touch it. This exists because auto-guessing
+series/episode matches for odd-naming releases is **not safe** — a first attempt at doing this by
+hand (before the script existed) used a regex against the full file *path* instead of just the
+basename, which matched a range like "01 ~ 25" in the parent folder name before it ever reached the
+actual per-file episode number, silently mapping every file in the batch to episode 1. `--apply`
+submits only files that are fully mapped (per-file, not per-download — a batch can be partly
+auto-matched and partly not, e.g. RWBY's 118 real episodes vs. its 5 unmonitored specials), polls
+each submitted command, and re-checks the queue afterward to report cleared vs. still-stuck.
 
 ---
 

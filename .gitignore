@@ -160,6 +160,7 @@ secrets.yml
 
 # Logs, caches and backups
 logs/
+stuck_plans/
 tmp/
 temp/
 .cache/
