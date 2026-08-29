@@ -227,3 +227,7 @@ Commafeed/data/
 
 # Config backups with timestamps
 media/.config/qbittorrent/*.backup.*
+
+# Homepage runtime state (logfile, manual backups) - config/ is git-synced, this isn't
+truenas/stacks/homepage/config/logs/
+truenas/stacks/homepage/config/*.bak

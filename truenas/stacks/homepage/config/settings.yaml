@@ -1,6 +1,5 @@
 ---
 title: Homelab
-logpath: /app/state/logs
 layout:
   Media:
     style: row

@@ -4,10 +4,15 @@
 # Unified dashboard for all homelab services
 #
 # Storage layout:
-#   Config → ./config (this stack's dir, Dockhand git-synced, read-only)
-#   State  → /mnt/Fast/docker/homepage/state/     (NVMe - logs, not git-synced;
-#            see settings.yaml's logpath, same split as infisical-agent's /auth)
+#   Config → ./config (this stack's dir, Dockhand git-synced)
 #   .env   → /mnt/Fast/docker/homepage/.env       (NVMe - API keys from Infisical)
+#
+# Logs: homepage writes its logfile inside config/logs/ by default (same
+# convention as every other stack here - radarr, prowlarr, bazarr, qbittorrent,
+# sabnzbd, cleanuparr all write logs inside their single /config mount).
+# The mount is writable (not :ro) to allow this; verified Dockhand's git sync
+# only touches tracked files and leaves untracked ones (like config/logs/)
+# alone, so this coexists safely with git-sync.
 #
 # Secrets:
 #   Managed by Infisical Agent → writes .env to /mnt/Fast/docker/homepage/.env
@@ -37,11 +42,9 @@ services:
     volumes:
       # Homepage configuration - Dockhand git clone of this stack's directory,
       # so config yaml/css/js come straight from git on each sync+deploy (no
-      # manual scp) - matches infisical-agent's pattern
-      - ./config:/app/config:ro
-      # Writable state (logs) - kept out of the git-synced config dir, see
-      # settings.yaml's logpath
-      - /mnt/Fast/docker/homepage/state:/app/state
+      # manual scp). Writable (not :ro) - homepage writes its logfile into
+      # config/logs/ at runtime, see comment above.
+      - ./config:/app/config
       - /mnt/Data/Servarr/:/data
     ports:
       - "3000:3000"
