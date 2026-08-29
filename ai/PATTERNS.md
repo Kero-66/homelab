@@ -639,6 +639,19 @@ curl -sL "$SONARR_BASE/api/v3/history?seriesId=$SERIES_ID&pageSize=20&apikey=$SO
 curl -sL "$SONARR_BASE/api/v3/config/downloadclient?apikey=$SONARR_KEY" | jq '{enableCompletedDownloadHandling, autoRedownloadFailed}'
 ```
 
+### Manual import payload — build it FROM the scan result, never hand-craft it
+Every field in the `ManualImport` command payload below (`quality`, `languages`, `downloadId`) must
+come from the corresponding `manualimport` GET scan's response for that file — don't type them in
+by hand, even for fields that look optional or guessable. Confirmed failure (2026-08-29): a
+hand-built payload omitted `languages` (assumed optional) and Sonarr accepted the command with
+`status: "completed"` and no error in the response — but the import silently no-op'd
+(`hasFile` stayed `false`). The real failure only showed up in `docker logs sonarr`:
+`NOT NULL constraint failed: EpisodeFiles.Languages`. The command API's "completed" status does
+**not** mean the import actually happened — always verify via `hasFile`/`episodeFileId` on the
+target episode/movie afterward, and check `docker logs sonarr --tail 60` if it didn't land, per the
+"check logs first" rule — the exception detail is only in the container log, never in the API
+response.
+
 ### Force manual import for stuck importBlocked items
 Sonarr sometimes blocks auto-import with "release was matched to series by ID" for releases with non-English filenames. This pattern analyzes and imports all clean (zero-rejection) files for a given `downloadId`.
 
@@ -1304,7 +1317,7 @@ from the log afterward instead of re-running curl commands to reconstruct what h
 ```
 
 Requirements: `jq`, `curl`, `infisical` CLI authenticated.
-Scan dirs: `/data/downloads/qbittorrent/completed`, `/data/downloads/sabnzbd/complete`
+Scan dirs: `/data/downloads/qbittorrent/completed`, `/data/downloads/sabnzbd/completed`
 Auto-imports: files with series/movie match and zero rejections (importMode: copy)
 
 ### `POST /api/v3/manualimport` vs `POST /api/v3/command` (name: `ManualImport`) — not interchangeable

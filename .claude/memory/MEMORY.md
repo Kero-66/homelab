@@ -2,6 +2,7 @@
 
 **IMPORTANT:** First 200 lines only! Keep concise. Link to detailed docs.
 
+- [**Check docs BEFORE acting, especially when told something is documented**](feedback_check_docs_before_acting_not_after.md) — repeated failure mode, user has had to catch this multiple times; the instant "documented process" comes up, go read it before responding
 - [Do not automate Bitwarden access](feedback_bitwarden_access.md) — scripts reading Bitwarden give Claude full vault access
 - [Never run infisical secrets table form](feedback_no_secret_table_output.md) — always use `infisical secrets get <KEY> --plain`, NEVER bare `infisical secrets` (prints all secrets in cleartext)
 - [No grep/head filtering on first run](feedback_no_grep_head.md) — always read raw output first, filter only if too large
@@ -207,6 +208,7 @@ TRUENAS_API_KEY=$(infisical secrets get truenas_admin_api --env dev --path /True
 - **Session work**: `ai/SESSION_NOTES.md`
 - **Task tracking**: `ai/todo.md`
 - **Doc structure**: `ai/DOCUMENTATION_STRUCTURE.md`
+
 
 ## Troubleshooting Rule (ENFORCED)
 - [Check logs first, never assume](../rules/troubleshooting.md) — `docker logs <container> --tail 30` BEFORE forming any hypothesis. Networking is rarely the cause.

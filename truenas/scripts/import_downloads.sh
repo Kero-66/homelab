@@ -6,23 +6,62 @@
 # because Sonarr or Radarr's download client integration grabbed it (an
 # automatic search grab, or a manual Prowlarr "escape hatch" grab via
 # POST /api/v3/release — either way it's Sonarr/Radarr's own grab call, so it
-# registers a queue entry same as any other). That means the queue is a
-# reliable, complete index of everything waiting to be imported — including
-# stuck importBlocked items whose files already exist on disk. Default mode
-# walks that queue (not the filesystem) and auto-imports files with clean
-# matches (no rejections) via the real import pipeline, reporting unmatched
-# files so you know what needs --plan/--apply or manual UI attention.
+# registers a queue entry same as any other). That means the queue is USUALLY
+# a reliable index of everything waiting to be imported — including stuck
+# importBlocked items whose files already exist on disk. Default mode walks
+# that queue (not the filesystem) and auto-imports files with clean matches
+# (no rejections) via the real import pipeline, reporting unmatched files so
+# you know what needs --plan/--apply or manual UI attention.
 #
-# Folder-scanning (--scan-folder) is kept only as a narrow fallback for a
-# file dropped into the download folder completely outside any Sonarr/
-# Radarr/Prowlarr-initiated grab (rare — a true out-of-band manual copy).
-# It has no downloadId to correlate against, so even then it can only report
-# "needs manual attention", never auto-import. It is also known incomplete:
-# Sonarr's `manualimport?folder=` does not reliably recurse into every
-# download subfolder (confirmed live 2026-08-29 — returned 104 items for
-# a full completed-dir scan and silently missed an entire subfolder that
-# `manualimport?downloadId=` returned in full). Queue-walking has no such gap
-# since it starts from Sonarr/Radarr's own downloadId, not a directory walk.
+# CAVEAT (open question, ai/todo.md #112, 2026-08-29): grabs made via
+# Prowlarr's own POST /api/v1/search (the escape-hatch pattern — as opposed
+# to Sonarr/Radarr's POST /api/v3/release) have NOT been showing up in the
+# Sonarr/Radarr queue at all in practice, torrent or NZB, despite this
+# header's original claim that they register a queue entry "same as any
+# other". Root cause not yet investigated. Until it is, treat every
+# escape-hatch grab (via Prowlarr's /api/v1/search, not Sonarr/Radarr's own
+# /api/v3/release) as needing --scan-folder, not the default queue walk.
+#
+# Folder-scanning (--scan-folder) was written as a narrow fallback for a file
+# dropped into the download folder completely outside any *arr-initiated
+# grab, but per the caveat above it is currently the ONLY reliable path for
+# every Prowlarr-escape-hatch grab too — that's the common case now, not the
+# rare one. It has no downloadId to correlate against, so it can only report
+# "needs manual attention" for anything that doesn't cleanly auto-match — see
+# the "Known escape-hatch import gotchas" section below for the specific
+# per-file fixes usually needed. It is also known incomplete: Sonarr's
+# `manualimport?folder=` does not reliably recurse into every download
+# subfolder (confirmed live 2026-08-29 — returned 104 items for a full
+# completed-dir scan and silently missed an entire subfolder that
+# `manualimport?downloadId=` returned in full).
+#
+# Known escape-hatch import gotchas (all confirmed live 2026-08-29, folding
+# in lessons from that session so the next run doesn't rediscover them):
+#   - Folder path is `sabnzbd/completed` (plural) — `sabnzbd/complete` (singular,
+#     an old doc typo) returns an empty scan with no error, not a failure.
+#   - NEVER pass `&seriesId=<id>` to `manualimport?folder=` — it makes Sonarr
+#     fuzzy-match against the ENTIRE existing library folder instead of just
+#     the scanned download folder (confirmed: 36 real files became an 85-item
+#     result mixing in already-owned episodes). Scan without the hint, then
+#     assign seriesId explicitly per file in the payload you build.
+#   - `indexerFlags` is REQUIRED in the ManualImport payload (this script now
+#     includes it — see below). Omitting it does not error; the command
+#     returns `status: "completed"` with an empty `message` and silently
+#     imports zero files. The only trustworthy success signal is `message`
+#     saying "Manually imported N files" with N > 0 — this script checks
+#     that now, not just `status`.
+#   - A release using absolute/continuous numbering across seasons (e.g.
+#     Robotech's E61-E85 spanning what Sonarr tracks as Season 3) fails
+#     Sonarr's own `S01E##`-style parse ("Invalid season or episode") even
+#     though the number in the filename is real — map it yourself via each
+#     target episode's `absoluteEpisodeNumber` (`GET /api/v3/episode?seriesId=`)
+#     instead of trusting the scan's own episode match.
+#   - Radarr and Sonarr do NOT share a language-id table — Sonarr's Japanese
+#     is id 8, but Radarr's id 6 is Danish (Radarr's Japanese is also 8, but
+#     don't assume any id carries across apps). Always fetch
+#     `GET /api/v3/language` from the SAME app you're importing into and use
+#     its own id, per [[../../ai/PATTERNS.md]]'s "build payload FROM the scan
+#     result" rule — don't hand-carry an id you saw work in the other app.
 #
 # This is the canonical way to import stuck/manual downloads — run this
 # BEFORE reaching for ad-hoc curl against the Sonarr/Radarr API. Every run
@@ -296,6 +335,11 @@ scan_folder_and_import() {
       # NOT /api/v3/manualimport — see header comment for why that endpoint
       # doesn't actually import anything.
       local files command_payload result command_id final_status
+      # indexerFlags is REQUIRED — omitting it does not error, but the command
+      # silently imports zero files (confirmed live 2026-08-29: response said
+      # "status": "completed" with no exception, yet no episode/movie file
+      # count changed). Pull it from the scan result like every other field
+      # (`// 0` since a manual/out-of-band file has no indexer flags to carry).
       if [[ "$app" == "sonarr" ]]; then
         files=$(echo "$importable" | jq '[.[] | {
           path,
@@ -305,6 +349,7 @@ scan_folder_and_import() {
           quality,
           languages,
           releaseGroup,
+          indexerFlags: (.indexerFlags // 0),
           importMode: "copy"
         }]')
       else
@@ -315,6 +360,7 @@ scan_folder_and_import() {
           quality,
           languages,
           releaseGroup,
+          indexerFlags: (.indexerFlags // 0),
           importMode: "copy"
         }]')
       fi
@@ -339,12 +385,19 @@ scan_folder_and_import() {
       fi
 
       final_status=$(wait_for_command "$app" "$command_id")
-      local status
+      local status message imported_n
       status=$(echo "$final_status" | jq -r '.status // "unknown"')
-      if [[ "$status" == "completed" ]]; then
-        log_ok "$app: ManualImport command $command_id completed for $importable_count file(s) from $scan_dir"
+      message=$(echo "$final_status" | jq -r '.message // ""')
+      # status:"completed" is NOT proof the import happened — confirmed live
+      # 2026-08-29: a payload missing indexerFlags returned status:"completed"
+      # with no exception, but the message was empty and zero files actually
+      # landed. The only reliable success signal is the message field saying
+      # "Manually imported N files" with N > 0 — check that, not just status.
+      imported_n=$(echo "$message" | grep -oE '^Manually imported [0-9]+' | grep -oE '[0-9]+' || echo "")
+      if [[ "$status" == "completed" && -n "$imported_n" && "$imported_n" -gt 0 ]]; then
+        log_ok "$app: ManualImport command $command_id imported $imported_n file(s) from $scan_dir"
       else
-        log_skip "$app: ManualImport command $command_id ended with status '$status' — $(echo "$final_status" | jq -c '{status, exception, trigger}')"
+        log_skip "$app: ManualImport command $command_id did NOT confirm a real import (status='$status', message='$message') — verify hasFile on the target episode(s)/movie manually before trusting this ran"
       fi
     fi
   fi
