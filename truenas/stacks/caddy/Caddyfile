@@ -73,7 +73,7 @@ http://grafana.home {
 # is Dockhand-managed, no ad-hoc `docker run`/`docker exec` on the host).
 http://loki.home {
 	basic_auth {
-		loki_push $2y$10$lnAjMMe9or/XwNDx4QYtWOIfOZAdwO7QqLq.JtvotHkJuhmluajSa
+		loki_push $2y$10$VGClrlPc64TiJ1okAPO/E.0VHWfOT2Tqlpu4WDuVmzKr7hj4TavmS
 	}
 	reverse_proxy loki:3100
 }
