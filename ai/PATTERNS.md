@@ -725,9 +725,17 @@ Sonarr's episode-matching can fail for two structurally different reasons. Check
 - If no XEM mapping exists, set it manually per episode: `PUT /api/v3/episode/{id}` with `sceneSeasonNumber` and `sceneEpisodeNumber` added to the existing episode object (send the full episode resource, not a partial patch), then set `useSceneNumbering: true` on the series. Requires the absolute episode numbering to line up 1:1 with the release group's continuous numbering — verify this first (compare first/last episode of each season against the release group's numbering) rather than assuming.
 - **Get explicit user confirmation before bulk-writing scene numbers** — this is inferred metadata, not sourced from a third party, and the auto-mode classifier will block unattended bulk writes to production series data anyway.
 
-**2. Release has NO episode markers at all** (e.g. a "Complete Series" pack with no season/episode info in the title) — scene numbering can't help since there's no encoded number to translate. This needs a **one-time manual override at grab time**, not a persistent config change — the next similarly-unparseable release will need the same treatment again:
+**2. Release has NO episode markers at all** (e.g. a "Complete Series" pack with no season/episode info in the title) — scene numbering can't help since there's no encoded number to translate. This needs a **one-time manual override at grab time**, not a persistent config change — the next similarly-unparseable release will need the same treatment again.
+
+**This is also the primary "Prowlarr escape hatch" method** (when Sonarr/Radarr's own search finds nothing at all, so you fall back to Prowlarr's free-text search): find the release via Prowlarr's `GET /api/v1/search?query=...`, then grab it through Sonarr/Radarr's own `/api/v3/release` below (not through Prowlarr's own download-client integration) — this makes Sonarr/Radarr create a real `TrackedDownload`, so it shows up in the queue and imports automatically like a native grab. Verified working 2026-08-29 (Gundam 0083 "Mayfly of Space", see media/docs/SONARR_STRUCTURAL_AUDIT.md). Grabbing via Prowlarr's own client instead is a dead end — see `ai/todo.md`/COMPLETED.md #112: those grabs never create a `TrackedDownload`, so they're invisible to `/api/v3/queue` regardless of category, and need `import_downloads.sh --scan-folder` to import — use that only as a fallback when this override is rejected too.
+
+**MANDATORY pre-grab checklist — every step, every time, before POSTing the override below. Skipping any one of these caused a real ~100GiB duplicate-content grab on 2026-08-29 (see SONARR_STRUCTURAL_AUDIT.md's escape-hatch section for the full incident):**
+1. `GET /api/v3/release?episodeId=<ID>` (or `movieId=` for Radarr) for **every** episode you're trying to fill. Sort by `customFormatScore` descending and use the **winning candidate's own fields verbatim** — never hardcode `guid`/`indexerId`/`quality`/`languages` from a candidate you just happened to look at first.
+2. **A release's own rejection text (e.g. `"Wrong season"`) describes Sonarr's automated title-parse, not the file's actual contents.** Multi-episode/BD-BOX/Remux/"Complete" packs routinely bundle bonus specials/OVAs the title doesn't mention. Before deciding a pack is irrelevant OR before accepting it as a match, check the indexer's own listing or (once downloading) the torrent client's actual file tree — Sonarr/Prowlarr's release-search JSON never exposes per-file contents, only release-level title/size.
+3. **Before setting `episodeIds` in the override body, check `GET /api/v3/episode/<id>` `hasFile` for every episode the pack's title/season implies** — not just the ones you intend to include. If a pack covers a full season plus bonus content, and the season episodes already have `hasFile: true`, only include the genuinely-missing episode IDs in `episodeIds`; don't blindly map the whole implied range. Grabbing the full pack for the bonus content is fine, but the override's `episodeIds` should reflect only what you actually need, and once downloading, set the already-owned files' torrent-client priority to "do not download" to avoid wasting bandwidth/disk.
+4. Only after 1-3 are confirmed, build and POST the override:
 ```bash
-# Requires: seriesId, full list of episodeIds the pack covers, a quality id (GET /api/v3/qualitydefinition
+# Requires: seriesId, ONLY the genuinely-missing episodeIds (see step 3), a quality id (GET /api/v3/qualitydefinition
 # for the id matching the release's stated quality), and the series' originalLanguage id.
 jq -n --slurpfile rel release.json --slurpfile eps episode_ids.json '
   ($rel[0][] | select(.title | test("KEYWORD"))) as $r |
@@ -739,8 +747,8 @@ jq -n --slurpfile rel release.json --slurpfile eps episode_ids.json '
 curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" \
   --data-binary @grab_body.json "http://sonarr.home/sonarr/api/v3/release"
 ```
-- Verify success via `GET /api/v3/history?seriesId=<ID>&pageSize=5` (look for fresh `grabbed` events) — the response body from the POST itself can come back with `null` fields even on a genuine `200` success, don't treat that as failure.
-- After download completes, use Sonarr's Manual Import (`GET /api/v3/manualimport?downloadId=<ID>`) to map the pack's actual files to individual episodes.
+5. Verify success via `GET /api/v3/history?seriesId=<ID>&pageSize=5` (look for fresh `grabbed` events) — the response body from the POST itself can come back with `null` fields even on a genuine `200` success, don't treat that as failure.
+6. Once the specific files you need finish downloading (check per-file progress in the torrent client, not just overall torrent progress — a large pack downloads unevenly), run Sonarr's Manual Import **preview first** (`GET /api/v3/manualimport?downloadId=<ID>`, read-only) and verify it maps the actual filename/size/duration to the correct episode — don't assume the auto-detected mapping is right, confirm it. Only then POST the import (`importMode: "copy"`, never `"move"` — see this repo's hardlink rule).
 
 ---
 
@@ -1432,6 +1440,54 @@ bare LAN-trust, because it's a write endpoint. Credentials: `LOKI_PUSH_USER`/`LO
 Infisical `/observability` (the Caddyfile's `basic_auth` hash is a static `htpasswd`-generated
 literal until #111 in `ai/todo.md` wires it through Infisical Agent templating — regenerate and
 redeploy the hash manually if the password ever rotates).
+
+**Rotation procedure** (needed if the password is ever exposed — e.g. printed via `bash -x`,
+confirmed live 2026-08-29):
+```bash
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+
+# 1. Generate + store the new plaintext password in Infisical
+NEW_PASS=$(openssl rand -base64 24 | tr -d '=+/' | cut -c1-32)
+infisical secrets set LOKI_PUSH_PASSWORD "$NEW_PASS" --env dev --path /observability \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081
+
+# 2. Hash it (htpasswd -bnBC 10, NOT `caddy hash-password` — avoids an ad-hoc
+#    `docker run` on the Dockhand-managed TrueNAS host) and write straight into
+#    the Caddyfile via sed, in the same pipeline so the plaintext never touches
+#    a file or gets echoed
+NEW_PASS=$(infisical secrets get LOKI_PUSH_PASSWORD --env dev --path /observability \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 --plain)
+NEW_HASH=$(htpasswd -bnBC 10 "" "$NEW_PASS" | cut -d: -f2)
+sed -i '' "s|loki_push \$2y\$[0-9]*\\\$[A-Za-z0-9./]*|loki_push $NEW_HASH|" truenas/stacks/caddy/Caddyfile
+
+# 3. Deploy: scp the file, then reload (NOT restart — Caddy is Dockhand-managed,
+#    this is a config-only change)
+eval $(ssh-agent -s) > /dev/null
+infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --projectId "$INFISICAL_PROJECT_ID" \
+  --domain http://192.168.20.22:8081 --plain | ssh-add - 2>/dev/null
+scp truenas/stacks/caddy/Caddyfile kero66@192.168.20.22:/tmp/Caddyfile_new
+ssh kero66@192.168.20.22 "sudo cp /tmp/Caddyfile_new /mnt/Fast/docker/caddy/Caddyfile && rm /tmp/Caddyfile_new && sudo docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
+ssh-agent -k > /dev/null
+
+# 4. Verify end-to-end. loki.home does NOT resolve from a Mac off the LAN's
+#    AdGuard DNS — use --resolve to force the IP rather than SSH-tunneling the
+#    curl (nesting a local heredoc's stdin through a remote ssh command does
+#    NOT correctly attach to the remote curl's -K stdin — confirmed broken
+#    2026-08-29, don't retry that path, use --resolve instead):
+LOKI_USER=$(infisical secrets get LOKI_PUSH_USER --env dev --path /observability \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 --plain)
+LOKI_PASS=$(infisical secrets get LOKI_PUSH_PASSWORD --env dev --path /observability \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 --plain)
+curl -s --resolve loki.home:80:192.168.20.22 -K - -o /dev/null -w "HTTP:%{http_code}\n" \
+  -X POST "http://loki.home/loki/api/v1/push" -H "Content-Type: application/json" \
+  -d "{\"streams\":[{\"stream\":{\"job\":\"rotation_test\",\"host\":\"test\",\"run_status\":\"success\"},\"values\":[[\"$(date +%s%N)\",\"rotation verification\"]]}]}" <<EOF
+user = "${LOKI_USER}:${LOKI_PASS}"
+EOF
+# Expect HTTP:204. Any other code means the hash/deploy didn't take.
+```
+**Never use `bash -x`/`set -x` on anything that fetches or handles a secret** — it prints every
+expanded variable, including secret values, directly into the terminal/tool output. If a trace is
+genuinely needed for debugging, isolate the secret-handling lines out of the traced block first.
 
 **Payload shape — keep labels low-cardinality, put detail in the line itself**:
 ```json

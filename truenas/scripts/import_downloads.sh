@@ -282,11 +282,14 @@ scan_folder_and_import() {
   local app="$1"       # sonarr or radarr
   local scan_dir="$2"
 
+  local encoded_dir
+  encoded_dir=$(jq -rn --arg s "$scan_dir" '$s|@uri')
+
   local items
   if [[ "$app" == "sonarr" ]]; then
-    items=$(sonarr_api "manualimport?folder=${scan_dir}&filterExistingFiles=false" 2>/dev/null)
+    items=$(sonarr_api "manualimport?folder=${encoded_dir}&filterExistingFiles=false" 2>/dev/null)
   else
-    items=$(radarr_api "manualimport?folder=${scan_dir}&filterExistingFiles=false" 2>/dev/null)
+    items=$(radarr_api "manualimport?folder=${encoded_dir}&filterExistingFiles=false" 2>/dev/null)
   fi
 
   # Check we got valid JSON
