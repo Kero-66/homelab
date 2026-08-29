@@ -3,6 +3,7 @@
 **IMPORTANT:** First 200 lines only! Keep concise. Link to detailed docs.
 
 - [**Check docs BEFORE acting, especially when told something is documented**](feedback_check_docs_before_acting_not_after.md) — repeated failure mode, user has had to catch this multiple times; the instant "documented process" comes up, go read it before responding
+- [Dockhand git-stack file-only changes need force-recreate](feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md) — sync+deploy doesn't recreate the container if only a mounted file (not compose.yaml) changed; verify actual container content, don't trust job success
 - [Do not automate Bitwarden access](feedback_bitwarden_access.md) — scripts reading Bitwarden give Claude full vault access
 - [Never run infisical secrets table form](feedback_no_secret_table_output.md) — always use `infisical secrets get <KEY> --plain`, NEVER bare `infisical secrets` (prints all secrets in cleartext)
 - [No grep/head filtering on first run](feedback_no_grep_head.md) — always read raw output first, filter only if too large

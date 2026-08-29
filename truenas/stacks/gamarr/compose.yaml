@@ -1,0 +1,69 @@
+# =============================================================================
+# Gamarr Stack - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# Game/ROM search, download, and library manager (Arr-style): queries Prowlarr
+# for indexer results, downloads via qBittorrent, organizes into a game vault.
+# Deployed via Dockhand (docker compose), not midclt.
+#
+# Storage layout:
+#   Config/DB  → /mnt/Fast/docker/gamarr/config (DATA_DIR, no hardlink needs)
+#   Everything else is ONE mount spanning the whole unified Servarr dataset —
+#   matches CLAUDE.md's "Hardlinks are load-bearing" rule and gamarr's own
+#   requirement (see its README "Hardlink import: volume layout"): hardlinks
+#   fail across separate bind mounts even on the same filesystem, and gamarr's
+#   view of a torrent's path must match qBittorrent's exactly (no remote path
+#   mapping). qBittorrent mounts /mnt/Data/Servarr/downloads -> /data/downloads
+#   (see downloaders/compose.yaml) — mounting the shared parent here at the
+#   same /data root keeps that path identical inside both containers.
+#     /mnt/Data/Servarr -> /data
+#       /data/downloads/games  (QB_SAVE_PATH, QB_CATEGORY=games)
+#       /data/games             (GAMES_VAULT_PATH — new library category,
+#                                 same pattern as shows/movies/music/etc.)
+#       /data/games/roms         (GAMES_ROMS_PATH)
+#
+# Secrets:
+#   PROWLARR_API_KEY / QB_USER / QB_PASS rendered by Infisical Agent from
+#   /media (see truenas/stacks/infisical-agent/gamarr.tmpl) into
+#   /mnt/Fast/docker/gamarr/.env
+#
+# Networking:
+#   Joins arr-stack_default (external) to reach Prowlarr, and
+#   downloaders_default (external) to reach qBittorrent by container name.
+# =============================================================================
+
+services:
+  gamarr:
+    image: ghcr.io/jeremiahm37/gamarr:latest
+    container_name: gamarr
+    restart: unless-stopped
+    env_file:
+      - /mnt/Fast/docker/gamarr/.env
+    environment:
+      - PROWLARR_URL=http://prowlarr:9696
+      - QB_URL=http://qbittorrent:8080
+      - QB_SAVE_PATH=/data/downloads/games
+      - QB_CATEGORY=games
+      - DATA_DIR=/data/gamarr
+      - GAMES_VAULT_PATH=/data/games
+      - GAMES_ROMS_PATH=/data/games/roms
+      - TZ=Australia/Brisbane
+    labels:
+      - homepage.group=Media
+      - homepage.name=Gamarr
+      - homepage.icon=mdi-controller-classic
+      - homepage.href=http://gamarr.home
+      - homepage.description=Game/ROM search & download automation
+    ports:
+      - "5001:5001"
+    volumes:
+      - /mnt/Fast/docker/gamarr/config:/data/gamarr
+      - /mnt/Data/Servarr:/data
+    networks:
+      - arr-stack_default
+      - downloaders_default
+
+networks:
+  arr-stack_default:
+    external: true
+  downloaders_default:
+    external: true

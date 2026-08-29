@@ -1,0 +1,20 @@
+# Gamarr stack secrets - rendered by Infisical Agent
+# DO NOT EDIT - this file is auto-generated every 5 minutes
+# Source: Infisical project, dev environment, /media path
+#
+# Reuses existing Prowlarr/qBittorrent credentials, remapped to Gamarr's
+# expected env var names (QB_USER/QB_PASS instead of QBITTORRENT_USER/PASS).
+
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "PROWLARR_API_KEY" }}
+PROWLARR_API_KEY={{ .Value }}
+{{- end }}
+{{- if eq .Key "QBITTORRENT_USER" }}
+QB_USER={{ .Value }}
+{{- end }}
+{{- if eq .Key "QBITTORRENT_PASS" }}
+QB_PASS={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}

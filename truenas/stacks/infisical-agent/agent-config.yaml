@@ -78,3 +78,9 @@ templates:
     destination-path: /output/shokoanime/.env
     config:
       polling-interval: 5m
+
+  # Gamarr secrets (Prowlarr API key, qBittorrent creds remapped to QB_USER/QB_PASS)
+  - source-path: /config/gamarr.tmpl
+    destination-path: /output/gamarr/.env
+    config:
+      polling-interval: 5m
