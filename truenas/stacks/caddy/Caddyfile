@@ -146,9 +146,9 @@ http://suggestarr.home {
 	reverse_proxy 192.168.20.22:5000
 }
 
-# Questarr (Game collection tracking & automation)
-http://questarr.home {
-	reverse_proxy questarr:5000
+# Gamarr (Game/ROM search & download automation)
+http://gamarr.home {
+	reverse_proxy gamarr:5001
 }
 
 # Maintainerr (Watched-media cleanup automation)
