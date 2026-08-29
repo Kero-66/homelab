@@ -44,6 +44,7 @@ Owns all deployment, configuration, and operation of the homelab on TrueNAS Scal
 - DO NOT pipe SSH commands — use separate steps (TrueNAS SSH piped commands fail)
 - DO NOT pipe API responses to `jq` without first checking the response isn't HTML
 - DO NOT assume networking is the cause of a broken service — check logs first: `sudo docker logs <container> --tail 30`
+- DO NOT `docker run` a new throwaway container on this host for an unrelated utility task (hashing, testing, one-off CLI work), even with `--rm` — Dockhand's inventory never sees it, same violation as a raw lifecycle command against a managed app. Check for a local equivalent (`which <tool>`) before reaching for SSH+docker at all. `docker exec` into an *already-running* Dockhand-managed container to invoke its own documented action (e.g. `docker exec caddy caddy reload`) is fine — that's a different, narrower, already-accepted pattern. See `.claude/memory/feedback_dockhand_apps_no_raw_docker_commands.md`.
 
 ## Related Context
 - `ai/PATTERNS.md` - Verified SSH/Infisical/midclt commands (check before trial-and-error)

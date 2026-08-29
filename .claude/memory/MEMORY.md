@@ -31,7 +31,7 @@
 - [Check monitored before Radarr action](feedback_check_sonarr_monitored_before_radarr_action.md) — unmonitored Sonarr special means already deprioritized, not overlooked
 - [Season 0 is not just movies](feedback_season0_not_just_movies.md) — Sonarr specials include short bonus/promo/recap content too; runtime is a triage signal, not a filter for what to check
 - [Check correct config files](feedback_check_correct_files.md) — live TrueNAS configs are in `truenas/stacks/`, never push from `networking/.config/` (reference only)
-- [Dockhand apps: no raw docker commands](feedback_dockhand_apps_no_raw_docker_commands.md) — use Dockhand API/docker compose for restarts, never bare `docker restart`
+- [Dockhand apps: no raw docker commands](feedback_dockhand_apps_no_raw_docker_commands.md) — use Dockhand API/docker compose for restarts (never bare `docker restart`), and never `docker run` a throwaway utility container on the host either — check for a local tool first, `docker exec` into an existing managed container is the one exception
 - [Movie specials: solve in Radarr first](feedback_movie_specials_solve_in_radarr_first.md) — for Sonarr movie-length (≥50min) specials, check Radarr/TMDB not Sonarr/TVDB for identity — TVDB gives false negatives on real films; also: don't classify from title alone, don't skip a "not committed" franchise's classification
 - [Never dump full records with secret fields](feedback_never_dump_full_records_with_secret_fields.md) — don't jq-dump whole Sonarr objects when a nested field carries a live Prowlarr key
 - [No OpenSubtitles](feedback_no_opensubtitles.md) — no longer free/personally usable, don't suggest it
@@ -42,15 +42,17 @@
 - [Read memory at session start](feedback_read_memory_at_session_start.md) — CLAUDE.md step 1 is not optional; skipping it caused repeat violations of 5+ already-documented lessons in one session (2026-08-24)
 - [Verify API before calling](feedback_verify_api_before_calling.md) — check swagger/OpenAPI spec or source for correct method+body before guessing; a failed call's error response has no data, don't misparse it as an empty result
 - [Shoko manual linking](service_shoko_manual_linking.md) — the working API sequence for unrecognized files: AniDB search → Refresh `?createSeriesEntry=true` (the easy-to-miss flag) → wait for queue → get episodes with `includeMissing=true` → Link with local (not AniDB) episode IDs
+- [Tailscale authkey expiry incident](incident_tailscale_authkey_expiry.md) — auth key expiry (separate from node key) crash-loops the TrueNAS container; expiry now disabled, fix procedure + real compose path documented
+- [Never self-certify the security gate](feedback_no_self_certify_security_gate.md) — never manually write the commit-gate timestamp yourself, even after a genuinely clean /security-review run; a repeat violation, not a one-off
+- [Never move, only hardlink media](feedback_never_move_only_hardlink_media.md) — never mv/cp media between downloads and library by hand, never importMode:"move" — breaks hardlinks and torrent seed data; root-caused to stale /mnt/Data/media and /mnt/Data/downloads paths in CLAUDE.md/AGENTS.md (now fixed to /mnt/Data/Servarr)
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**
 - **Workstation**: 192.168.20.66 (Fedora, cold spare)
-- **JetKVM**: 192.168.20.25 (LAN, Tailscale enabled) — SSH as root@, key in Infisical `/networking/JETKVM_SSH_PRIVATE_KEY`
+- **JetKVM**: 192.168.20.15 (LAN, Tailscale enabled, key expiry disabled) — SSH as root@, key in Infisical `/networking/JETKVM_SSH_PRIVATE_KEY`; tailscale binary at `/userdata/tailscale/tailscale` (not on PATH)
 - **Pools**: `/mnt/Fast` (NVMe), `/mnt/Data` (HDD)
 - **Configs**: `/mnt/Fast/docker/<service>/`
-- **Media**: `/mnt/Data/media/{shows,movies,anime,music,tv,downloads}`
-- **Downloads**: `/mnt/Data/downloads/{qbittorrent,sabnzbd,complete,incomplete}`
+- **Media + Downloads (unified dataset since #92)**: `/mnt/Data/Servarr/{downloads,shows,movies,music,books,manga,webtoons}` — one ZFS dataset so imports hardlink. `/mnt/Data/media` and `/mnt/Data/downloads` are OLD legacy paths, not mounted by any app.
 
 ## Key Architecture Decisions
 - **Security**: API-first approach, Infisical for infrastructure secrets, Bitwarden for personal passwords

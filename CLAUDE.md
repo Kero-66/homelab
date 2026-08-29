@@ -13,8 +13,8 @@
 - **JetKVM**: 192.168.20.25 — SSH as root@, key in Infisical `/networking/JETKVM_SSH_PRIVATE_KEY`
 - **Pools**: `/mnt/Fast` (NVMe), `/mnt/Data` (HDD)
 - **Configs**: `/mnt/Fast/docker/<service>/`
-- **Media**: `/mnt/Data/media/{shows,movies,anime,music,tv,downloads}`
-- **Downloads**: `/mnt/Data/downloads/{qbittorrent,sabnzbd,complete,incomplete}`
+- **Media + Downloads (unified dataset since #92, 2026-08-24)**: `/mnt/Data/Servarr/{downloads,shows,movies,music,books,manga,webtoons}` — one ZFS dataset, mounted whole into each *arr/downloader container so imports hardlink instead of copy/move. `/mnt/Data/media` and `/mnt/Data/downloads` are OLD, pre-migration paths — legacy content only, no longer mounted by any app. Never search or write there.
+- **Hardlinks are load-bearing** — NEVER `mv`/`cp` media files between downloads and library by hand, and never call an import API with `importMode: "move"`. Always use `importMode: "copy"` (or the Sonarr/Radarr UI default with "Use Hardlinks" on) — see `ai/PATTERNS.md` "Manual Import `importMode`" section. A `move` breaks the torrent's seed data (qBittorrent → `missingFiles`) even though the import itself looks like it worked.
 
 ## Architecture
 - **Secrets**: Infisical for infrastructure secrets, Bitwarden for personal passwords
@@ -95,11 +95,13 @@ See `.claude/docs/recyclarr.md`
 - **Commits**: `<type>(<scope>): <short summary>` — e.g. `fix(autobrr): correct feed_type for AnimeTosho`
 
 ## Commit Security Gate — REQUIRED
-Before EVERY commit:
-1. Run `/security-review` on staged changes
-2. If clean: `date +%s > ~/.claude/hooks/.security-review-timestamp`
-3. Then commit — hook reads timestamp, allows if within 10 minutes, deletes token
-4. If hook blocks: security review is stale or missing — repeat from step 1
+Before EVERY commit, use the `security-review-gate` skill (not the bundled `/security-review`) —
+it reviews the diff and, only if nothing is found, writes the commit-gate token itself as its own
+last step (bound to a hash of that exact diff, not just a time window). If it finds anything, it
+stops and reports to the user for review/direction — never fixes or proceeds unprompted. The
+model must never write `~/.claude/hooks/.security-review-timestamp` by hand under any
+circumstances — see `.claude/memory/feedback_no_self_certify_security_gate.md`. If the hook
+blocks a commit, the diff changed since the last review (or none was run) — re-run the skill.
 
 ## Task Tracking
 - Use TodoWrite for multi-step current session work
@@ -114,7 +116,7 @@ If context is compacted, preserve these critical facts:
 - Dockhand apps: use `sudo docker compose up -d --force-recreate` — midclt does NOT apply
 - Infisical: ALL secrets are `--env dev`, NEVER run `infisical secrets` without targeting a key
 - Check logs first: `sudo docker logs <container> --tail 30` before any hypothesis
-- EVERY commit: run `/security-review` → if clean: `date +%s > ~/.claude/hooks/.security-review-timestamp` → then commit
+- EVERY commit: use the `security-review-gate` skill (not `/security-review`) — it writes its own gate token only after a real clean review; never write that token file yourself
 
 ## Intent Layer
 

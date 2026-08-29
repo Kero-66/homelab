@@ -51,6 +51,9 @@
     }
   },
   "permissions": {
+    "allow": [
+      "Bash(bash .claude/skills/security-review-gate/scripts/write-token.sh)"
+    ],
     "deny": [
       "Read(archive/**)",
       "Read(.claude/projects/-Users-kieran-repos-homelab/**)",

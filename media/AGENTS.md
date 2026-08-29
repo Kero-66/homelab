@@ -12,9 +12,11 @@ Reference compose files and setup automation for the homelab media stack (Jellyf
 ## Contracts & Invariants
 
 **Live config paths on TrueNAS:**
-- Media: `/mnt/Data/media/{shows,movies,anime,music,tv,downloads}`
-- Downloads: `/mnt/Data/downloads/{qbittorrent,sabnzbd,complete,incomplete}`
+- Media + Downloads (one unified ZFS dataset since #92, 2026-08-24): `/mnt/Data/Servarr/{downloads,shows,movies,music,books,manga,webtoons}` — mounted whole into every *arr/downloader container so imports hardlink. `/mnt/Data/media` and `/mnt/Data/downloads` are OLD pre-migration paths, no longer mounted — legacy content only, do not use.
 - Configs: `/mnt/Fast/docker/<service>/`
+
+**Hardlinks — never break them:**
+- Never `mv`/`cp` a media file between the downloads folder and the library by hand — use `cp -al`/`ln`, or better, the *arr Manual Import API with `importMode: "copy"` (creates a hardlink on this dataset). `importMode: "move"` physically relocates the file and breaks the torrent's seed data (qBittorrent → `missingFiles`). See `ai/PATTERNS.md` "Manual Import `importMode`" for the full explanation and the recovery procedure if this already happened.
 
 **API keys — stored in Infisical `/media`:**
 - `JELLYFIN_API_KEY`, `SONARR_API_KEY`, `RADARR_API_KEY`, `BAZARR_API_KEY`, `PROWLARR_API_KEY`
@@ -41,6 +43,7 @@ Reference compose files and setup automation for the homelab media stack (Jellyf
 - Anime indexers via Prowlarr built-in: Nyaa, AniDex, AnimeTosho, Anirena
 
 ## Anti-patterns
+- DO NOT `mv`/`cp` media files between downloads and library by hand, or use `importMode: "move"` — breaks hardlinks and the torrent's seed data
 - DO NOT deploy `media/compose.yaml` directly — use `truenas/stacks/` via midclt
 - DO NOT use ffprobe/python to query media info when a service API exists
 - DO NOT edit Bazarr `enabled_providers` via API — it silently ignores it on both read and write; use Bazarr UI: Settings → Providers

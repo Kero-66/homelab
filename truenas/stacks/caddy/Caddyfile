@@ -55,10 +55,27 @@ http://signoz.home {
 }
 
 # Grafana (Observability trial 2 - Loki logs + Prometheus metrics via Alloy)
-# Proxies to the host-exposed port, same pattern as signoz.home above —
-# Caddy doesn't join grafana-alloy-network to avoid unnecessary coupling.
+# Proxies to the host-exposed port, same pattern as signoz.home above.
 http://grafana.home {
 	reverse_proxy 192.168.20.22:3010
+}
+
+# Loki push API — lets scripts ship logs to Loki over the LAN without SSH.
+# Loki itself has no built-in auth (confirmed via Loki's own docs: "authorization
+# is not part of the Loki API... needs to be done separately, e.g. an
+# open-source load-balancer such as NGINX") and is bound to 127.0.0.1:3100 on
+# the host, so Caddy joins grafana-alloy-network (2026-08-29, see compose.yaml)
+# to reach it by container name and puts a basic_auth gate in front — the one
+# exception to every other *.home vhost's LAN-trust-only model, because this
+# is a write endpoint. Credentials: LOKI_PUSH_USER/LOKI_PUSH_PASSWORD in
+# Infisical /observability (hash below is generated from that password via
+# `htpasswd -bnBC 10 "" '<password>'`, not `caddy hash-password` — this stack
+# is Dockhand-managed, no ad-hoc `docker run`/`docker exec` on the host).
+http://loki.home {
+	basic_auth {
+		loki_push $2y$10$lnAjMMe9or/XwNDx4QYtWOIfOZAdwO7QqLq.JtvotHkJuhmluajSa
+	}
+	reverse_proxy loki:3100
 }
 
 # Bazarr (Subtitles) - note the /bazarr URL base

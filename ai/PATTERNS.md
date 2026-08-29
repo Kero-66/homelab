@@ -1284,8 +1284,16 @@ curl -s -H "X-Api-Key: $RADARR_KEY" "$RADARR/api/v3/release?movieId=<ID>" | \
 
 ## Manual Import Script
 
+**Run this before reaching for ad-hoc curl against Sonarr/Radarr's manual-import API.**
+Hand-crafting the same curl commands turn after turn burns tokens for no reason once a working,
+logged script exists — use the script first, and only drop to raw curl for something the script
+doesn't cover (a one-off single-file case, or diagnosing why the script itself failed).
+
 Script: `truenas/scripts/import_downloads.sh`
-Scans qBittorrent and SABnzbd completed dirs, auto-imports clean matches into Sonarr/Radarr.
+Scans qBittorrent and SABnzbd completed dirs, auto-imports clean matches into Sonarr/Radarr via
+`POST /api/v3/command` (`name: "ManualImport"`) — every run's full output is also captured to
+`truenas/scripts/logs/import_downloads_<timestamp>.log` (gitignored) so a failure can be diagnosed
+from the log afterward instead of re-running curl commands to reconstruct what happened.
 
 ```bash
 # Dry run — shows what would be imported without doing anything
@@ -1298,6 +1306,19 @@ Scans qBittorrent and SABnzbd completed dirs, auto-imports clean matches into So
 Requirements: `jq`, `curl`, `infisical` CLI authenticated.
 Scan dirs: `/data/downloads/qbittorrent/completed`, `/data/downloads/sabnzbd/complete`
 Auto-imports: files with series/movie match and zero rejections (importMode: copy)
+
+### `POST /api/v3/manualimport` vs `POST /api/v3/command` (name: `ManualImport`) — not interchangeable
+`POST /api/v3/manualimport` is Sonarr/Radarr's **ReprocessItems** endpoint — it only re-evaluates
+quality/language/episode matching for the items you send it and echoes the result back. It does
+**not** copy or hardlink any file, and does not fire the internal `DownloadCompletedEvent` that
+marks a queue item resolved. Confirmed live 2026-08-29: POSTing an already-imported Zoids Chaotic
+Century episode to it returned an unchanged echo and left the queue item stuck at `importBlocked`;
+using the Sonarr UI's own Interactive Import (which drives the real import pipeline) cleared the
+same queue item immediately and logged `DownloadCompletedEvent`. `POST /api/v3/command` with
+`{"name": "ManualImport", "files": [...], "importMode": "copy"}` drives that same real pipeline via
+the API and is a queued async Command — poll `GET /api/v3/command/<id>` until `status` leaves
+`queued`/`started`. This is what `import_downloads.sh` uses; don't revert to `/api/v3/manualimport`
+for anything other than a read-only `GET` to see what's importable.
 Reports: files needing manual attention with rejection reason
 
 ### Manual Import `importMode` — always use `"copy"`, never `"move"`
@@ -1312,6 +1333,84 @@ after the next recheck) even though the import itself succeeds. If a `move` impo
 a torrent, it's fixable without re-downloading: match qBittorrent's original per-file name+size
 (`GET /api/v2/torrents/files?hash=<hash>`) against the imported library file by exact byte size,
 recreate a hardlink at the original download path (`os.link`), then `POST /api/v2/torrents/recheck`.
+
+### Stuck queue items after Manual Import — what's confirmed vs. still open
+9 batch/pack downloads (Zoids Chaotic Century, RWBY, Robotech, Koyomimonogatari, Maison Ikkoku,
+Mospeada, Tekkaman Blade BD-BOX, .hack, G.U. Trilogy) were found stuck at
+`trackedDownloadState: importBlocked` with a null series/movie id — permanent "Series/Movie title
+mismatch" queue entries, invisible to the normal `GET /api/v3/queue` unless
+`includeUnknownSeriesItems=true`/`includeUnknownMovieItems=true` is passed. This also permanently
+blocks Cleanuparr's seeding-rule cleanup, which refuses to touch any download an arr still has
+queued (`[DownloadCleaner] skip | download is used by an arr`), regardless of `max_seed_time`.
+
+**Confirmed (2026-08-29):**
+- These imports had all been done via `POST /api/v3/manualimport`, which is a metadata-only
+  reprocess (see above) — it never fires the `DownloadCompletedEvent` that queue clearing depends
+  on. A single-file test resubmit with `downloadId` added, still via `/api/v3/manualimport`,
+  changed nothing.
+- The Sonarr UI's own Interactive Import for Zoids Chaotic Century cleared its queue item
+  immediately and logged `DownloadCompletedEvent` — confirming the real pipeline (i.e.
+  `POST /api/v3/command` with `name: "ManualImport"`) is what's required, not the reprocess
+  endpoint.
+- `GET /api/v3/manualimport` already returns `downloadId` per file — always thread it into the
+  import payload (`{path, seriesId, episodeIds, downloadId, ...}` for Sonarr;
+  `{path, movieId, downloadId, ...}` for Radarr). This is schema-correct per Sonarr's own
+  `ManualImportFile`/`ManualImportItem` models regardless, and costs nothing to include.
+
+**Still open / not independently verified:** whether `POST /api/v3/command` (ManualImport) via the
+API — as opposed to the UI's Interactive Import specifically — actually clears these particular 9
+queue items, and whether `downloadId` is necessary or just correct-but-inert for that to happen.
+`import_downloads.sh` now uses the command endpoint with `downloadId` included; the real test is
+running it against one of the 9 stuck items and checking `GET /api/v3/queue` afterward — don't
+assume it's fixed until that's actually been observed.
+
+---
+
+## Shipping Script Logs to Loki
+
+Any script that logs to a local file (like `import_downloads.sh`) should also ship that log to
+Loki (the Grafana Alloy stack, `truenas/stacks/grafana-alloy/`) so it's queryable in Grafana instead
+of living only on whatever machine ran the script — this is the standard going forward for
+repeatable scripts, not a one-off.
+
+**Endpoint**: `http://loki.home/loki/api/v1/push` — added 2026-08-29 specifically so scripts can push
+without SSH. Loki itself has no built-in auth (its own docs: "authorization is not part of the Loki
+API... needs to be done separately") and binds to `127.0.0.1:3100` on the TrueNAS host, so Caddy
+joins `grafana-alloy-network` and puts `basic_auth` in front — the one `*.home` vhost that isn't
+bare LAN-trust, because it's a write endpoint. Credentials: `LOKI_PUSH_USER`/`LOKI_PUSH_PASSWORD` in
+Infisical `/observability` (the Caddyfile's `basic_auth` hash is a static `htpasswd`-generated
+literal until #111 in `ai/todo.md` wires it through Infisical Agent templating — regenerate and
+redeploy the hash manually if the password ever rotates).
+
+**Payload shape — keep labels low-cardinality, put detail in the line itself**:
+```json
+{"streams": [{
+  "stream": {"job": "<script_name>", "host": "<hostname>", "run_status": "success|failure"},
+  "values": [["<unix_nanoseconds_as_string>", "<log line>"], ...]
+}]}
+```
+- `stream` labels become Loki's index — keep them to a small fixed set (job/host/status). Never put
+  the run id, timestamp, or free-text content in a label; that's what blew up cardinality warnings
+  in other Loki setups. Put `run_id=<value>` as a suffix on the log line text instead, so it's
+  searchable via `|= "run_id=x"` without being an index dimension.
+- Timestamps must be **non-decreasing** within a stream, sent as a **string**, not a number
+  (`400` otherwise) — assign strictly increasing nanosecond values per line if pushing a whole log
+  file's lines in one batch (e.g. `base_ns + line_index`).
+- `jq -R -s 'split("\n") | map(select(length > 0)) | to_entries | map([...])'` is the reliable way to
+  turn a multi-line log file into this shape from bash — see `import_downloads.sh`'s
+  `ship_log_to_loki()` for the full working version. Strip ANSI color codes first
+  (`sed -E 's/\x1b\[[0-9;]*m//g'`) so lines read cleanly in Grafana's log panel.
+
+**Querying it back** (from anywhere on the LAN, no SSH): Grafana's datasource-proxy API works even
+without opening Grafana's UI —
+```bash
+curl -s -u "admin:$GRAFANA_PASS" -G "http://grafana.home/api/datasources/proxy/uid/P8E80F9AEF21F6940/loki/api/v1/query_range" \
+  --data-urlencode 'query={job="import_downloads"}' \
+  --data-urlencode "start=$(( $(date +%s) - 3600 ))000000000" \
+  --data-urlencode "end=$(date +%s)000000000" | jq '.data.result'
+```
+(`GRAFANA_ADMIN_PASSWORD` in Infisical `/observability`; Loki datasource UID `P8E80F9AEF21F6940`,
+confirmed live — re-check via `GET /api/datasources` if this ever changes.)
 
 ---
 
