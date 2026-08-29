@@ -35,6 +35,7 @@ services:
     volumes:
       # Homepage configuration
       - /mnt/Fast/docker/homepage/config:/app/config
+      - /mnt/Data/Servarr/:/data
     ports:
       - "3000:3000"
     networks:
