@@ -1,0 +1,24 @@
+---
+title: Homelab
+logpath: /app/state/logs
+layout:
+  Media:
+    style: row
+    columns: 3
+    Arr Apps:
+      style: column
+    Streaming:
+      style: column
+    Downloaders:
+      style: column
+  RSS:
+    style: row
+    columns: 4
+  Calendar:
+    style: row
+  Status:
+    style: row
+    columns: 2
+    Maintenance:
+      style: row
+      columns: 2

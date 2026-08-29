@@ -4,7 +4,9 @@
 # Unified dashboard for all homelab services
 #
 # Storage layout:
-#   Config → /mnt/Fast/docker/homepage/config/    (NVMe - Homepage config files)
+#   Config → ./config (this stack's dir, Dockhand git-synced, read-only)
+#   State  → /mnt/Fast/docker/homepage/state/     (NVMe - logs, not git-synced;
+#            see settings.yaml's logpath, same split as infisical-agent's /auth)
 #   .env   → /mnt/Fast/docker/homepage/.env       (NVMe - API keys from Infisical)
 #
 # Secrets:
@@ -33,8 +35,13 @@ services:
     env_file:
       - /mnt/Fast/docker/homepage/.env
     volumes:
-      # Homepage configuration
-      - /mnt/Fast/docker/homepage/config:/app/config
+      # Homepage configuration - Dockhand git clone of this stack's directory,
+      # so config yaml/css/js come straight from git on each sync+deploy (no
+      # manual scp) - matches infisical-agent's pattern
+      - ./config:/app/config:ro
+      # Writable state (logs) - kept out of the git-synced config dir, see
+      # settings.yaml's logpath
+      - /mnt/Fast/docker/homepage/state:/app/state
       - /mnt/Data/Servarr/:/data
     ports:
       - "3000:3000"
