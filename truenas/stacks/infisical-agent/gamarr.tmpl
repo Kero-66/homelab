@@ -16,5 +16,8 @@ QB_USER={{ .Value }}
 {{- if eq .Key "QBITTORRENT_PASS" }}
 QB_PASS={{ .Value }}
 {{- end }}
+{{- if eq .Key "SABNZBD_API_KEY" }}
+SABNZBD_API_KEY={{ .Value }}
+{{- end }}
 {{- end }}
 {{- end }}

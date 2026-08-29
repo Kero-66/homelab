@@ -22,7 +22,7 @@
 #       /data/games/roms         (GAMES_ROMS_PATH)
 #
 # Secrets:
-#   PROWLARR_API_KEY / QB_USER / QB_PASS rendered by Infisical Agent from
+#   PROWLARR_API_KEY / QB_USER / QB_PASS / SABNZBD_API_KEY rendered by Infisical Agent from
 #   /media (see truenas/stacks/infisical-agent/gamarr.tmpl) into
 #   /mnt/Fast/docker/gamarr/.env
 #
@@ -43,6 +43,8 @@ services:
       - QB_URL=http://qbittorrent:8080
       - QB_SAVE_PATH=/data/downloads/games
       - QB_CATEGORY=games
+      - SABNZBD_URL=http://sabnzbd:8080
+      - SABNZBD_CATEGORY=games
       - DATA_DIR=/data/gamarr
       - GAMES_VAULT_PATH=/data/games
       - GAMES_ROMS_PATH=/data/games/roms
