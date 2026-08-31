@@ -639,59 +639,36 @@ curl -sL "$SONARR_BASE/api/v3/history?seriesId=$SERIES_ID&pageSize=20&apikey=$SO
 curl -sL "$SONARR_BASE/api/v3/config/downloadclient?apikey=$SONARR_KEY" | jq '{enableCompletedDownloadHandling, autoRedownloadFailed}'
 ```
 
-### Manual import payload — build it FROM the scan result, never hand-craft it
-Every field in the `ManualImport` command payload below (`quality`, `languages`, `downloadId`) must
-come from the corresponding `manualimport` GET scan's response for that file — don't type them in
-by hand, even for fields that look optional or guessable. Confirmed failure (2026-08-29): a
-hand-built payload omitted `languages` (assumed optional) and Sonarr accepted the command with
-`status: "completed"` and no error in the response — but the import silently no-op'd
-(`hasFile` stayed `false`). The real failure only showed up in `docker logs sonarr`:
-`NOT NULL constraint failed: EpisodeFiles.Languages`. The command API's "completed" status does
-**not** mean the import actually happened — always verify via `hasFile`/`episodeFileId` on the
-target episode/movie afterward, and check `docker logs sonarr --tail 60` if it didn't land, per the
-"check logs first" rule — the exception detail is only in the container log, never in the API
-response.
+### Manual import — always use `truenas/scripts/import_downloads.sh`, never hand-roll the curl/jq
+**Do not construct a `ManualImport` command payload by hand.** Use the script — `--plan`/`--apply`
+for stuck `importBlocked` queue items, `--scan-folder` for untracked/escape-hatch downloads. See
+"## Manual Import Script" further below for full usage. Confirmed failure, twice independently
+(2026-08-29 and again 2026-08-31 despite the first incident already being documented here):
+hand-built payloads got fields wrong in ways that looked like success —
+- Omitting `languages` (assumed optional): Sonarr returned `status: "completed"` with no error,
+  but the import silently no-op'd (`hasFile` stayed `false`); the real failure only showed up in
+  `docker logs sonarr` (`NOT NULL constraint failed: EpisodeFiles.Languages`).
+- Sourcing `quality.id` from `GET /api/v3/qualitydefinition` instead of an actual release/episode
+  quality object — that endpoint's `id` field is a **different id-space** from the `Quality` enum
+  id used in import/release payloads (e.g. qualitydefinition's DVD=5 vs. the real enum's DVD=2,
+  where enum-5 is actually `WEBDL-720p`). The import "succeeded" but tagged the file with the
+  wrong quality.
+- Omitting `indexerFlags`/`releaseGroup`. The command still reports `"Manually imported N files"`
+  with real N>0, but the queue item never actually clears — invisible unless you check the queue
+  afterward, which a hand-rolled command doesn't do automatically the way the script does.
+
+The command API's `"completed"` status and even a real `"Manually imported N files"` message do
+**not** on their own prove the import fully succeeded — always verify `hasFile`/`episodeFileId` on
+the target AND that the queue entry actually cleared, or just use the script, which checks both.
 
 ### Force manual import for stuck importBlocked items
-Sonarr sometimes blocks auto-import with "release was matched to series by ID" for releases with non-English filenames. This pattern analyzes and imports all clean (zero-rejection) files for a given `downloadId`.
-
+Sonarr sometimes blocks auto-import with "release was matched to series by ID" for releases with non-English filenames, or for any release with no parseable episode/season markers. Use the script:
 ```bash
-# Step 1: check what's stuck
-curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/queue?pageSize=50" | \
-  jq '.records[] | select(.trackedDownloadState == "importBlocked") | {title, downloadId, seriesId, episodeId}'
-
-# Step 2: analyze a stuck download (verify episode detection and check rejections)
-curl -s -H "X-Api-Key: $SONARR_KEY" \
-  "http://192.168.20.22:8989/sonarr/api/v3/manualimport?downloadId=<DOWNLOAD_ID>&filterExistingFiles=false" | \
-  jq '.[] | {path, episodes: [.episodes[].episodeNumber], rejections}'
-
-# Step 3: force import (pipe jq-built payload directly to curl — no temp files)
-# Imports only files with zero rejections; skips downgrades/unexpected episodes automatically
-# importMode MUST be "copy", not "move" — see "Manual Import importMode" note below for why.
-curl -s -H "X-Api-Key: $SONARR_KEY" \
-  "http://192.168.20.22:8989/sonarr/api/v3/manualimport?downloadId=<DOWNLOAD_ID>&filterExistingFiles=false" | \
-  jq '[.[] | select(.rejections | length == 0)] | {name: "ManualImport", importMode: "copy", files: [.[] | {path, seriesId: .series.id, episodeIds: [.episodes[0].id], quality, languages, downloadId}]}' | \
-  curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" \
-    --data-binary @- "http://192.168.20.22:8989/sonarr/api/v3/command" | jq '{id, status}'
-
-# Step 4: check result
-curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/command/<COMMAND_ID>" | jq '{status, message}'
-
-# Step 5: clear the now-orphaned queue entry — manual import does NOT do this automatically
-# A forced ManualImport bypasses Sonarr's normal completion pipeline, so the queue entry
-# (matched to the download by downloadId) is never marked as resolved. It sits forever
-# with trackedDownloadState "importBlocked" / status message "Unable to parse download,
-# automatic import is not possible" — even though the files were correctly imported.
-# Cleanuparr's queue_cleaner does NOT catch this pattern (only catches things like "Not an
-# upgrade for existing episode file(s)"), so it will not self-clear. Verify the import
-# actually landed (episode/episodefile hasFile checks) before removing, then:
-curl -s -H "X-Api-Key: $SONARR_KEY" "http://192.168.20.22:8989/sonarr/api/v3/queue?pageSize=200&includeUnknownSeriesItems=true" | \
-  jq -r '.records[] | select(.downloadId=="<DOWNLOAD_ID>") | .id' | while read -r qid; do
-    curl -s -X DELETE -H "X-Api-Key: $SONARR_KEY" \
-      "http://192.168.20.22:8989/sonarr/api/v3/queue/$qid?removeFromClient=true&blocklist=false"
-  done
+./truenas/scripts/import_downloads.sh --plan             # writes a plan file, auto-mapped entries pre-filled
+# edit the plan file — fill in seriesId+episodeIds (Sonarr) or movieId (Radarr) for any null entries
+./truenas/scripts/import_downloads.sh --apply <plan-file> # submits mapped entries, polls, reports cleared vs. still-stuck
 ```
-**Never do this without confirming with the user first if the removal is more than a couple of items** — clearing the queue is easy to reverse-in-spirit (nothing is blocklisted, files aren't touched) but it's still an action on shared state, not a read.
+It also clears the now-orphaned queue entry check for you — a forced `ManualImport` bypasses Sonarr's normal completion pipeline, so the queue entry is never automatically marked resolved otherwise (Cleanuparr's queue_cleaner does not catch this pattern either).
 
 **When this fails (permanent blocks):**
 - `"Not an upgrade for existing episode file"` → existing file is better quality, don't import
@@ -729,6 +706,8 @@ Sonarr's episode-matching can fail for two structurally different reasons. Check
 
 **This is also the primary "Prowlarr escape hatch" method** (when Sonarr/Radarr's own search finds nothing at all, so you fall back to Prowlarr's free-text search): find the release via Prowlarr's `GET /api/v1/search?query=...`, then grab it through Sonarr/Radarr's own `/api/v3/release` below (not through Prowlarr's own download-client integration) — this makes Sonarr/Radarr create a real `TrackedDownload`, so it shows up in the queue and imports automatically like a native grab. Verified working 2026-08-29 (Gundam 0083 "Mayfly of Space", see media/docs/SONARR_STRUCTURAL_AUDIT.md). Grabbing via Prowlarr's own client instead is a dead end — see `ai/todo.md`/COMPLETED.md #112: those grabs never create a `TrackedDownload`, so they're invisible to `/api/v3/queue` regardless of category, and need `import_downloads.sh --scan-folder` to import — use that only as a fallback when this override is rejected too.
 
+**Correction (2026-08-29): a Prowlarr-only `guid` (from `/api/v1/search`, never seen by Sonarr/Radarr's own search) 404s on `/api/v3/release` with "Couldn't find requested release in cache."** The override only bypasses a title-parse *rejection* on a release the app's own search already cached — it cannot inject a release the app never saw. Re-running `EpisodeSearch`/`MoviesSearch` does not fix this if the release's title genuinely doesn't match what the app queries for (e.g. a compilation-film title with no episode/series-name overlap). Confirm the guid is present in `GET /api/v3/release?episodeId=`/`?movieId=` (the app's own cache) before attempting the override — if it isn't there, either the content is really a distinct movie that belongs in Radarr instead (check TMDB, see structural flaw #1 in `media/docs/SONARR_ACQUISITION_PROCESS.md`), or fall straight to manual download + `import_downloads.sh --scan-folder`, without wasting a POST on the guaranteed-404 override.
+
 **MANDATORY pre-grab checklist — every step, every time, before POSTing the override below. Skipping any one of these caused a real ~100GiB duplicate-content grab on 2026-08-29 (see SONARR_STRUCTURAL_AUDIT.md's escape-hatch section for the full incident):**
 1. `GET /api/v3/release?episodeId=<ID>` (or `movieId=` for Radarr) for **every** episode you're trying to fill. Sort by `customFormatScore` descending and use the **winning candidate's own fields verbatim** — never hardcode `guid`/`indexerId`/`quality`/`languages` from a candidate you just happened to look at first.
 2. **A release's own rejection text (e.g. `"Wrong season"`) describes Sonarr's automated title-parse, not the file's actual contents.** Multi-episode/BD-BOX/Remux/"Complete" packs routinely bundle bonus specials/OVAs the title doesn't mention. Before deciding a pack is irrelevant OR before accepting it as a match, check the indexer's own listing or (once downloading) the torrent client's actual file tree — Sonarr/Prowlarr's release-search JSON never exposes per-file contents, only release-level title/size.
@@ -748,7 +727,7 @@ curl -s -X POST -H "X-Api-Key: $SONARR_KEY" -H "Content-Type: application/json" 
   --data-binary @grab_body.json "http://sonarr.home/sonarr/api/v3/release"
 ```
 5. Verify success via `GET /api/v3/history?seriesId=<ID>&pageSize=5` (look for fresh `grabbed` events) — the response body from the POST itself can come back with `null` fields even on a genuine `200` success, don't treat that as failure.
-6. Once the specific files you need finish downloading (check per-file progress in the torrent client, not just overall torrent progress — a large pack downloads unevenly), run Sonarr's Manual Import **preview first** (`GET /api/v3/manualimport?downloadId=<ID>`, read-only) and verify it maps the actual filename/size/duration to the correct episode — don't assume the auto-detected mapping is right, confirm it. Only then POST the import (`importMode: "copy"`, never `"move"` — see this repo's hardlink rule).
+6. Once the specific files you need finish downloading (check per-file progress in the torrent client, not just overall torrent progress — a large pack downloads unevenly), run `import_downloads.sh --plan` (or `--scan-folder` for an untracked download) and check its preview/plan output maps the actual filename/size/duration to the correct episode before editing in the mapping — don't assume the auto-detected mapping is right, confirm it. Then `--apply` — never hand-construct the `ManualImport` POST yourself (see "Manual import" above), and never pass `importMode: "move"` if you do have to touch the payload directly for some reason (the script always uses `"copy"` — see this repo's hardlink rule).
 
 ---
 

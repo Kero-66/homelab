@@ -3,6 +3,8 @@
 **IMPORTANT:** First 200 lines only! Keep concise. Link to detailed docs.
 
 - [**Check docs BEFORE acting, especially when told something is documented**](feedback_check_docs_before_acting_not_after.md) — repeated failure mode, user has had to catch this multiple times; the instant "documented process" comes up, go read it before responding
+- [Re-verify doc "✅ resolved" claims against live state; never call content bonus without checking Radarr/TMDB + researching](feedback_reverify_doc_claims_against_live_state.md) — a doc row is a cache of the process's output, not proof it ran
+- [**Never hand-roll ManualImport curl/jq — always use `import_downloads.sh`**](feedback_use_import_downloads_script_not_handrolled.md) — did this twice in one session despite the script existing; both had real bugs (wrong quality-id space, missing fields) the script avoids
 - [Dockhand git-stack file-only changes need force-recreate](feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md) — sync+deploy doesn't recreate the container if only a mounted file (not compose.yaml) changed; verify actual container content, don't trust job success
 - [Do not automate Bitwarden access](feedback_bitwarden_access.md) — scripts reading Bitwarden give Claude full vault access
 - [Never run infisical secrets table form](feedback_no_secret_table_output.md) — always use `infisical secrets get <KEY> --plain`, NEVER bare `infisical secrets` (prints all secrets in cleartext)
