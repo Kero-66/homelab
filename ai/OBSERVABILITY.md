@@ -22,6 +22,32 @@ Loki datasource-proxy query pattern used to pull these.
 - **Revisit**: if this starts blocking real requests (not just showing in logs), or if a future
   Seerr release changelog mentions a session/cookie fix beyond #2793.
 
+## cAdvisor `container_health_state` caches at discovery (2026-09-10)
+
+**Confirmed via direct test.** Restarting `grafana-alloy-alloy` immediately fixed 5 of 7
+containers showing a stale `container_health_state == 0` (autobrr, gamarr, suggestarr,
+`grafana-alloy-prometheus`, `grafana-alloy-grafana`) despite `docker inspect` confirming all
+were genuinely `healthy` — some for 10+ minutes beforehand. The Prometheus samples were
+fresh (current timestamps), so this wasn't a scrape/staleness issue — the *value* itself was
+frozen.
+
+**Root cause**: cAdvisor appears to capture a container's Docker `Health.Status` once at
+discovery/stats-collection start and never refreshes it as the container's health transitions
+over its lifetime. Every affected container had been recreated (new container ID, part of
+tonight's various compose changes) *after* `grafana-alloy-alloy` last started — so cAdvisor
+discovered each one while its healthcheck was still in `starting` (or, for gamarr/suggestarr/
+autobrr, before any healthcheck existed at all) and never re-checked once Docker's own status
+moved to `healthy`.
+
+**Practical implication**: after adding or changing a `healthcheck:` on any service, restart
+`grafana-alloy-alloy` afterward to get accurate `container_health_state` data — don't just
+wait, it will stay stale indefinitely until cAdvisor itself restarts.
+
+`loki` and `alloy` remain permanently unable to have a Docker healthcheck at all regardless of
+this — their images have no shell/curl/wget to run one (separate, already-documented below in
+the healthcheck-additions section of git history — see commit `9d355d7`). Their
+`container-unhealthy` alert firing forever is expected, not a bug.
+
 ## Known Issues (no action available from our side)
 
 ### Grafana: cosmetic "Loki" error badge on Alerting > Alert rules
