@@ -20,6 +20,8 @@ services:
     container_name: infisical-agent
     restart: unless-stopped
     mem_limit: 128m
+    labels:
+      - homelab.tier=noncritical
     command: agent --config /config/agent-config.yaml
     volumes:
       # Agent config and templates - relative path resolves inside Dockhand's

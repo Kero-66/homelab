@@ -31,6 +31,8 @@ services:
     container_name: flaresolverr
     restart: unless-stopped
     mem_limit: 768m
+    labels:
+      - homelab.tier=noncritical
     environment:
       - PUID=1000
       - PGID=1000
@@ -64,6 +66,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     labels:
+      - homelab.tier=critical
       - homepage.group=Arr Apps
       - homepage.name=Prowlarr
       - homepage.icon=prowlarr.png
@@ -106,6 +109,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     labels:
+      - homelab.tier=critical
       - homepage.group=Arr Apps
       - homepage.name=Sonarr
       - homepage.icon=sonarr.png
@@ -143,6 +147,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     labels:
+      - homelab.tier=critical
       - homepage.group=Arr Apps
       - homepage.name=Radarr
       - homepage.icon=radarr.png
@@ -180,6 +185,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Arr Apps
       - homepage.name=Bazarr
       - homepage.icon=bazarr.png
@@ -216,6 +222,8 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     user: "1000:1000"
+    labels:
+      - homelab.tier=noncritical
     environment:
       - TZ=Australia/Brisbane
       - CRON_SCHEDULE=@daily
@@ -237,6 +245,8 @@ services:
     container_name: cleanuparr
     restart: unless-stopped
     mem_limit: 512m
+    labels:
+      - homelab.tier=noncritical
     environment:
       - PUID=1000
       - PGID=1000

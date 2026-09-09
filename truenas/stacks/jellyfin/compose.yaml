@@ -34,6 +34,7 @@ services:
       - "107"  # render group GID — required for /dev/dri/renderD128 access
       - "44"   # video group GID — required for /dev/dri/card0 access
     labels:
+      - homelab.tier=critical
       - homepage.group=Media
       - homepage.name=Jellyfin
       - homepage.icon=jellyfin.png
@@ -75,6 +76,7 @@ services:
       - TZ=Australia/Brisbane
       - LOG_LEVEL=debug
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Media
       - homepage.name=Jellyseerr
       - homepage.icon=jellyseerr.png
@@ -104,6 +106,8 @@ services:
     container_name: jellystat-db
     restart: unless-stopped
     mem_limit: 384m
+    labels:
+      - homelab.tier=noncritical
     env_file:
       - /mnt/Fast/docker/jellyfin/.env
     environment:
@@ -139,6 +143,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=jfstat
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Media
       - homepage.name=Jellystat
       - homepage.icon=jellystat.png

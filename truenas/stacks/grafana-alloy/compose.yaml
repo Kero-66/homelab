@@ -63,6 +63,8 @@ services:
     container_name: grafana-alloy-loki
     restart: unless-stopped
     mem_limit: 768m
+    labels:
+      - homelab.tier=critical
     environment:
       - TZ=Australia/Brisbane
     ports:
@@ -79,6 +81,8 @@ services:
     container_name: grafana-alloy-prometheus
     restart: unless-stopped
     mem_limit: 512m
+    labels:
+      - homelab.tier=critical
     environment:
       - TZ=Australia/Brisbane
     command:
@@ -100,6 +104,7 @@ services:
     mem_limit: 768m
     user: "1000:1000"
     labels:
+      - homelab.tier=critical
       - homepage.group=Infrastructure
       - homepage.name=Grafana
       - homepage.icon=mdi-chart-areaspline
@@ -165,6 +170,8 @@ services:
     container_name: grafana-alloy-alloy
     restart: unless-stopped
     mem_limit: 1g
+    labels:
+      - homelab.tier=critical
     privileged: true
     environment:
       - TZ=Australia/Brisbane

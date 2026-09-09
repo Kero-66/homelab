@@ -12,6 +12,7 @@ services:
       - PGID=1000
       - TZ=Australia/Brisbane
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Arr Apps
       - homepage.name=Shoko
       - homepage.icon=shoko.png

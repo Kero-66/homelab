@@ -21,6 +21,8 @@ services:
     container_name: infisical-db
     restart: unless-stopped
     mem_limit: 256m
+    labels:
+      - homelab.tier=critical
     env_file:
       - /mnt/Fast/docker/infisical/.env
     environment:
@@ -39,6 +41,8 @@ services:
     container_name: infisical-redis
     restart: unless-stopped
     mem_limit: 64m
+    labels:
+      - homelab.tier=critical
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     volumes:
@@ -54,6 +58,8 @@ services:
     container_name: infisical
     restart: unless-stopped
     mem_limit: 1536m
+    labels:
+      - homelab.tier=critical
     depends_on:
       infisical-db:
         condition: service_healthy

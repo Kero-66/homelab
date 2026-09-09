@@ -18,6 +18,7 @@ services:
       - arr-stack_default
       - downloaders_default
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Downloads
       - homepage.name=autobrr
       - homepage.icon=autobrr

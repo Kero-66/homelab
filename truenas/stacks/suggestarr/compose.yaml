@@ -20,6 +20,7 @@ services:
     restart: unless-stopped
     mem_limit: 256m
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Media
       - homepage.name=SuggestArr
       - homepage.icon=mdi-movie-search

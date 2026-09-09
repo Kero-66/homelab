@@ -36,6 +36,7 @@ services:
       - "107"  # render group — Intel VAAPI access
       - "44"   # video group
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Media
       - homepage.name=FileFlows
       - homepage.icon=fileflows.png

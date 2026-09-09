@@ -24,6 +24,7 @@ services:
     mem_limit: 768m
     user: "1000:1000"
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Media
       - homepage.name=Maintainerr
       - homepage.icon=mdi-broom
