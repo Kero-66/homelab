@@ -433,21 +433,29 @@ JELLYFIN_API_KEY=$(infisical secrets get JELLYFIN_API_KEY --env dev --path /medi
 # NOTE: JELLYFIN_API_KEY is at path "/media" not "/TrueNAS"
 ```
 
+### Auth header (Jellyfin 12+)
+Since the 10 → 12 upgrade (2026-09-09), `X-Emby-Token`/`X-Emby-Authorization`/`X-MediaBrowser-Token` are no longer parsed — they silently 401. Use the standard `Authorization` header with the `MediaBrowser` scheme instead:
+```bash
+-H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\""
+# Login (no token yet) uses the same scheme without Token=:
+-H "Authorization: MediaBrowser Client=\"Script\", Device=\"Setup\", DeviceId=\"script\", Version=\"1.0.0\""
+```
+
 ### Get encoding configuration
 ```bash
-curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+curl -s -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" \
   "$JELLYFIN_BASE/System/Configuration/encoding" | jq '{HardwareAccelerationType, VaapiDevice}'
 ```
 
 ### Set VAAPI hardware transcoding (Intel N150)
 ```bash
 # Get current config first
-CONFIG=$(curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+CONFIG=$(curl -s -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" \
   "$JELLYFIN_BASE/System/Configuration/encoding")
 
 # Then POST the modified config (HTTP 204 = success)
 curl -s -X POST \
-  -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+  -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" \
   -H "Content-Type: application/json" \
   -d "$(echo $CONFIG | jq '
     .HardwareAccelerationType = "vaapi" |
@@ -462,27 +470,27 @@ curl -s -X POST \
 
 ### Get system info
 ```bash
-curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+curl -s -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" \
   "$JELLYFIN_BASE/System/Info" | jq '{ServerName, Version, OperatingSystem}'
 ```
 
 ### Get all episodes for a series (with season/episode numbers)
 ```bash
 SERIES_ID="510503d8b628f2208659a267b3afa881"  # from /Items?searchTerm=...&IncludeItemTypes=Series
-curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" \
+curl -s -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" \
   "$JELLYFIN_BASE/Shows/$SERIES_ID/Episodes?fields=Name,ParentIndexNumber,IndexNumber" \
   | python3 -c "import json,sys; [print(f'S{i[\"ParentIndexNumber\"]:02d}E{i[\"IndexNumber\"]:02d}', i['Name'], i['Id']) for i in json.load(sys.stdin)['Items']]"
 ```
 
 ### Create a playlist (watch order)
 ```bash
-USER_ID=$(curl -s -H "X-Emby-Token: $JELLYFIN_API_KEY" "$JELLYFIN_BASE/Users" \
+USER_ID=$(curl -s -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" "$JELLYFIN_BASE/Users" \
   | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['Id'])")
 
 # IDS = ordered list of Jellyfin item IDs (episodes + movies interleaved)
 IDS_JSON=$(python3 -c "import json; print(json.dumps(['id1','id2','id3']))")
 
-curl -s -X POST -H "X-Emby-Token: $JELLYFIN_API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" -H "Content-Type: application/json" \
   "$JELLYFIN_BASE/Playlists" \
   -d "{\"Name\": \"My Watch Order\", \"Ids\": $IDS_JSON, \"UserId\": \"$USER_ID\", \"MediaType\": \"Unknown\"}"
 # Returns: {"Id": "<playlist_id>"}

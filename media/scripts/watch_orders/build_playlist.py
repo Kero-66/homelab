@@ -22,7 +22,7 @@ def call(path, method="GET", body=None):
     req = urllib.request.Request(
         f"{BASE}{path}",
         method=method,
-        headers={"X-Emby-Token": KEY, "Content-Type": "application/json"},
+        headers={"Authorization": f'MediaBrowser Token="{KEY}"', "Content-Type": "application/json"},
         data=json.dumps(body).encode() if body is not None else None,
     )
     resp = urllib.request.urlopen(req)

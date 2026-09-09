@@ -32,14 +32,14 @@ echo "Configuring Jellystat..."
 echo "Creating Jellyfin API key for Jellystat..."
 TOKEN=$(curl -s -X POST "$JELLYFIN_URL/Users/AuthenticateByName" \
     -H 'Content-Type: application/json' \
-    -H 'X-Emby-Authorization: MediaBrowser Client="Setup", Device="Setup", DeviceId="setup", Version="1.0.0"' \
+    -H 'Authorization: MediaBrowser Client="Setup", Device="Setup", DeviceId="setup", Version="1.0.0"' \
     -d '{"Username": "'"$USERNAME"'", "Pw": "'"$PASSWORD"'"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["AccessToken"])')
 
 # Create API key using query parameter
-curl -s -X POST "$JELLYFIN_URL/Auth/Keys?app=Jellystat" -H "X-Emby-Token: $TOKEN" > /dev/null
+curl -s -X POST "$JELLYFIN_URL/Auth/Keys?app=Jellystat" -H "Authorization: MediaBrowser Token=\"$TOKEN\"" > /dev/null
 
 # Get the newly created API key
-JELLYSTAT_API_KEY=$(curl -s "$JELLYFIN_URL/Auth/Keys" -H "X-Emby-Token: $TOKEN" | python3 -c 'import sys,json; items=json.load(sys.stdin)["Items"]; key=[i["AccessToken"] for i in items if i["AppName"]=="Jellystat"]; print(key[0] if key else "")' 2>/dev/null || echo "")
+JELLYSTAT_API_KEY=$(curl -s "$JELLYFIN_URL/Auth/Keys" -H "Authorization: MediaBrowser Token=\"$TOKEN\"" | python3 -c 'import sys,json; items=json.load(sys.stdin)["Items"]; key=[i["AccessToken"] for i in items if i["AppName"]=="Jellystat"]; print(key[0] if key else "")' 2>/dev/null || echo "")
 
 if [ -z "$JELLYSTAT_API_KEY" ]; then
     echo "Error: Could not create Jellyfin API key"

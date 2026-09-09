@@ -42,7 +42,7 @@ wait_for_jellyfin() {
     local attempt=1
     echo "Waiting for Jellyfin to be ready..."
     while [ $attempt -le $max_attempts ]; do
-        if curl -s "$JELLYFIN_URL/System/Info" -H "X-Emby-Token: $JELLYFIN_API_KEY" | grep -q "Version"; then
+        if curl -s "$JELLYFIN_URL/System/Info" -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" | grep -q "Version"; then
             echo "Jellyfin is ready"
             return 0
         fi
@@ -56,7 +56,7 @@ wait_for_jellyfin() {
 
 # Get installed plugins
 get_installed_plugins() {
-    curl -s "$JELLYFIN_URL/Plugins" -H "X-Emby-Token: $JELLYFIN_API_KEY" | jq -r '.[].Name'
+    curl -s "$JELLYFIN_URL/Plugins" -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" | jq -r '.[].Name'
 }
 
 # Install a plugin by name
@@ -73,7 +73,7 @@ install_plugin() {
     fi
     
     # Check if available in configured repos
-    local available=$(curl -s "$JELLYFIN_URL/Packages" -H "X-Emby-Token: $JELLYFIN_API_KEY" | jq -r ".[] | select(.name == \"$name\") | .name")
+    local available=$(curl -s "$JELLYFIN_URL/Packages" -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" | jq -r ".[] | select(.name == \"$name\") | .name")
     if [ -z "$available" ]; then
         echo "  ✗ Not found in any configured repository"
         return 1
@@ -82,7 +82,7 @@ install_plugin() {
     # Install via API
     local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
         "$JELLYFIN_URL/Packages/Installed/$encoded_name" \
-        -H "X-Emby-Token: $JELLYFIN_API_KEY")
+        -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"")
     
     if [ "$http_code" = "204" ]; then
         echo "  ✓ Queued for installation"
@@ -118,6 +118,6 @@ echo "Plugins processed: ${#PLUGINS[@]}"
 if [ "$INSTALLED" -gt 0 ]; then
     echo ""
     echo "Restarting Jellyfin to load new plugins..."
-    curl -s -X POST "$JELLYFIN_URL/System/Restart" -H "X-Emby-Token: $JELLYFIN_API_KEY"
+    curl -s -X POST "$JELLYFIN_URL/System/Restart" -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\""
     echo "Jellyfin is restarting. Wait ~15 seconds for it to come back up."
 fi

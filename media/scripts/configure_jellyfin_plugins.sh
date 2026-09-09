@@ -34,7 +34,7 @@ if [[ -z "$JELLYFIN_API" ]]; then
 fi
 
 # Get Jellyfin version
-JELLYFIN_VERSION=$(curl -s "http://localhost:8096/System/Info" -H "X-Emby-Token: $JELLYFIN_API" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('Version', 'Unknown'))" 2>/dev/null || echo "Unknown")
+JELLYFIN_VERSION=$(curl -s "http://localhost:8096/System/Info" -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API\"" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('Version', 'Unknown'))" 2>/dev/null || echo "Unknown")
 echo -e "Jellyfin Version: ${GREEN}$JELLYFIN_VERSION${NC}"
 echo ""
 
@@ -63,7 +63,7 @@ declare -A REPOS=(
 )
 
 # Get current repositories
-CURRENT_REPOS=$(curl -s "http://localhost:8096/Repositories" -H "X-Emby-Token: $JELLYFIN_API" 2>/dev/null || echo "[]")
+CURRENT_REPOS=$(curl -s "http://localhost:8096/Repositories" -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API\"" 2>/dev/null || echo "[]")
 
 echo -e "${YELLOW}📦 Checking Plugin Repositories...${NC}"
 echo ""
@@ -115,7 +115,7 @@ print(json.dumps(repos))
     
     # Update repositories
     RESULT=$(curl -s -X POST "http://localhost:8096/Repositories" \
-        -H "X-Emby-Token: $JELLYFIN_API" \
+        -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API\"" \
         -H "Content-Type: application/json" \
         -d "$NEW_REPOS" 2>/dev/null)
     
@@ -130,7 +130,7 @@ echo -e "${GREEN}   Currently Installed Plugins${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════${NC}"
 echo ""
 
-curl -s "http://localhost:8096/Plugins" -H "X-Emby-Token: $JELLYFIN_API" | python3 -c "
+curl -s "http://localhost:8096/Plugins" -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API\"" | python3 -c "
 import sys, json
 plugins = json.load(sys.stdin)
 if plugins:

@@ -249,7 +249,7 @@ def main():
 
     if downloaded and not args.dry_run and JELLYFIN_KEY:
         try:
-            _post(f"{JELLYFIN_BASE}/Library/Refresh", {"X-Emby-Token": JELLYFIN_KEY})
+            _post(f"{JELLYFIN_BASE}/Library/Refresh", {"Authorization": f'MediaBrowser Token="{JELLYFIN_KEY}"'})
             print("Jellyfin library refresh triggered.")
         except Exception:
             pass

@@ -138,13 +138,13 @@ if [[ -z "${ACCESS_TOKEN:-}" ]]; then
   exit 0
 fi
 
-if ! curl -s -H "X-Emby-Token: $ACCESS_TOKEN" "$JELLYFIN_URL/Library/VirtualFolders" >/dev/null 2>&1; then
+if ! curl -s -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"" "$JELLYFIN_URL/Library/VirtualFolders" >/dev/null 2>&1; then
   echo "Jellyfin not reachable at $JELLYFIN_URL; files created but libraries not configured."
   exit 0
 fi
 
 echo "Checking existing Jellyfin libraries..."
-EXISTING=$(curl -s -H "X-Emby-Token: $ACCESS_TOKEN" "$JELLYFIN_URL/Library/VirtualFolders")
+EXISTING=$(curl -s -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"" "$JELLYFIN_URL/Library/VirtualFolders")
 
 add_library_if_missing() {
   local NAME=$1 HOST_PATH=$2
@@ -158,7 +158,7 @@ add_library_if_missing() {
 {"LibraryOptions":{"EnablePhotos":true,"EnableRealtimeMonitor":true,"EnableChapterImageExtraction":false,"ExtractChapterImagesDuringLibraryScan":false,"PathInfos":[{"Path":"$HOST_PATH"}]}}
 JSON
     curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=books&refreshLibrary=false&name=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote("'$NAME'"))')" \
-      -H "X-Emby-Token: $ACCESS_TOKEN" -H "Content-Type: application/json" -d "$BODY" >/dev/null || true
+      -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"" -H "Content-Type: application/json" -d "$BODY" >/dev/null || true
   fi
 }
 
@@ -167,7 +167,7 @@ add_library_if_missing "Comics" "/data/manga"
 add_library_if_missing "Webtoons" "/data/webtoons"
 
 echo "Triggering Jellyfin library refresh"
-curl -s -X POST "$JELLYFIN_URL/Library/Refresh" -H "X-Emby-Token: $ACCESS_TOKEN" >/dev/null || true
+curl -s -X POST "$JELLYFIN_URL/Library/Refresh" -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"" >/dev/null || true
 
 echo "Done. Visit Jellyfin UI to verify the new libraries and sample content: http://localhost:8096"
 

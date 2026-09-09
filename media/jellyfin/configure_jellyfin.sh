@@ -100,7 +100,7 @@ sleep 10
 echo "Authenticating..."
 AUTH_RESPONSE=$(curl -s -X POST "$JELLYFIN_URL/Users/AuthenticateByName" \
     -H "Content-Type: application/json" \
-    -H "X-Emby-Authorization: MediaBrowser Client=\"Script\", Device=\"Setup\", DeviceId=\"script\", Version=\"1.0.0\"" \
+    -H "Authorization: MediaBrowser Client=\"Script\", Device=\"Setup\", DeviceId=\"script\", Version=\"1.0.0\"" \
     -d '{
         "Username": "'"$USERNAME"'",
         "Pw": "'"$PASSWORD"'"
@@ -119,14 +119,14 @@ echo "Authenticated successfully!"
 echo "Checking existing libraries..."
 
 # Get existing libraries
-LIBRARIES=$(curl -s "$JELLYFIN_URL/Library/VirtualFolders" -H "X-Emby-Token: $ACCESS_TOKEN")
+LIBRARIES=$(curl -s "$JELLYFIN_URL/Library/VirtualFolders" -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"")
 
 if echo "$LIBRARIES" | python3 -c "import sys,json; libs=json.load(sys.stdin); print('yes' if any(l['Name']=='TV Shows' for l in libs) else 'no')" 2>/dev/null | grep -q "yes"; then
     echo "  • TV Shows library already exists"
 else
     echo "Adding TV Shows library..."
     curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=tvshows&refreshLibrary=false&name=TV%20Shows" \
-    -H "X-Emby-Token: $ACCESS_TOKEN" \
+    -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"" \
     -H "Content-Type: application/json" \
     -d '{
         "LibraryOptions": {
@@ -148,7 +148,7 @@ if echo "$LIBRARIES" | python3 -c "import sys,json; libs=json.load(sys.stdin); p
 else
     echo "Adding Movies library..."
     curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=movies&refreshLibrary=false&name=Movies" \
-    -H "X-Emby-Token: $ACCESS_TOKEN" \
+    -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"" \
     -H "Content-Type: application/json" \
     -d '{
         "LibraryOptions": {
@@ -170,7 +170,7 @@ if echo "$LIBRARIES" | python3 -c "import sys,json; libs=json.load(sys.stdin); p
 else
     echo "Adding Music library..."
     curl -s -X POST "$JELLYFIN_URL/Library/VirtualFolders?collectionType=music&refreshLibrary=false&name=Music" \
-    -H "X-Emby-Token: $ACCESS_TOKEN" \
+    -H "Authorization: MediaBrowser Token=\"$ACCESS_TOKEN\"" \
     -H "Content-Type: application/json" \
     -d '{
         "LibraryOptions": {
