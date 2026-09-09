@@ -81,6 +81,29 @@ the complete before/after table. Highlights:
   confirm no container is getting OOM-killed under its new limit, especially jellyfin and the
   shrunk databases.
 
+## config.alloy / loki-config.yaml mount paths never applied (2026-09-09, resolved)
+
+Both files were bind-mounted from an absolute `/mnt/Fast/docker/grafana-alloy/config/`
+path that predated this stack's Dockhand git-sync migration, per a compose.yaml comment
+claiming Dockhand's git-stack API "only tracks compose.yaml, not sibling config files" —
+requiring a manual `scp` before each deploy. That claim was wrong (or became wrong):
+`config/provisioning/` in this same compose file already proved git-sync applies every
+tracked file. Nobody ran the manual scp step during tonight's session, so **the earlier
+Loki retention fix (commit `e93cf4b`) and the first attempt at the Dockhand metrics scrape
+job (`fad1af9`) silently never took effect** despite clean deploys and healthy container
+restarts — both configs kept running their old versions the whole time. Caught by
+comparing file mtimes between the live mount and the Dockhand-synced copy. Fixed in
+`eb06f18` by switching both to relative paths (`./config.alloy`, `./loki-config.yaml`),
+matching the already-correct `config/provisioning/` pattern. Verified after the fix:
+`retention_period: 720h` present in the actually-mounted file, and
+`prometheus.scrape.dockhand` shows healthy in Alloy's component list with
+`dockhand_containers_count` genuinely flowing into Prometheus.
+
+**Lesson**: a "successful deploy" and a "healthy container" don't prove a config file
+change took effect — verify the *actual mounted content* (via file mtimes, `docker
+inspect --format '{{.Mounts}}'`, or reading the file at its real host path) after any
+change to a stack whose compose.yaml doesn't already prove its mount pattern works.
+
 ## Dockhand Metrics (2026-09-09, in progress)
 
 Dockhand has a Prometheus `/metrics` endpoint (source: `src/routes/metrics/+server.ts`,
@@ -104,13 +127,16 @@ feature anyway.
   This is meaningfully richer than cAdvisor's `container_health_state` (which turned out
   to just indicate "a healthcheck is configured", not actual pass/fail — not useful for
   alerting).
-- **Not yet done**: wiring this into the `grafana-alloy` Prometheus scrape config.
-  Dockhand's Prometheus auth needs a bearer API token (session cookies don't work for
-  scraping) — was investigating `POST /api/auth/tokens` (`src/routes/api/auth/tokens/+server.ts`)
-  when this got deprioritized in favor of other items. Next step: generate a token (via
-  the UI under Profile, or that API), store it in Infisical, add a
-  `prometheus.scrape "dockhand"` block to `config.alloy` with `bearer_token_file` or
-  inline `authorization.credentials`, target `http://192.168.20.22:30328/metrics`.
+- **Done**: wired into `grafana-alloy`'s Prometheus scrape config (commit `fad1af9`, fixed
+  to actually take effect in `eb06f18` — see the mount-path issue above). API token
+  created via `POST /api/auth/tokens` (id 2, `grafana-alloy-prometheus-scrape-2`), stored
+  as `DOCKHAND_METRICS_TOKEN` in Infisical `/TrueNAS`, rendered into `grafana-alloy/.env`
+  by infisical-agent, read by a new `prometheus.scrape "dockhand"` block in `config.alloy`
+  via `sys.env(...)` (not bare `env()` — verified against Alloy's actual stdlib docs).
+  Confirmed live: `dockhand_containers_count` etc. flowing into Prometheus.
+  A `scrape-target-down` alert rule (`up < 1`) now also covers this + the cAdvisor job —
+  the monitoring pipeline failing silently would otherwise show as every other alert just
+  going quiet instead of firing.
 
 ## Dockhand Auto-Update Config (2026-09-09)
 
