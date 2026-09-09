@@ -37,8 +37,6 @@ services:
     container_name: gamarr
     restart: unless-stopped
     mem_limit: 256m
-    labels:
-      - homelab.tier=noncritical
     env_file:
       - /mnt/Fast/docker/gamarr/.env
     environment:
@@ -53,6 +51,7 @@ services:
       - GAMES_ROMS_PATH=/data/games/roms
       - TZ=Australia/Brisbane
     labels:
+      - homelab.tier=noncritical
       - homepage.group=Media
       - homepage.name=Gamarr
       - homepage.icon=mdi-controller-classic
