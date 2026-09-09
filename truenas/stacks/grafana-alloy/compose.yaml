@@ -128,6 +128,13 @@ services:
           isDefault: false
           version: 1
           editable: false
+          jsonData:
+            # Loki has no ruler component configured (see loki-config.yaml) - without
+            # this, Grafana's Alert rules page shows a permanent "Error" on a "Loki"
+            # group because it tries to list Loki-native alert rules and gets a 404.
+            # We only use Grafana-managed alerting (provisioning/alerting/rules.yaml),
+            # never Loki-native rules, so there's nothing to manage here.
+            manageAlerts: false
         - name: Prometheus
           type: prometheus
           orgId: 1
