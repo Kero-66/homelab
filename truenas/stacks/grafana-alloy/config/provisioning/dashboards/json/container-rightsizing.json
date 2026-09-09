@@ -1,400 +1,184 @@
 {
   "title": "Container Rightsizing",
   "uid": "homelab-rightsizing",
-  "description": "Memory/CPU usage vs configured limits, for spotting over/under-provisioned containers. Built 2026-09-09 after a manual 7-day cAdvisor review (see ai/OBSERVABILITY.md) - this makes that a repeatable check instead of one-off PromQL.",
+  "description": "Memory/CPU usage vs configured limits, for spotting over/under-provisioned containers. Built 2026-09-09 after a manual 7-day cAdvisor review (see ai/OBSERVABILITY.md), reworked 2026-09-10 for readability (sorted bar gauges instead of overlaid multi-container line graphs, grouped into rows).",
   "editable": true,
   "schemaVersion": 39,
-  "tags": [
-    "homelab",
-    "resources"
-  ],
+  "tags": ["homelab", "resources"],
   "timezone": "browser",
-  "time": {
-    "from": "now-7d",
-    "to": "now"
-  },
+  "time": { "from": "now-7d", "to": "now" },
   "refresh": "5m",
   "panels": [
     {
       "id": 6,
       "title": "Host memory used",
       "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 0,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "Sum of all container working-set memory / total host memory (machine_memory_bytes, from cAdvisor). Not the same as the host's own free/used (page cache etc. isn't counted), but tracks container-driven pressure.",
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Sum of all container working-set memory / total host memory (machine_memory_bytes, from cAdvisor).",
       "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "sum(container_memory_working_set_bytes{name!=\"\"}) / avg(machine_memory_bytes) * 100"
-        }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sum(container_memory_working_set_bytes{name!=\"\"}) / avg(machine_memory_bytes) * 100" }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          }
+          "unit": "percent", "max": 100, "min": 0,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }
+          ]}
         },
         "overrides": []
       },
-      "options": {
-        "graphMode": "none"
-      }
+      "options": { "graphMode": "none" }
     },
     {
       "id": 7,
       "title": "Host CPU cores",
       "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 12,
-        "y": 0
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "Total logical cores available on the host (machine_cpu_cores, from cAdvisor) - reference point for the CPU usage panel below.",
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
       "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "avg(machine_cpu_cores)"
-        }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" }, "expr": "avg(machine_cpu_cores)" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "graphMode": "none" }
+    },
+    {
+      "id": 9,
+      "title": "Containers unhealthy",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Count where container_health_state < 1. cAdvisor caches this at container discovery and doesn't refresh it live - see ai/OBSERVABILITY.md 2026-09-10 entry. loki/alloy always count here (their images can't run a healthcheck at all).",
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "count(container_health_state{name!=\"\"} < 1)" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 3 }
+          ]}
+        },
+        "overrides": []
+      },
+      "options": { "graphMode": "none" }
+    },
+    {
+      "id": 100, "title": "Memory", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 4 },
+      "collapsed": false, "panels": []
+    },
+    {
+      "id": 1,
+      "title": "Memory usage vs limit (% of limit, worst first)",
+      "type": "bargauge",
+      "gridPos": { "h": 14, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Only containers with a memory limit set - see the table to the right for uncapped ones.",
+      "targets": [
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "(max by (name) (container_memory_working_set_bytes{name!=\"\"})) / (max by (name) (container_spec_memory_limit_bytes{name!=\"\"} > 0)) * 100",
+          "legendFormat": "{{name}}", "instant": true }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null }, { "color": "yellow", "value": 60 }, { "color": "red", "value": 85 }
+          ]}
         },
         "overrides": []
       },
       "options": {
-        "graphMode": "none"
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "sortBy": "Last *", "sortByDesc": true
       }
-    },
-    {
-      "id": 1,
-      "title": "Memory usage vs limit (current, sorted worst-first)",
-      "type": "table",
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "sort_desc((max by (name) (container_memory_working_set_bytes{name!=\"\"})) / (max by (name) (container_spec_memory_limit_bytes{name!=\"\"} > 0)) * 100)",
-          "format": "table",
-          "instant": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 85
-              }
-            ]
-          },
-          "custom": {
-            "cellOptions": {
-              "type": "color-background"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "renameByName": {
-              "Value": "% of limit",
-              "name": "container"
-            }
-          }
-        }
-      ]
     },
     {
       "id": 2,
       "title": "Containers with NO memory limit set (current usage)",
       "type": "table",
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 14
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "A runaway process in any of these can exhaust host memory unchecked. Cross-check against ai/OBSERVABILITY.md's rightsizing pass - if something's been running a while and still shows here, it may be new since that pass.",
+      "gridPos": { "h": 14, "w": 12, "x": 12, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "A runaway process in any of these can exhaust host memory unchecked.",
       "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
           "expr": "sort_desc(container_memory_working_set_bytes{name!=\"\"} unless on(name) (container_spec_memory_limit_bytes{name!=\"\"} > 0))",
-          "format": "table",
-          "instant": true
-        }
+          "format": "table", "instant": true }
       ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
       "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "renameByName": {
-              "Value": "current usage",
-              "name": "container"
-            }
-          }
-        }
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "Value": "current usage", "name": "container" } } },
+        { "id": "sortBy", "options": { "fields": {}, "sort": [{ "field": "current usage", "desc": true }] } }
       ]
     },
     {
-      "id": 3,
-      "title": "Memory usage over time \u2014 critical tier",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 0,
-        "y": 22
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "Grouped by the homelab.tier=critical compose label (ai/OBSERVABILITY.md / commit 7b0dc78). No data until the label has actually deployed to each container.",
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "max by (name) (container_memory_working_set_bytes{name!=\"\"}) and on(name) (container_last_seen{container_label_homelab_tier=\"critical\"})",
-          "legendFormat": "{{name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "id": 4,
-      "title": "Memory usage over time \u2014 noncritical tier",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 22
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "Grouped by the homelab.tier=noncritical compose label. No data until the label has actually deployed to each container.",
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "max by (name) (container_memory_working_set_bytes{name!=\"\"}) and on(name) (container_last_seen{container_label_homelab_tier=\"noncritical\"})",
-          "legendFormat": "{{name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes"
-        },
-        "overrides": []
-      }
+      "id": 101, "title": "CPU", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 },
+      "collapsed": false, "panels": []
     },
     {
       "id": 5,
-      "title": "CPU usage (avg cores) by container",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 31
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
+      "title": "CPU usage - top 15 by avg cores (5m)",
+      "type": "bargauge",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "Limited to the top 15 - full per-container CPU history is in Explore if you need a specific one not shown here.",
       "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[5m]))",
-          "legendFormat": "{{name}}"
-        }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "topk(15, sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[5m])))",
+          "legendFormat": "{{name}}", "instant": true }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short", "decimals": 3, "min": 0,
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] }
         },
         "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "sortBy": "Last *", "sortByDesc": true
       }
+    },
+    {
+      "id": 102, "title": "Health", "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "collapsed": false, "panels": []
     },
     {
       "id": 8,
       "title": "Container health status (Docker healthcheck)",
       "type": "table",
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 40
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "Real per-container Docker healthcheck result via cAdvisor container_health_state (not just \"is the process running\"). 1 = healthy. 0 = unhealthy, stuck starting, OR no healthcheck defined - this cAdvisor build does not distinguish those (upstream source says it should emit -1 for no-healthcheck, but empirically never does here - verified 2026-09-09, see ai/OBSERVABILITY.md). Cross-check against compose files if a 0 here is unexpected.",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 35 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "description": "1 = healthy. 0 = unhealthy, stuck starting, or no healthcheck defined (this cAdvisor build doesn't distinguish those). cAdvisor caches this at container discovery and won't reflect a health change until grafana-alloy-alloy itself restarts - see ai/OBSERVABILITY.md 2026-09-10 entry. loki/alloy always show 0 - their images have no shell/curl/wget to run a healthcheck at all.",
       "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "sort(container_health_state{name!=\"\"})",
-          "format": "table",
-          "instant": true
-        }
+        { "refId": "A", "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+          "expr": "sort(container_health_state{name!=\"\"})", "format": "table", "instant": true }
       ],
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "custom": {
-            "cellOptions": {
-              "type": "color-background"
-            }
-          },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null }, { "color": "green", "value": 1 }
+          ]},
+          "custom": { "cellOptions": { "type": "color-background" } },
           "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "1": {
-                  "text": "healthy"
-                },
-                "0": {
-                  "text": "unhealthy / starting / no check"
-                }
-              }
-            }
+            { "type": "value", "options": { "1": { "text": "healthy" }, "0": { "text": "unhealthy / starting / no check / stale" } } }
           ]
         },
         "overrides": []
       },
       "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true
-            },
-            "renameByName": {
-              "Value": "status",
-              "name": "container"
-            }
-          }
-        }
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "Value": "status", "name": "container" } } },
+        { "id": "sortBy", "options": { "fields": {}, "sort": [{ "field": "status", "desc": false }] } }
       ]
     }
   ]
