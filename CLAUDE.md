@@ -136,6 +136,7 @@ If context is compacted, preserve these critical facts:
 
 ## Documentation Index
 - `ai/PATTERNS.md` — verified commands (check before trial-and-error)
+- `ai/OBSERVABILITY.md` — known issues from Grafana/Loki log review, resolved-issue history, container memory rightsizing notes
 - `truenas/README.md` — architecture
 - `truenas/DEPLOYMENT_GUIDE.md` — deployment
 - `.github/TROUBLESHOOTING.md` — troubleshooting
