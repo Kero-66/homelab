@@ -142,6 +142,11 @@ services:
       - "3010:3000"
     volumes:
       - /mnt/Fast/docker/grafana-alloy/data/grafana:/var/lib/grafana
+      # File-provisioned alert rules (ai/OBSERVABILITY.md) — Dockhand git-syncs this stack's
+      # dir, so config/provisioning/alerting/*.yaml comes straight from git on each deploy.
+      # The entrypoint below writes config/provisioning/datasources/ds.yaml into the same
+      # mount at container start (gitignored — runtime-generated, not tracked).
+      - ./config/provisioning:/etc/grafana/provisioning
     networks:
       - grafana-alloy-network
     depends_on:
