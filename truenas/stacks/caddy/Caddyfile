@@ -117,7 +117,7 @@ http://rss.home {
 }
 
 # TrueNAS (Admin Interface) - redirect to HTTPS
-truenas.home {
+http://truenas.home {
 	redir https://192.168.20.22{uri} permanent
 }
 
