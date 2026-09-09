@@ -36,10 +36,15 @@
 #   /mnt/Fast/docker/grafana-alloy/data/prometheus   (Prometheus TSDB)
 #   /mnt/Fast/docker/grafana-alloy/data/grafana      (Grafana DB/plugins)
 #   /mnt/Fast/docker/grafana-alloy/data/alloy        (Alloy's own storage.path)
-#   Config files (config.alloy, loki-config.yaml) are scp'd from this repo to
-#   /mnt/Fast/docker/grafana-alloy/config/ before each Dockhand deploy — same
-#   pattern as SigNoz (Dockhand's git-stack API only tracks compose.yaml
-#   itself, not sibling config files).
+#   Config files (config.alloy, loki-config.yaml) are mounted via relative paths
+#   that resolve inside Dockhand's git clone of this stack's directory, so they
+#   come straight from git on each sync+deploy — same pattern as
+#   config/provisioning/ below. (This used to require a manual scp to
+#   /mnt/Fast/docker/grafana-alloy/config/ before each deploy, on the claim that
+#   Dockhand's git-stack API only tracks compose.yaml — found 2026-09-09 to be
+#   incorrect: git-sync applies every tracked file. The manual-scp path was
+#   stale and silently absorbing every config.alloy/loki-config.yaml edit
+#   without ever taking effect. See ai/OBSERVABILITY.md.)
 #
 # Ports (verified free via `ss -tlnp` on TrueNAS 2026-08-21):
 #   Grafana UI:      3010  LAN-exposed (remapped from reference's 3000 -
@@ -70,7 +75,12 @@ services:
     ports:
       - "127.0.0.1:3100:3100"
     volumes:
-      - /mnt/Fast/docker/grafana-alloy/config/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      # Relative path resolves inside Dockhand's git clone of this stack's directory,
+      # so this comes straight from git on each sync+deploy - was previously an
+      # absolute /mnt/Fast/docker/... path that predated Dockhand git-sync and was
+      # never updated, so config edits silently never took effect (found 2026-09-09,
+      # see ai/OBSERVABILITY.md).
+      - ./loki-config.yaml:/etc/loki/local-config.yaml:ro
       - /mnt/Fast/docker/grafana-alloy/data/loki:/var/lib/loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
@@ -185,7 +195,7 @@ services:
       - "127.0.0.1:4317:4317"
       - "127.0.0.1:4318:4318"
     volumes:
-      - /mnt/Fast/docker/grafana-alloy/config/config.alloy:/etc/alloy/config.alloy:ro
+      - ./config.alloy:/etc/alloy/config.alloy:ro
       - /mnt/Fast/docker/grafana-alloy/data/alloy:/var/lib/alloy/data
       - /proc:/rootproc:ro
       - /var/run/docker.sock:/var/run/docker.sock
