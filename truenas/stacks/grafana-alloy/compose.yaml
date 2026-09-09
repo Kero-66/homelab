@@ -173,6 +173,10 @@ services:
     labels:
       - homelab.tier=critical
     privileged: true
+    env_file:
+      # DOCKHAND_METRICS_TOKEN, rendered by infisical-agent - see config.alloy's
+      # dockhand scrape job, which reads it via sys.env().
+      - /mnt/Fast/docker/grafana-alloy/.env
     environment:
       - TZ=Australia/Brisbane
       - ALLOY_DEPLOY_MODE=docker

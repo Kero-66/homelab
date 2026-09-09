@@ -37,6 +37,28 @@ prometheus.remote_write "demo" {
   }
 }
 
+// Scrape Dockhand's own Prometheus metrics (EXPORT_METRICS=true, enabled 2026-09-09 -
+// see ai/OBSERVABILITY.md). Environment-level aggregates only (containers by
+// state/health, restart counts, pending updates, vulnerabilities, Dockhand internals) -
+// no per-container name label, so this complements cAdvisor rather than replacing it.
+// Bearer token rendered by infisical-agent into grafana-alloy/.env (DOCKHAND_METRICS_TOKEN),
+// read here via sys.env() - never hardcode it in this file.
+prometheus.scrape "dockhand" {
+  targets = [{
+    __address__ = "192.168.20.22:30328",
+  }]
+  metrics_path = "/metrics"
+  scheme       = "http"
+
+  authorization {
+    type        = "Bearer"
+    credentials = sys.env("DOCKHAND_METRICS_TOKEN")
+  }
+
+  forward_to      = [ prometheus.remote_write.demo.receiver ]
+  scrape_interval = "30s"
+}
+
 // ###############################
 // #### Logging Configuration ####
 // ###############################
