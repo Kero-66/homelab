@@ -36,6 +36,7 @@ services:
     image: ghcr.io/jeremiahm37/gamarr:latest
     container_name: gamarr
     restart: unless-stopped
+    mem_limit: 256m
     env_file:
       - /mnt/Fast/docker/gamarr/.env
     environment:

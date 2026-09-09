@@ -20,7 +20,7 @@ services:
     image: postgres:14-alpine
     container_name: infisical-db
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 256m
     env_file:
       - /mnt/Fast/docker/infisical/.env
     environment:
@@ -38,7 +38,7 @@ services:
     image: redis:7-alpine
     container_name: infisical-redis
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 64m
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     volumes:
@@ -53,7 +53,7 @@ services:
     image: infisical/infisical:latest
     container_name: infisical
     restart: unless-stopped
-    mem_limit: 1g
+    mem_limit: 1536m
     depends_on:
       infisical-db:
         condition: service_healthy

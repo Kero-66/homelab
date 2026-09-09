@@ -20,7 +20,7 @@ services:
     image: postgres:16-alpine
     container_name: commafeed-db
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 128m
     env_file:
       - /mnt/Fast/docker/commafeed/.env
     environment:
@@ -38,7 +38,7 @@ services:
     image: athou/commafeed:latest-postgresql
     container_name: commafeed
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 256m
     depends_on:
       commafeed-db:
         condition: service_healthy

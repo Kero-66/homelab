@@ -21,7 +21,7 @@ services:
     image: lscr.io/linuxserver/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
-    mem_limit: 4g
+    mem_limit: 2560m
     environment:
       - PUID=1000
       - PGID=1000
@@ -70,6 +70,7 @@ services:
     container_name: jellyseerr
     init: true
     restart: unless-stopped
+    mem_limit: 768m
     environment:
       - TZ=Australia/Brisbane
       - LOG_LEVEL=debug
@@ -102,6 +103,7 @@ services:
     image: postgres:15-alpine
     container_name: jellystat-db
     restart: unless-stopped
+    mem_limit: 384m
     env_file:
       - /mnt/Fast/docker/jellyfin/.env
     environment:
@@ -123,6 +125,7 @@ services:
     image: cyfershepard/jellystat:latest
     container_name: jellystat
     restart: unless-stopped
+    mem_limit: 512m
     depends_on:
       jellystat-db:
         condition: service_healthy

@@ -30,6 +30,7 @@ services:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     restart: unless-stopped
+    mem_limit: 768m
     environment:
       - PUID=1000
       - PGID=1000
@@ -55,6 +56,7 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     restart: unless-stopped
+    mem_limit: 512m
     env_file:
       - /mnt/Fast/docker/arr-stack/.env
     environment:
@@ -96,6 +98,7 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     restart: unless-stopped
+    mem_limit: 512m
     env_file:
       - /mnt/Fast/docker/arr-stack/.env
     environment:
@@ -132,6 +135,7 @@ services:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     restart: unless-stopped
+    mem_limit: 512m
     env_file:
       - /mnt/Fast/docker/arr-stack/.env
     environment:
@@ -168,6 +172,7 @@ services:
     image: lscr.io/linuxserver/bazarr:latest
     container_name: bazarr
     restart: unless-stopped
+    mem_limit: 512m
     env_file:
       - /mnt/Fast/docker/arr-stack/.env
     environment:
@@ -209,6 +214,7 @@ services:
     image: ghcr.io/recyclarr/recyclarr:8
     container_name: recyclarr
     restart: unless-stopped
+    mem_limit: 256m
     user: "1000:1000"
     environment:
       - TZ=Australia/Brisbane
@@ -230,6 +236,7 @@ services:
     image: ghcr.io/cleanuparr/cleanuparr:latest
     container_name: cleanuparr
     restart: unless-stopped
+    mem_limit: 512m
     environment:
       - PUID=1000
       - PGID=1000

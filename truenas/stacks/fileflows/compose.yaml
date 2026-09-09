@@ -25,7 +25,7 @@ services:
     image: revenz/fileflows:26.04
     container_name: fileflows
     restart: unless-stopped
-    mem_limit: 2g
+    mem_limit: 1g
     environment:
       - TZ=Australia/Brisbane
       - PUID=1000

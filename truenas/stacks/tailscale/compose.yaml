@@ -26,6 +26,7 @@ services:
     image: tailscale/tailscale:latest
     container_name: tailscale
     restart: unless-stopped
+    mem_limit: 256m
     hostname: truenas
     network_mode: host
     cap_add:

@@ -18,7 +18,7 @@ services:
     image: ciuse99/suggestarr:latest
     container_name: suggestarr
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 256m
     labels:
       - homepage.group=Media
       - homepage.name=SuggestArr

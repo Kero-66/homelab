@@ -5,6 +5,7 @@ services:
     image: ghcr.io/autobrr/autobrr:v1.79.0
     container_name: autobrr
     restart: unless-stopped
+    mem_limit: 512m
     environment:
       - PUID=1000
       - PGID=1000

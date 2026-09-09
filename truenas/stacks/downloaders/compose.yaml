@@ -31,7 +31,7 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: unless-stopped
-    mem_limit: 4g
+    mem_limit: 6g
     env_file:
       - /mnt/Fast/docker/downloaders/.env
     environment:
@@ -74,6 +74,7 @@ services:
     image: lscr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
     restart: unless-stopped
+    mem_limit: 2g
     env_file:
       - /mnt/Fast/docker/downloaders/.env
     environment:

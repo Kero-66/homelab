@@ -62,6 +62,7 @@ services:
     image: grafana/loki:3.7.3
     container_name: grafana-alloy-loki
     restart: unless-stopped
+    mem_limit: 768m
     environment:
       - TZ=Australia/Brisbane
     ports:
@@ -77,6 +78,7 @@ services:
     image: prom/prometheus:v3.13.1
     container_name: grafana-alloy-prometheus
     restart: unless-stopped
+    mem_limit: 512m
     environment:
       - TZ=Australia/Brisbane
     command:
@@ -95,6 +97,7 @@ services:
     image: grafana/grafana:13.1.0
     container_name: grafana-alloy-grafana
     restart: unless-stopped
+    mem_limit: 768m
     user: "1000:1000"
     labels:
       - homepage.group=Infrastructure
@@ -149,6 +152,7 @@ services:
     image: grafana/alloy:v1.18.1
     container_name: grafana-alloy-alloy
     restart: unless-stopped
+    mem_limit: 1g
     privileged: true
     environment:
       - TZ=Australia/Brisbane
