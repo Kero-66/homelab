@@ -63,7 +63,7 @@ services:
       - /mnt/Fast/docker/gamarr/config:/data/gamarr
       - /mnt/Data/Servarr:/data
     healthcheck:
-      test: curl -sf http://localhost:5001/ || exit 1
+      test: wget --no-verbose --tries=1 --spider http://localhost:5001/ || exit 1
       interval: 30s
       timeout: 10s
       retries: 3
