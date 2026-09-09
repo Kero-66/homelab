@@ -14,6 +14,12 @@ services:
       - /mnt/Fast/docker/autobrr/config:/config
     ports:
       - "7474:7474"
+    healthcheck:
+      test: curl -sf http://localhost:7474/api/healthz/liveness || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       - arr-stack_default
       - downloaders_default

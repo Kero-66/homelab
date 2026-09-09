@@ -195,3 +195,48 @@ groups:
           severity: critical
         annotations:
           summary: "Prometheus scrape target {{ $labels.job }} ({{ $labels.instance }}) is down - every other alert in this repo goes blind while this is unresolved"
+
+      - uid: container-unhealthy
+        title: Container healthcheck failing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: container_health_state{name!=""}
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.name }}'s Docker healthcheck is failing (or the container has been stuck starting for 3+ minutes) - real per-container signal from cAdvisor's container_health_state, not just cAdvisor's own is-the-process-running check"

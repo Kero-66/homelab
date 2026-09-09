@@ -318,6 +318,84 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 8,
+      "title": "Container health status (Docker healthcheck)",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "Real per-container Docker healthcheck result via cAdvisor container_health_state (not just \"is the process running\"). 1 = healthy. 0 = unhealthy, stuck starting, OR no healthcheck defined - this cAdvisor build does not distinguish those (upstream source says it should emit -1 for no-healthcheck, but empirically never does here - verified 2026-09-09, see ai/OBSERVABILITY.md). Cross-check against compose files if a 0 here is unexpected.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "sort(container_health_state{name!=\"\"})",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "custom": {
+            "cellOptions": {
+              "type": "color-background"
+            }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "healthy"
+                },
+                "0": {
+                  "text": "unhealthy / starting / no check"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "status",
+              "name": "container"
+            }
+          }
+        }
+      ]
     }
   ]
 }
