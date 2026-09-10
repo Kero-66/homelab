@@ -4,6 +4,41 @@ Findings from log/metric review via Grafana (Loki logs + Prometheus/cAdvisor met
 `grafana-alloy` stack, http://grafana.home). See `ai/PATTERNS.md` "Querying it back" for the
 Loki datasource-proxy query pattern used to pull these.
 
+## Host-level metrics added for Valheim prep (2026-09-10, staged — not yet deployed)
+
+Prepped in the same cloud session as the Valheim server stack (no LAN access, nothing live —
+see `ai/SESSION_NOTES.md`). Until now this stack only had **container-level** metrics
+(cAdvisor) plus two whole-machine gauges (`machine_memory_bytes`, `machine_cpu_cores`) — no
+real host CPU utilization, load average, or disk I/O at all. Added because Valheim is
+expected to be the single heaviest CPU consumer on this host (an Intel N150 — fine on RAM,
+weak on single-thread CPU), and because the user explicitly wants confirmation that neither
+Valheim nor this monitoring stack ever touch the slow `Data` HDD pool.
+
+- **`config.alloy`**: added `prometheus.exporter.unix "host"` (Alloy's node_exporter
+  equivalent) + a `host_metrics` scrape job, reusing the `/rootproc`, `/sys`, `/rootfs` host
+  bind mounts already present on the `alloy` service for cAdvisor's own needs — no new mounts
+  needed. Component argument names (`procfs_path`/`sysfs_path`/`rootfs_path`) confirmed via
+  Grafana's own component docs (web search — `grafana.com` itself is blocked by this
+  session's egress proxy, `pkg.go.dev`'s mirrored source docs were used instead) rather than
+  guessed from memory.
+- **`config/provisioning/alerting/rules.yaml`**: new `Host Health` alert group — CPU >85%
+  busy for 10m (`host-cpu-saturated`), available memory <10% for 10m
+  (`host-memory-low`) — same file-provisioned pattern as the existing `Container Health`
+  group, no notification channel configured (Alerting UI only, matches existing rules).
+- **`config/provisioning/dashboards/json/host-resources.json`**: new dashboard — CPU busy %,
+  load average, memory available, and (the actual point of this exercise) **disk I/O split
+  into a "Fast pool" panel (nvme0n1/nvme2n1) and a "Data pool, should stay near-idle" panel
+  (sda/sdb)**, plus filesystem-used-% by mountpoint for `/mnt/Fast`, `/mnt/Data`, `/`. Device
+  → pool mapping per `truenas/HARDWARE_CONFIG.md`.
+
+**Not yet verified live** (no LAN access this session): whether `prometheus.exporter.unix`
+actually starts cleanly against the existing mounts, whether the filesystem collector's
+default `mount_points_exclude` regex lets `/mnt/Fast`/`/mnt/Data` through as expected (it's
+node_exporter's stock default, not overridden here — if either mountpoint doesn't show up,
+check that first), and whether the new alert rules evaluate without error. `grafana-alloy` is
+`autoUpdate: false` (version-pinned) — this needs an explicit Dockhand sync+deploy, not just a
+git push, to take effect. Tracked in `ai/todo.md` #123.
+
 ## Known Issues (no action available from our side)
 
 ### jellyseerr/Seerr: intermittent 401 on internal self-fetch

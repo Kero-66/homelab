@@ -4,17 +4,42 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
-## Session 2026-09-10 - Valheim Server Prep (BLOCKED — needs LAN/TrueNAS access to finish)
+## Session 2026-09-10 - Valheim Server Prep + Host Resource Monitoring (BLOCKED — needs LAN/TrueNAS access to finish)
 
 ### Context
 This session ran in a cloud sandbox with no route to 192.168.20.22 (confirmed — `/dev/tcp` connect to port 22 timed out). Repo-side prep only; nothing deployed live, no SSH/Dockhand/Infisical calls made.
 
-### What Was Done
+### What Was Done — Valheim stack
 1. Added `truenas/stacks/valheim/compose.yaml` — `lloesche/valheim-server`, the standard dedicated-server image (bundles SteamCMD, auto-updates, scheduled backups). Standalone: no Caddy/DNS (no web UI), no *arr network joins — reached only via the game client over UDP.
 2. Added `truenas/stacks/infisical-agent/valheim.tmpl` + registered it in `agent-config.yaml` — renders `VALHEIM_SERVER_PASS` (Infisical `/TrueNAS`) into `SERVER_PASS` in `/mnt/Fast/docker/valheim/.env`.
 3. Added a `Games` group entry for Valheim in `apps/homepage/config/services.yaml`.
 4. Added a `valheim` section to `truenas/DEPLOYMENT_GUIDE.md` (storage layout, secret, ports, deploy steps).
 5. Logged remaining work as `ai/todo.md` #122.
+
+### What Was Done — host resource monitoring (follow-up, same session)
+User asked to prep monitoring ahead of Valheim going live (expected to be the heaviest CPU
+consumer on this N150 host) and was explicit that neither Valheim nor the monitoring stack
+itself should ever touch the slow `Data` HDD pool. Existing `grafana-alloy` stack already
+had ZERO host-level metrics (cAdvisor only covers containers) — added via
+`prometheus.exporter.unix`, reusing bind mounts already present for cAdvisor. Full detail in
+`ai/OBSERVABILITY.md` → "Host-level metrics added for Valheim prep". Summary:
+1. `truenas/stacks/grafana-alloy/config.alloy` — new `prometheus.exporter.unix "host"` +
+   scrape job (CPU, memory, load average, disk I/O, filesystem).
+2. `truenas/stacks/grafana-alloy/config/provisioning/alerting/rules.yaml` — new `Host Health`
+   alert group (CPU >85% busy / mem <10% available, both for 10m).
+3. `truenas/stacks/grafana-alloy/config/provisioning/dashboards/json/host-resources.json` —
+   new dashboard, notably a disk-I/O panel split Fast-pool-vs-Data-pool so the "stay off the
+   slow disks" requirement is actually observable, not just asserted.
+4. `ai/todo.md` #123 for the still-open deploy/verify steps.
+
+Component argument names for `prometheus.exporter.unix` were confirmed via web search
+(`grafana.com` itself is blocked by this session's egress proxy — used `pkg.go.dev`'s
+mirrored source docs instead) rather than assumed from memory, per this repo's
+research-first rule. Metric names (`node_cpu_seconds_total`, `node_load1`,
+`node_memory_MemAvailable_bytes`, `node_disk_read_bytes_total`,
+`node_filesystem_avail_bytes`, etc.) are node_exporter's long-stable defaults, not verified
+against a live instance this session — flagged in OBSERVABILITY.md as the main thing to check
+once actually deployed.
 
 ### NEXT STEPS (needs a session with LAN access)
 1. Edit `truenas/stacks/valheim/compose.yaml` — set real `SERVER_NAME`/`WORLD_NAME` before first deploy (`WORLD_NAME` fixes the save file; changing it later starts a new world, doesn't rename the old one).
@@ -22,6 +47,7 @@ This session ran in a cloud sandbox with no route to 192.168.20.22 (confirmed �
 3. Create the Dockhand git stack per `truenas/DOCKHAND_GITOPS_GUIDE.md` → "Migration Path": `POST /api/git/stacks` with `stackName: "valheim"`, `composePath: "/truenas/stacks/valheim/compose.yaml"`.
 4. Forward UDP `2456-2458` on the router (needed for anyone connecting from outside the LAN).
 5. Once live, watch actual server tick rate — host is an Intel N150 (Alder Lake-N); RAM (4g limit set) should be plenty but single-thread CPU is the real unknown for several concurrent players. Not benchmarked, just flagged.
+6. `grafana-alloy` is `autoUpdate: false` (version-pinned) — the monitoring changes need an explicit Dockhand sync+deploy (not just the git push) to actually take effect. Verify the new `host_metrics` scrape target shows healthy in Alloy's component list and that `/mnt/Fast`/`/mnt/Data` both actually appear in the filesystem panel before trusting the dashboard.
 
 ### Key Facts
 
@@ -33,6 +59,10 @@ This session ran in a cloud sandbox with no route to 192.168.20.22 (confirmed �
 | Ports | `2456-2458/udp` |
 | Secret | `VALHEIM_SERVER_PASS` at Infisical `/TrueNAS` |
 | Deployment | Dockhand git stack (not midclt) — everything new goes through Dockhand per current CLAUDE.md policy |
+| New Grafana dashboard | "Host Resources" (`homelab-host-resources`), folder `Homelab` |
+| New alert group | "Host Health" (`host-cpu-saturated`, `host-memory-low`), folder `Homelab Alerts` |
+| Fast pool devices | `nvme0n1`, `nvme2n1` |
+| Data pool devices (slow, must stay idle) | `sda`, `sdb` |
 
 ---
 
