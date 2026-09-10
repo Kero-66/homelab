@@ -4,6 +4,38 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-09-10 - Valheim Server Prep (BLOCKED — needs LAN/TrueNAS access to finish)
+
+### Context
+This session ran in a cloud sandbox with no route to 192.168.20.22 (confirmed — `/dev/tcp` connect to port 22 timed out). Repo-side prep only; nothing deployed live, no SSH/Dockhand/Infisical calls made.
+
+### What Was Done
+1. Added `truenas/stacks/valheim/compose.yaml` — `lloesche/valheim-server`, the standard dedicated-server image (bundles SteamCMD, auto-updates, scheduled backups). Standalone: no Caddy/DNS (no web UI), no *arr network joins — reached only via the game client over UDP.
+2. Added `truenas/stacks/infisical-agent/valheim.tmpl` + registered it in `agent-config.yaml` — renders `VALHEIM_SERVER_PASS` (Infisical `/TrueNAS`) into `SERVER_PASS` in `/mnt/Fast/docker/valheim/.env`.
+3. Added a `Games` group entry for Valheim in `apps/homepage/config/services.yaml`.
+4. Added a `valheim` section to `truenas/DEPLOYMENT_GUIDE.md` (storage layout, secret, ports, deploy steps).
+5. Logged remaining work as `ai/todo.md` #122.
+
+### NEXT STEPS (needs a session with LAN access)
+1. Edit `truenas/stacks/valheim/compose.yaml` — set real `SERVER_NAME`/`WORLD_NAME` before first deploy (`WORLD_NAME` fixes the save file; changing it later starts a new world, doesn't rename the old one).
+2. Store `VALHEIM_SERVER_PASS` in Infisical at `/TrueNAS` (5+ chars, must not be a substring of the server name).
+3. Create the Dockhand git stack per `truenas/DOCKHAND_GITOPS_GUIDE.md` → "Migration Path": `POST /api/git/stacks` with `stackName: "valheim"`, `composePath: "/truenas/stacks/valheim/compose.yaml"`.
+4. Forward UDP `2456-2458` on the router (needed for anyone connecting from outside the LAN).
+5. Once live, watch actual server tick rate — host is an Intel N150 (Alder Lake-N); RAM (4g limit set) should be plenty but single-thread CPU is the real unknown for several concurrent players. Not benchmarked, just flagged.
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| Image | `lloesche/valheim-server` |
+| Config/world saves | `/mnt/Fast/docker/valheim/config` |
+| Server binaries | `/mnt/Fast/docker/valheim/server` |
+| Ports | `2456-2458/udp` |
+| Secret | `VALHEIM_SERVER_PASS` at Infisical `/TrueNAS` |
+| Deployment | Dockhand git stack (not midclt) — everything new goes through Dockhand per current CLAUDE.md policy |
+
+---
+
 ## Session 2026-05-30 - Comicarr Setup (BLOCKED — needs credentials re-setup)
 
 ### Current State (handoff)
