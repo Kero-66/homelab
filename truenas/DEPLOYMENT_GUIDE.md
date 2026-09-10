@@ -13,6 +13,7 @@ This guide covers deploying all Custom App stacks on **TrueNAS Scale 25.10.1** w
 - `adguard-home` — local DNS (resolves `.home` → 192.168.20.22)
 - `homepage` — dashboard
 - `tailscale` — subnet router for remote access
+- `claude-workstation` — persistent Claude Code Remote Control container (see `docs/CLAUDE_SELF_HOSTED_RUNNER.md`; not yet deployed — needs one-time interactive setup, see that doc)
 
 **Important:** Custom Apps cannot be created via the REST API. Use `midclt call -j app.create` via SSH — see `ai/PATTERNS.md` → "Create a new Custom App".
 
@@ -187,6 +188,21 @@ Subnet router for remote access.
 - Result: all `*.home` services work identically over Tailscale
 - Auth key: `TRUENAS_TAILSCALE_AUTH_KEY` in Infisical at `/TrueNAS`
 - State: `/mnt/Fast/docker/tailscale/`
+
+### claude-workstation
+
+Persistent Claude Code Remote Control container — lets a phone/web Claude Code session reach
+this LAN (TrueNAS, Infisical) by attaching to a real always-on process here instead of running
+in Anthropic's network-isolated cloud VM. **Staged in repo, not yet deployed** — needs one-time
+interactive setup (Infisical login, git clone, Claude auth, workspace trust, Remote Control
+confirmation) that can't be scripted. Full walkthrough: `docs/CLAUDE_SELF_HOSTED_RUNNER.md`.
+
+- No web UI, no Caddy/DNS entry — outbound HTTPS only, never opens inbound ports
+- Own dedicated bridge network `claude-workstation_default` (not `network_mode: host` — see `truenas/stacks/claude-workstation/compose.yaml` for why bridge is sufficient), joinable by future stacks the same way `suggestarr` joins `jellyfin_default`
+- State: `/mnt/Fast/docker/claude-workstation/home` (mounted at `/root` — the whole home dir)
+- Secrets: `CLAUDE_WORKSTATION_GIT_SSH_PRIVATE_KEY` (dedicated deploy key, write access on `kero-66/homelab` + `kero-66/skills`) and reuses `kero66_ssh_key`, both from Infisical `/TrueNAS`
+- **First stack in this repo using `build:` instead of a published image** — update procedure differs, see the compose file's header comment
+- Before first deploy: read `docs/CLAUDE_SELF_HOSTED_RUNNER.md` in full — several steps require a human at a real terminal, not automatable
 
 ---
 
