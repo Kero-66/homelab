@@ -4,6 +4,73 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-09-10 - Claude Workstation (Remote Control container) — BLOCKED, needs LAN + human present
+
+### Context
+Follow-up to a separate session's Valheim/monitoring work (different branch,
+`claude/valheim-truenas-server-rqtsoa`, PR #2). This session started fresh from `main` on its
+own branch per explicit user request ("new branch and PR"), specifically for a way to reach
+this LAN from Claude Code sessions started on web/mobile.
+
+### Why this exists
+Confirmed (this session, no LAN access, `/dev/tcp` to 192.168.20.22:22 times out) that cloud
+Claude Code sessions can't reach TrueNAS/Infisical at any network-access level — even "Full, any
+domain" is HTTP(S)-only through Anthropic's own proxy, no raw-socket egress exists. Researched
+Anthropic's "self-hosted environments" feature as a fix — it's Team/Enterprise-only (confirmed:
+user is on **Pro**), so not available on this account at all. **Remote Control**
+(code.claude.com/docs/en/remote-control) is the actual fix on Pro: it's just a normal local
+`claude` CLI process that a phone/browser can attach to, no plan gate, no inbound ports.
+
+### What Was Done
+1. Built `truenas/stacks/claude-workstation/` — `Dockerfile` (Anthropic's own verified
+   `claude`-binary install recipe from their self-hosted-environments-deploy docs, reused only
+   for that one step — not using that feature), `entrypoint.sh` (loads `kero66_ssh_key` +
+   a new dedicated `CLAUDE_WORKSTATION_GIT_SSH_PRIVATE_KEY` into an in-memory ssh-agent at a
+   fixed socket path, then execs `claude remote-control`), `compose.yaml`.
+2. Own dedicated bridge network (`claude-workstation_default`), matching every other stack's
+   pattern — an initial draft used `network_mode: host`, but the security review caught that
+   as a larger grant than needed (exposes loopback-only host services + the real NIC to the
+   container) for a problem bridge networking already solves: a bridge container reaches the
+   host's own externally-assigned LAN IP (192.168.20.22) fine, no hairpin-NAT issue involved.
+3. Deliberately does NOT mount `docker.sock` or run privileged — reaches TrueNAS via the
+   existing kero66-SSH pattern (`ai/PATTERNS.md`), same as the workstation or any cloud session
+   would, so running on the same physical host as TrueNAS doesn't expand its privileges.
+4. Rewrote `docs/CLAUDE_SELF_HOSTED_RUNNER.md` in full — it previously described the
+   Team/Enterprise-only self-hosted-environments path, which is flatly inapplicable on Pro. Now
+   documents Remote Control + this container, with the full one-time interactive setup
+   (11 numbered steps: generate/register the deploy key, deploy the stack, `docker exec -it`,
+   `infisical login`, load keys, `git clone`, `claude auth login`, accept workspace trust, accept
+   the Remote Control y/n confirmation).
+5. Updated `truenas/DEPLOYMENT_GUIDE.md` (stack list + a `claude-workstation` section) and
+   logged the remaining work as `ai/todo.md` #122.
+
+### Why TrueNAS and not the workstation
+The workstation (192.168.20.66) is a "cold spare" per `CLAUDE.md` — likely off most of the time.
+Remote Control only exists while its local process is running, so putting it on the one thing
+in this homelab that's actually always on (TrueNAS) is what makes "fix this from my phone"
+reliable rather than dependent on remembering to boot a machine first.
+
+### NEXT STEPS (needs a session with LAN access AND a human physically present — OAuth/interactive steps can't be scripted)
+Full detail in `docs/CLAUDE_SELF_HOSTED_RUNNER.md`. Summary: generate + register a write-scoped
+git deploy key, deploy the stack via Dockhand, `docker exec -it` in, `infisical login`, load SSH
+keys, clone both repos, `claude auth login`, accept workspace trust, accept the Remote Control
+confirmation once. After that, it should survive restarts unattended.
+
+### Key Facts
+
+| Item | Value |
+|------|-------|
+| Why not self-hosted environments | Team/Enterprise-only beta; account is Pro |
+| Why Remote Control instead | Available on Pro; no inbound ports; just a logged-in local `claude` process |
+| Why TrueNAS not workstation | Workstation is a "cold spare" (usually off); TrueNAS is always on |
+| Networking | Own bridge network `claude-workstation_default` (caught+corrected from an initial `network_mode: host` draft during security review) |
+| Privilege boundary | No docker.sock, not privileged — SSHes to TrueNAS like any other actor |
+| State volume | `/mnt/Fast/docker/claude-workstation/home` → `/root` (whole home dir) |
+| New secret | `CLAUDE_WORKSTATION_GIT_SSH_PRIVATE_KEY` (Infisical `/TrueNAS`) — dedicated, write-scoped deploy key |
+| Deploy mechanism | Dockhand git-stack, first one in this repo using `build:` not a published `image:` |
+
+---
+
 ## Session 2026-05-30 - Comicarr Setup (BLOCKED — needs credentials re-setup)
 
 ### Current State (handoff)

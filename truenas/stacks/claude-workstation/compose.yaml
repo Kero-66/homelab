@@ -1,0 +1,113 @@
+# =============================================================================
+# Claude Workstation - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# A persistent container that behaves like a dedicated "workstation" for
+# Claude Code Remote Control (code.claude.com/docs/en/remote-control) - NOT
+# Anthropic's separate "self-hosted environment" feature, which requires a
+# Team/Enterprise plan (this account is Pro, so that feature is unavailable
+# outright - see docs/CLAUDE_SELF_HOSTED_RUNNER.md). Remote Control just
+# needs an always-on, already-logged-in `claude` process; a container is a
+# normal way to provide that.
+#
+# Why this exists: Claude Code sessions started from the web or mobile app
+# run in an Anthropic-managed cloud VM with no route into this LAN - they
+# can't reach TrueNAS, Infisical, or anything on 192.168.20.0/24, confirmed
+# live (a `/dev/tcp` connect to 192.168.20.22:22 from such a session times
+# out). This container fixes that by being a real, always-on presence on the
+# LAN that a phone/browser session can attach to and drive - filesystem and
+# command execution happen here, not in the cloud.
+#
+# Networking - normal bridge network, own dedicated network for this stack
+# (matches every other stack's pattern - no `network_mode: host`):
+#   Remote Control makes outbound-only HTTPS connections to Anthropic
+#   (confirmed via Anthropic's own docs: "never opens inbound ports on your
+#   machine"), so there is no port to publish and no conflict risk. A first
+#   draft of this file used `network_mode: host` reasoning that it was needed
+#   to reach 192.168.20.22:22 (SSH) and 192.168.20.22:8081 (Infisical) from a
+#   container running on that same host - the security review caught that
+#   this was a larger grant than the design needs: host mode also exposes any
+#   127.0.0.1-only-bound host services and the host's real NIC (raw sockets)
+#   to this container, neither of which a bridge network permits. In practice
+#   a bridge-networked container reaches the host's own externally-assigned
+#   LAN IP (192.168.20.22) just fine - Linux's routing recognizes it as a
+#   locally-owned address and delivers directly, no hairpin-NAT step
+#   involved (that issue only affects reaching *another container's
+#   published port* via the host's IP, a different scenario). So this stack
+#   gets its own plain bridge network, `claude-workstation_default`, exactly
+#   like arr-stack/downloaders/jellyfin each have their own - not `external`
+#   (nothing pre-creates it, this compose file is the sole owner), so a
+#   future stack that needs to reach this container directly by name can
+#   join it the same way suggestarr joins jellyfin_default: add
+#   `claude-workstation_default: {external: true}` to its own compose file.
+#   No such join exists yet - add one only when something actually needs it.
+#
+# Privilege boundary - preserved, not widened:
+#   This container does NOT mount /var/run/docker.sock and is not
+#   `privileged`. It reaches TrueNAS exactly like the workstation or any
+#   cloud session does: SSH to kero66@192.168.20.22 with `sudo docker ...`,
+#   using the same kero66_ssh_key every other actor uses (see
+#   ai/PATTERNS.md "TrueNAS SSH", truenas/AGENTS.md). Running on the same
+#   physical host as TrueNAS does not, by itself, grant this container any
+#   more access than a session running on the workstation would have.
+#
+# Storage: /mnt/Fast/docker/claude-workstation/home -> /root (the WHOLE home
+# directory, deliberately) - persists Claude Code's login + Remote Control
+# one-time confirmation + workspace-trust state, Infisical CLI's login
+# session, ssh known_hosts, and the actual repo checkouts under
+# /root/workspace/, so none of the one-time interactive setup below has to
+# be repeated after a container restart.
+#
+# ⚠️ REQUIRED ONE-TIME INTERACTIVE SETUP - cannot be done from this repo or
+# any cloud/remote session; needs a human at a real terminal. Full
+# walkthrough in docs/CLAUDE_SELF_HOSTED_RUNNER.md. Summary:
+#   1. Generate a dedicated SSH deploy key (NOT kero66's), add its public
+#      half as a deploy key with WRITE access on both kero-66/homelab and
+#      kero-66/skills, store the private half in Infisical /TrueNAS as
+#      CLAUDE_WORKSTATION_GIT_SSH_PRIVATE_KEY.
+#   2. Deploy this stack, then: docker exec -it claude-workstation bash
+#   3. infisical login -i --domain http://192.168.20.22:8081 --email <you>
+#   4. export SSH_AUTH_SOCK=/root/.ssh-agent.sock  (reuse the agent
+#      entrypoint.sh already started - or re-run its two `infisical secrets
+#      get ... | ssh-add -` lines by hand if this is the very first start
+#      and infisical login just happened for the first time)
+#   5. git clone the repo(s) into /root/workspace/
+#   6. claude auth login   (prints a URL - open it in any device's browser)
+#   7. claude   (once, inside /root/workspace/homelab - accept the
+#      workspace-trust dialog)
+#   8. claude remote-control   (once - accept "Enable Remote Control? (y/n)")
+#   Once step 8 is accepted, Ctrl-C out and let the container's normal
+#   restart policy take over with the real long-running command in
+#   entrypoint.sh - the acceptance from step 8 is what's persisted on the
+#   volume, so it only has to happen once, ever.
+#
+# First stack in this repo using `build:` instead of a published `image:` -
+# update procedure differs from every other stack:
+#   docker compose -f /mnt/Fast/docker/claude-workstation/compose.yaml \
+#     build && docker compose -f /mnt/Fast/docker/claude-workstation/compose.yaml \
+#     up -d --force-recreate
+#   (`up -d --force-recreate` alone, this repo's normal Dockhand update
+#   pattern, does NOT rebuild the image on a Dockerfile change.)
+# =============================================================================
+
+services:
+  claude-workstation:
+    build:
+      context: .
+      args:
+        CLAUDE_CODE_VERSION: "2.1.224"
+    image: claude-workstation:local
+    container_name: claude-workstation
+    restart: unless-stopped
+    mem_limit: 2g
+    labels:
+      - homelab.tier=noncritical
+    environment:
+      - TZ=Australia/Brisbane
+    volumes:
+      - /mnt/Fast/docker/claude-workstation/home:/root
+    networks:
+      - claude-workstation
+
+networks:
+  claude-workstation:
+    name: claude-workstation_default
