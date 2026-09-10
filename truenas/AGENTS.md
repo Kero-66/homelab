@@ -50,3 +50,4 @@ Owns all deployment, configuration, and operation of the homelab on TrueNAS Scal
 - `ai/PATTERNS.md` - Verified SSH/Infisical/midclt commands (check before trial-and-error)
 - `truenas/DOCKHAND_READINESS.md` - Current per-stack deployment state
 - `.claude/memory/MEMORY.md` - TrueNAS API patterns, AdGuard, Dockhand verified details
+- `.claude/skills/tailscale/SKILL.md` - Tailscale mesh network operations (status, new-device deploy, auth key rotation/expiry, troubleshooting)
