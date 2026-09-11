@@ -231,12 +231,15 @@ services:
   # fork of cAdvisor pinned to a v0.54.1 base (over a year behind upstream, confirmed via
   # grafana/alloy go.mod on both v1.18.1 and latest v1.19.2 - the fork lags because cAdvisor
   # wasn't designed to be embedded as a library and needs manual patching to rebase). That old
-  # base predates the upstream fix (google/cadvisor#3760, merged 2025-12-05, first in a real
-  # release at v0.60.5) for container_health_state being read once at container-discovery time
-  # instead of refreshed every housekeeping cycle. Running cAdvisor as its own container - what
-  # it's actually designed for - sidesteps the fork-lag problem entirely.
+  # base predates the upstream fix (google/cadvisor#3760, merged 2025-12-05, first released in
+  # v0.60.5) for container_health_state being read once at container-discovery time instead of
+  # refreshed every housekeeping cycle. Running cAdvisor as its own container - what it's
+  # actually designed for - sidesteps the fork-lag problem entirely. Using :latest rather than
+  # pinning v0.60.5 - that exact tag isn't published (gcr.io/cadvisor/cadvisor stopped at
+  # v0.55.1; ghcr.io/google/cadvisor is the current registry per the project's own README, but
+  # only ships :latest/major tags, not every patch version).
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    image: ghcr.io/google/cadvisor:latest
     container_name: grafana-alloy-cadvisor
     restart: unless-stopped
     mem_limit: 256m
@@ -251,7 +254,7 @@ services:
       - "127.0.0.1:8081:8080"
     volumes:
       - /:/rootfs:ro
-      - /var/run:/var/run:rw
+      - /var/run:/var/run:ro
       - /sys:/sys:ro
       # TrueNAS's actual docker root, not the Linux-standard /var/lib/docker - same gotcha
       # documented above for the Alloy-embedded exporter.

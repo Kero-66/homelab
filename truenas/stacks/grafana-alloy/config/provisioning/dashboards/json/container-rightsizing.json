@@ -117,7 +117,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "Count where container_health_state < 1, from the standalone cAdvisor v0.60.5 sidecar (job=\"cadvisor-standalone\") which re-inspects health every cycle - see ai/OBSERVABILITY.md 2026-09-11 entry. loki/alloy/cadvisor always count here (their images cannot run a healthcheck at all).",
+      "description": "Count where container_health_state < 1, from the standalone cAdvisor sidecar (ghcr.io/google/cadvisor:latest, job=\"cadvisor-standalone\") which re-inspects health every cycle - see ai/OBSERVABILITY.md 2026-09-11 entry. loki/alloy/cadvisor always count here (their images cannot run a healthcheck at all).",
       "targets": [
         {
           "refId": "A",
@@ -394,7 +394,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "1 = healthy. 0 = unhealthy, stuck starting, or no healthcheck defined. Sourced from the standalone cAdvisor v0.60.5 sidecar (job=\"cadvisor-standalone\"), which re-inspects Docker health every housekeeping cycle - genuinely live, unlike Alloy's built-in exporter (which embeds a cAdvisor fork stuck on an old base that caches this at container discovery - see ai/OBSERVABILITY.md 2026-09-10/2026-09-11 entries). loki/alloy/cadvisor always show 0 - their images have no shell/curl/wget to run a healthcheck at all.",
+      "description": "1 = healthy. 0 = unhealthy, stuck starting, or no healthcheck defined. Sourced from the standalone cAdvisor sidecar (ghcr.io/google/cadvisor:latest, job=\"cadvisor-standalone\"), which re-inspects Docker health every housekeeping cycle - genuinely live, unlike Alloy's built-in exporter (which embeds a cAdvisor fork stuck on an old base that caches this at container discovery - see ai/OBSERVABILITY.md 2026-09-10/2026-09-11 entries). loki/alloy/cadvisor always show 0 - their images have no shell/curl/wget to run a healthcheck at all.",
       "targets": [
         {
           "refId": "A",

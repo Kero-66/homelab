@@ -12,8 +12,9 @@ prometheus.remote_write "demo" {
 // Standalone cAdvisor (2026-09-11, see ai/OBSERVABILITY.md) - replaced the old
 // prometheus.exporter.cadvisor Alloy component, which embeds a Grafana fork stuck on an old
 // cAdvisor base that caches container_health_state at discovery and never refreshes it. This
-// is a real gcr.io/cadvisor/cadvisor:v0.60.5 container (see compose.yaml), which re-inspects
-// health every housekeeping cycle. Job label kept distinct in case anything else scrapes cadvisor.
+// is a real ghcr.io/google/cadvisor:latest container (see compose.yaml, fix landed upstream in
+// v0.60.5+), which re-inspects health every housekeeping cycle. Job label kept distinct in case
+// anything else scrapes cadvisor.
 discovery.relabel "cadvisor_standalone" {
     targets = [{
       __address__ = "grafana-alloy-cadvisor:8080",
