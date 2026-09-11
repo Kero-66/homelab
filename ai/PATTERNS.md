@@ -1180,6 +1180,76 @@ rm -f "$COOKIEJAR"
 curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/stacks?environmentId=1" | jq '[.[] | {id, name, status}]'
 ```
 
+### Update an EXISTING git-stack (most stacks — check `truenas/DOCKHAND_READINESS.md`)
+
+Most stacks (arr-stack, grafana-alloy, jellyfin, etc.) are Dockhand "git-stacks" — Dockhand pulls
+compose.yaml and every other tracked file straight from this repo's GitHub remote on sync, not
+from a one-shot API payload. **The correct update flow is: commit + push to git first, then call
+this API to sync+deploy** — not manual `scp`. (A manual scp/cp into the stack's live path on
+TrueNAS still works as a bypass, same as any Dockhand-managed compose file, but skips the git
+history and will be silently overwritten the next time anything triggers a sync — a
+nightly `autoUpdate` cron included.)
+
+```bash
+INFISICAL_PROJECT_ID="5086c25c-310d-4cfb-9e2c-24d1fa92c152"
+_isec() { infisical secrets get "$1" --env dev --path "$2" --plain \
+  --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null; }
+DH="http://192.168.20.22:30328"
+COOKIE_JAR=$(mktemp -d)/cookie
+curl -s -c "$COOKIE_JAR" -X POST "$DH/api/auth/login" -H "Content-Type: application/json" \
+  -d "{\"username\": \"$(_isec DOCKHAND_USER /TrueNAS)\", \"password\": \"$(_isec DOCKHAND_USER_PASSWORD /TrueNAS)\", \"provider\": \"local\"}" > /dev/null
+
+# Find the stack's numeric id (needed for every call below) - GET /api/git/stacks lists ALL
+# git-stacks with their current autoUpdate/repullImages/lastCommit/syncStatus config, useful
+# for auditing beyond just finding an id.
+curl -s -b "$COOKIE_JAR" "$DH/api/git/stacks" | python3 -c "
+import sys,json
+for s in json.load(sys.stdin):
+    if 'grafana' in s['stackName']:  # match on the stack you're after
+        print(s['id'], s['stackName'], s['composePath'])
+"
+
+# Sync pulls the latest commit from GitHub into Dockhand's own git clone
+# (/mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/<stack>/...) and reports which
+# files actually changed hash - confirm your edit is in there before deploying.
+curl -s -b "$COOKIE_JAR" -X POST "$DH/api/git/stacks/<ID>/sync" | python3 -c "
+import sys,json; d=json.load(sys.stdin); print('success:', d.get('success'), 'commit:', d.get('commit'))"
+
+# Deploy runs `docker compose up -d --remove-orphans` against the synced compose.yaml.
+# Returns a jobId immediately - it does NOT wait for completion.
+JOBID=$(curl -s -b "$COOKIE_JAR" -X POST "$DH/api/git/stacks/<ID>/deploy" | python3 -c "import sys,json; print(json.load(sys.stdin)['jobId'])")
+
+# Poll the job - status "done" + result.success:false still means failure (bad image tag,
+# port conflict, etc.) - always check result.error, a "done" status alone is not success.
+curl -s -b "$COOKIE_JAR" "$DH/api/jobs/$JOBID" | python3 -c "
+import sys,json; d=json.load(sys.stdin); r=d.get('result',{})
+print('status:', d['status'], '| success:', r.get('success'))
+print('error:', r.get('error','')[-500:])
+"
+rm -f "$COOKIE_JAR"
+```
+
+**⚠️ `deploy` recreates a service only if its compose.yaml block changed.** If you only edited a
+bind-mounted config file (e.g. `config.alloy`, a Caddyfile) and compose.yaml itself is unchanged
+for that service, `deploy` reports success but the container keeps running with the OLD file —
+see `.claude/memory/feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md`. Force
+it directly against Dockhand's own synced compose file:
+```bash
+ssh kero66@192.168.20.22 "sudo docker compose -p <stack> -f /mnt/.ix-apps/app_mounts/dockhand/data/stacks/TrueNAS/<stack>/compose.yaml up -d --force-recreate <service>"
+```
+
+**On-disk paths for a git-stack** (TrueNAS environment, id 1 — the `TrueNAS` segment is the
+Dockhand *environment* name, not literal for other environments):
+- `/mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/<stack>/` — Dockhand's raw git clone of the whole repo, stack subdir mirrors this repo's `truenas/stacks/<stack>/` path
+- `/mnt/.ix-apps/app_mounts/dockhand/data/stacks/TrueNAS/<stack>/` — the LIVE path compose actually runs from; relative bind-mounts in compose.yaml (`./config.alloy`, `./config/...`) resolve here, not against `/mnt/Fast/docker/<stack>/`
+
+**Before pinning any image tag** (new service, or bumping an existing pin): verify the tag
+actually exists on the registry you're using (`docker manifest inspect <image>:<tag>` or check
+the project's GitHub releases/README for its *current* registry — a `docker/<x>` GitHub repo
+release existing does not mean the same tag is published to whatever registry the README
+happened to reference last year, especially `gcr.io/*` images that projects have since migrated
+off). A wrong tag fails the deploy with `manifest unknown`, caught in the job's `result.error`.
+
 ---
 
 ## Recyclarr (Quality Profile Sync)
