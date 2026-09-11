@@ -117,7 +117,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "Count where container_health_state < 1, from the standalone cAdvisor sidecar (ghcr.io/google/cadvisor:latest, job=\"cadvisor-standalone\") which re-inspects health every cycle - see ai/OBSERVABILITY.md 2026-09-11 entry. loki/alloy/cadvisor always count here (their images cannot run a healthcheck at all).",
+      "description": "Count of containers with a FAILING Docker healthcheck (container_health_state == 0), from the standalone cAdvisor sidecar (ghcr.io/google/cadvisor:latest, job=\"cadvisor-standalone\") - live, re-inspected every cycle. -1 (no healthcheck defined) is excluded here since that is not a failure - see panel below for the full breakdown. See ai/OBSERVABILITY.md 2026-09-11 entry.",
       "targets": [
         {
           "refId": "A",
@@ -125,7 +125,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "count(container_health_state{name!=\"\", job=\"cadvisor-standalone\"} < 1)"
+          "expr": "count(container_health_state{name!=\"\", job=\"cadvisor-standalone\"} == 0)"
         }
       ],
       "fieldConfig": {
@@ -394,7 +394,7 @@
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
-      "description": "1 = healthy. 0 = unhealthy, stuck starting, or no healthcheck defined. Sourced from the standalone cAdvisor sidecar (ghcr.io/google/cadvisor:latest, job=\"cadvisor-standalone\"), which re-inspects Docker health every housekeeping cycle - genuinely live, unlike Alloy's built-in exporter (which embeds a cAdvisor fork stuck on an old base that caches this at container discovery - see ai/OBSERVABILITY.md 2026-09-10/2026-09-11 entries). loki/alloy/cadvisor always show 0 - their images have no shell/curl/wget to run a healthcheck at all.",
+      "description": "1 = healthy, 0 = UNHEALTHY (real failure), -1 = no healthcheck defined on the container at all. Sourced from the standalone cAdvisor sidecar (ghcr.io/google/cadvisor:latest, job=\"cadvisor-standalone\"), which re-inspects Docker health every housekeeping cycle and distinguishes \"no healthcheck\" from \"failing\" (upstream fix google/cadvisor#3760) - genuinely live, unlike Alloy's old built-in exporter which embedded a cAdvisor fork stuck on a base that caches this at container discovery and never refreshes - see ai/OBSERVABILITY.md 2026-09-10/2026-09-11 entries. loki/alloy/cadvisor always show -1 - their images have no shell/curl/wget to run a healthcheck at all.",
       "targets": [
         {
           "refId": "A",
@@ -417,6 +417,10 @@
                 "value": null
               },
               {
+                "color": "text",
+                "value": -1
+              },
+              {
                 "color": "green",
                 "value": 1
               }
@@ -432,10 +436,16 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "healthy"
+                  "text": "healthy",
+                  "color": "green"
                 },
                 "0": {
-                  "text": "unhealthy / starting / no check / stale"
+                  "text": "UNHEALTHY",
+                  "color": "red"
+                },
+                "-1": {
+                  "text": "no healthcheck defined",
+                  "color": "text"
                 }
               }
             }
