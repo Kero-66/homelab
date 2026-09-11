@@ -31,7 +31,20 @@ step 6a(b) exists specifically to catch this category of mistake (see the Gurren
 Works precedent in the same doc) — it was skipped again, in the very next action after being
 corrected on skipping step 6a itself.
 
+**Third confirmed instance (2026-09-10/11):** told the user "there's genuinely no tool" for
+franchise/multi-movie watch-order playlists (Broken Blade, Votoms, Monogatari) purely from general
+knowledge and a couple of web searches, without ever grepping `ai/SESSION_NOTES.md` — which already
+had a 2026-05-22 session ("Jellyfin Playback + Franchise Watch Order Research") naming two concrete
+candidates (Synclet, jellyfin-smartlists-plugin) for this exact question. Only checked
+`jellyfin-smartlists-plugin` after the user pushed back with "is there really nothing out there?" —
+and it turned out to be a real, currently-installable (v12-compatible) answer. The doc existed the
+whole time; the search should have started there, not with a fresh web search as if the question
+had never come up in this repo before.
+
 **How to apply:**
+- Before answering "no tool/solution exists" for anything project-related, grep `ai/SESSION_NOTES.md`
+  and relevant `.claude/memory/service_*.md` files for the topic first — prior sessions in this repo
+  may have already researched it, even if the current session has no memory of that research.
 - The moment the user says "this is documented," "there's a process for this," or similar — stop,
   find the doc (grep the repo, check `ai/AGENTS.md`'s docs index, check `media/AGENTS.md`, check
   the specific domain's `AGENTS.md`), and read it before responding, even if a plausible-sounding

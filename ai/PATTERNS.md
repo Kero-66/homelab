@@ -496,6 +496,40 @@ curl -s -X POST -H "Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\"" -H 
 # Returns: {"Id": "<playlist_id>"}
 ```
 
+### Plugin management (install/uninstall/update via API)
+```bash
+AUTHH="Authorization: MediaBrowser Token=\"$JELLYFIN_API_KEY\""
+
+# List installed plugins (Name, Version, Status — "Malfunctioned" means broken, still shows as installed)
+curl -s -H "$AUTHH" "$JELLYFIN_BASE/Plugins" | jq '.[] | {Name, Id, Version, Status}'
+
+# List configured plugin repositories
+curl -s -H "$AUTHH" "$JELLYFIN_BASE/Repositories" | jq .
+
+# Full catalog of installable packages across all configured repos, with per-version targetAbi
+# (targetAbi tells you which Jellyfin server version a build actually supports — check this
+# before assuming a plugin "should" work after a major server upgrade)
+curl -s -H "$AUTHH" "$JELLYFIN_BASE/Packages" | jq '.[] | select(.name=="Plugin Name") | {name, versions: [.versions[] | {version, targetAbi, sourceUrl}]}'
+
+# Uninstall a specific installed version — requires the VERSION STRING in the URL, not the plugin Id alone
+curl -s -X DELETE -H "$AUTHH" "$JELLYFIN_BASE/Plugins/<pluginGuid>/<version>"
+
+# Install a specific version from its catalog sourceUrl (get sourceUrl from the /Packages query above)
+curl -s -X POST -H "$AUTHH" --data-urlencode "repositoryUrl=<sourceUrl>" \
+  "$JELLYFIN_BASE/Packages/Installed/<url-encoded plugin name>?version=<version>"
+# Both uninstall and install return 204. A server restart is required for the change to actually
+# load/unload the assembly — installing/uninstalling alone does not take effect until restart.
+
+# Restart the server (required after any plugin install/uninstall)
+curl -s -X POST -H "$AUTHH" "$JELLYFIN_BASE/System/Restart"
+# Poll until back up (restart takes ~15-30s):
+for i in $(seq 1 12); do
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$JELLYFIN_BASE/System/Info/Public")
+  [ "$code" = "200" ] && break
+  sleep 5
+done
+```
+
 ---
 
 ## Jellystat API
