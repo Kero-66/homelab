@@ -19,10 +19,9 @@
 
 services:
   fileflows:
-    # Deliberately pinned — a prior upgrade attempt past this version caused issues.
-    # This is the user's main video-editing asset pipeline — do NOT bump without explicit
-    # go-ahead and a maintenance window. Current upstream is 26.07+ as of 2026-08-15.
-    image: revenz/fileflows:26.04
+    # Bumped to :latest 2026-09-11 — 26.04 pin now refuses to start ("out of date, please
+    # upgrade to continue"), so pinning is no longer viable. User approved trying latest.
+    image: revenz/fileflows:latest
     container_name: fileflows
     restart: unless-stopped
     mem_limit: 1g

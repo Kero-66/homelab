@@ -226,6 +226,42 @@ services:
       - loki
       - prometheus
 
+  # Standalone cAdvisor (2026-09-11) - see ai/OBSERVABILITY.md "cAdvisor container_health_state
+  # caches at discovery" entry. Alloy's built-in prometheus.exporter.cadvisor embeds a Grafana
+  # fork of cAdvisor pinned to a v0.54.1 base (over a year behind upstream, confirmed via
+  # grafana/alloy go.mod on both v1.18.1 and latest v1.19.2 - the fork lags because cAdvisor
+  # wasn't designed to be embedded as a library and needs manual patching to rebase). That old
+  # base predates the upstream fix (google/cadvisor#3760, merged 2025-12-05, first in a real
+  # release at v0.60.5) for container_health_state being read once at container-discovery time
+  # instead of refreshed every housekeeping cycle. Running cAdvisor as its own container - what
+  # it's actually designed for - sidesteps the fork-lag problem entirely.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.60.5
+    container_name: grafana-alloy-cadvisor
+    restart: unless-stopped
+    mem_limit: 256m
+    privileged: true
+    labels:
+      - homelab.tier=critical
+    environment:
+      - TZ=Australia/Brisbane
+    command:
+      - --docker_only=true
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      # TrueNAS's actual docker root, not the Linux-standard /var/lib/docker - same gotcha
+      # documented above for the Alloy-embedded exporter.
+      - /mnt/.ix-apps/docker:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    networks:
+      - grafana-alloy-network
+
 networks:
   grafana-alloy-network:
     name: grafana-alloy-network

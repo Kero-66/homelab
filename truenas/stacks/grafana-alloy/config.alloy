@@ -2,17 +2,26 @@
 // #### Metrics Configuration ####
 // ###############################
 
-// Host Cadvisor on the Docker socket to expose container metrics.
-prometheus.exporter.cadvisor "example" {
-  docker_only = true
+// Configure a prometheus.remote_write component to send metrics to a Prometheus server.
+prometheus.remote_write "demo" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
 }
 
-discovery.relabel "example" {
-    targets = prometheus.exporter.cadvisor.example.targets
+// Standalone cAdvisor (2026-09-11, see ai/OBSERVABILITY.md) - replaced the old
+// prometheus.exporter.cadvisor Alloy component, which embeds a Grafana fork stuck on an old
+// cAdvisor base that caches container_health_state at discovery and never refreshes it. This
+// is a real gcr.io/cadvisor/cadvisor:v0.60.5 container (see compose.yaml), which re-inspects
+// health every housekeeping cycle. Job label kept distinct in case anything else scrapes cadvisor.
+discovery.relabel "cadvisor_standalone" {
+    targets = [{
+      __address__ = "grafana-alloy-cadvisor:8080",
+    }]
 
     rule {
         target_label = "job"
-        replacement  = "integrations/docker"
+        replacement  = "cadvisor-standalone"
     }
 
     rule {
@@ -21,20 +30,11 @@ discovery.relabel "example" {
     }
 }
 
-// Configure a prometheus.scrape component to collect cadvisor metrics.
-prometheus.scrape "scraper" {
-  targets    = discovery.relabel.example.output
+prometheus.scrape "cadvisor_standalone" {
+  targets    = discovery.relabel.cadvisor_standalone.output
   forward_to = [ prometheus.remote_write.demo.receiver ]
 
-
   scrape_interval = "10s"
-}
-
-// Configure a prometheus.remote_write component to send metrics to a Prometheus server.
-prometheus.remote_write "demo" {
-  endpoint {
-    url = "http://prometheus:9090/api/v1/write"
-  }
 }
 
 // Scrape Dockhand's own Prometheus metrics (EXPORT_METRICS=true, enabled 2026-09-09 -
