@@ -1243,6 +1243,46 @@ Dockhand *environment* name, not literal for other environments):
 - `/mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/<stack>/` — Dockhand's raw git clone of the whole repo, stack subdir mirrors this repo's `truenas/stacks/<stack>/` path
 - `/mnt/.ix-apps/app_mounts/dockhand/data/stacks/TrueNAS/<stack>/` — the LIVE path compose actually runs from; relative bind-mounts in compose.yaml (`./config.alloy`, `./config/...`) resolve here, not against `/mnt/Fast/docker/<stack>/`
 
+**⚠️ Root cause identified (2026-09-11) via Dockhand's own public source (`github.com/Finsys/dockhand`,
+`src/lib/server/git-deploy-policy.ts` + `git.ts`'s `deployGitStack`): both the nightly
+`autoUpdateCron` job and this manual `sync`+`deploy` API pair route through the same
+`gitUpdated`/`syncResult.updated` diff-detection flag. `shouldDeployGitStack` only deploys when
+`force || forceRedeploy || gitUpdated`, and `shouldForceRecreateGitStack` only passes
+`--force-recreate` when `gitUpdated || forceRedeploy` — so whenever that diff-detection returns a
+false negative (confirmed happens - see below), NOTHING deploys or recreates, cron or manual,
+even though the file genuinely changed. `arr-stack`'s `mem_limit` rightsizing sat un-applied on
+every live container for a full day of nightly cron runs because of exactly this.**
+
+**The fix: set `forceRedeploy: true` on the stack** (`PUT /api/git/stacks/<id>` with
+`{"forceRedeploy": true}`) — this is a real, intentional escape hatch in Dockhand's own design
+("the 'always redeploy on webhook/scheduled sync' setting forces a deploy even when git reported
+no changes", per the source's own comment) that bypasses the flaky diff-detection entirely and
+guarantees every sync (cron, webhook, or manual) actually deploys with `--force-recreate`. This
+was identified once already in an earlier session but never actually applied nor written down
+anywhere in this repo — don't let that happen a third time. Applied to `arr-stack` (id 12) and
+`grafana-alloy` (id 17) on 2026-09-11; **the other 15 git-stacks (see `GET /api/git/stacks` for
+the current list) still have it `false` and are equally exposed** — apply it stack-by-stack as
+each one bites, or all at once if the user approves a blanket change (a bulk config change across
+every deployed stack needs explicit confirmation, not a unilateral loop).
+
+**⚠️ `sync`'s `success`/`updated`/`changedFiles` response is not reliable proof the live file
+actually changed.** Confirmed twice in one session (2026-09-11, grafana-alloy stack, a nested
+`config/provisioning/dashboards/json/*.json` file): `sync` reported `success: true` and even
+`updated: true, changedFiles: [...]` on the second occurrence, but the file at the live
+`stacks/TrueNAS/<stack>/` path was byte-identical to the PRE-change version - only
+`git-repos/TrueNAS/<stack>/` (Dockhand's raw clone) actually had the new content. Once this
+happens, every subsequent `sync` call also reports success and does nothing further, because
+Dockhand's `lastCommit` bookkeeping already thinks it's at the target commit - there is no
+automatic retry. **After any sync you actually care about taking effect, diff the two paths
+directly instead of trusting the response:**
+```bash
+ssh kero66@192.168.20.22 "sudo diff -q /mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/<stack>/truenas/stacks/<stack>/<path> /mnt/.ix-apps/app_mounts/dockhand/data/stacks/TrueNAS/<stack>/<path>"
+```
+If they differ, `sudo cp` the git-repos copy over the stacks copy directly, then force-recreate
+the affected service. This is a distinct failure mode from the file-only-change-needs-
+force-recreate issue above - that one is about `deploy` not recreating a container; this one is
+about `sync` not even writing the file the container would see.
+
 **Before pinning any image tag** (new service, or bumping an existing pin): verify the tag
 actually exists on the registry you're using (`docker manifest inspect <image>:<tag>` or check
 the project's GitHub releases/README for its *current* registry — a `docker/<x>` GitHub repo

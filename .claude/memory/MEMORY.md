@@ -29,6 +29,7 @@
 - [Sonarr `/queue` hides unmatched downloads](feedback_sonarr_queue_hides_unmatched.md) — pass `includeUnknownSeriesItems=true` or manually-grabbed "Unknown Series" downloads won't show as in-progress
 - [Answer questions, don't act on them](feedback_answer_questions_dont_act_on_them.md) — "how should we X" is not authorization to do X; reread terse messages literally, don't pattern-match to the prior topic
 - [**Don't poll `docker inspect`/`ps` directly over SSH**](feedback_no_direct_docker_polling.md) — use Grafana/Loki (the monitoring stack) for health/status checks instead; repeated user correction
+- [**Dockhand git-stack `sync`/cron can silently no-op — set `forceRedeploy:true`**](feedback_dockhand_sync_unreliable_verify_disk.md) — root cause found in Dockhand's source: both manual sync+deploy and the nightly cron gate on the same flaky `gitUpdated` diff flag; `forceRedeploy:true` bypasses it. Was found once before and never applied/documented — don't lose it again. Applied to arr-stack+grafana-alloy 2026-09-11, other 15 stacks still exposed
 - [Media library gap survey](project_media_gap_survey.md) — in-progress audit of missing Sonarr episodes/Radarr movies, see `media/docs/SONARR_STRUCTURAL_AUDIT.md` for the durable findings
 - [Sonarr↔Radarr movie migration](project_sonarr_radarr_movie_migration.md) — movies unmonitored in Sonarr specials still needing a file copy into Radarr
 - [Verify queue before reporting zero results](feedback_verify_queue_before_reporting_zero_results.md) — don't trust one immediate post-search queue check, grabs can lag
