@@ -272,12 +272,17 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Time": true
+            "includeByName": {
+              "name": true,
+              "Value": true
             },
             "renameByName": {
               "Value": "current usage",
               "name": "container"
+            },
+            "indexByName": {
+              "name": 0,
+              "Value": 1
             }
           }
         },
@@ -457,12 +462,17 @@
         {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Time": true
+            "includeByName": {
+              "name": true,
+              "Value": true
             },
             "renameByName": {
               "Value": "status",
               "name": "container"
+            },
+            "indexByName": {
+              "name": 0,
+              "Value": 1
             }
           }
         },
