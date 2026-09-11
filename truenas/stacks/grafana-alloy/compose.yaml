@@ -250,6 +250,16 @@ services:
       - TZ=Australia/Brisbane
     command:
       - --docker_only=true
+      # Default metric set (app,cpu,cpuLoad,disk,diskIO,memory,network,oom_event,percpu,
+      # perf_event,pressure) includes disk/diskIO, whose fsHandler does a recursive
+      # filesystem walk (du + inode count) per container every housekeeping cycle -
+      # confirmed live 2026-09-11 taking 2-3.5s per scan across ~38 containers and erroring
+      # repeatedly on stale overlay2 dirs from already-removed containers, driving sustained
+      # ~1.5 CPU cores on a 4-core host. Health status (container_health_state) is collected
+      # via a separate Docker-inspect code path, not gated by this flag at all - dropping
+      # disk/diskIO/percpu/perf_event/pressure/app/cpuLoad doesn't affect it. Narrowed to
+      # exactly what this dashboard (container-rightsizing.json) actually queries.
+      - --enable_metrics=cpu,memory,oom_event
     ports:
       # 8081 collides with Infisical's own API port on this host (verified via ss -tlnp
       # 2026-09-11) - 8090 confirmed free at the same time.
