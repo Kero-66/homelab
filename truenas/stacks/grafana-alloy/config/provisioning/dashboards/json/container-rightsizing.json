@@ -125,7 +125,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "count(container_health_state{name!=\"\", job=\"cadvisor-standalone\"} == 0)"
+          "expr": "count(container_health_state{name!=\"\", job=\"cadvisor-standalone\"} == 0) or vector(0)"
         }
       ],
       "fieldConfig": {
