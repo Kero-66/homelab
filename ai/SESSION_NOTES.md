@@ -4,6 +4,52 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-09-09/10 - Grafana Recovery + Full Observability Build-out (COMPLETED)
+
+### What Was Done
+
+**Incident fixes** (found via first Grafana/Loki log review since the stack was stood up):
+1. Recovered Grafana admin login (username `admin`, password `GRAFANA_ADMIN_PASSWORD` in Infisical `/observability`)
+2. Fixed `homepage`'s Jellyfin widget 404 loop — Jellyfin 12.0.0 dropped the legacy `/emby/*` API; widget needed `version: 2`
+3. Fixed a Dockhand deploy-blocking permission bug found along the way: `homepage/config/` dir ownership fighting between Dockhand's `apps` UID and homepage's own container UID — fixed with `chgrp apps` + `chmod 2775` (setgid)
+4. Fixed Jellyfin's Trakt plugin — v31 (rewritten for Trakt's API changes) was installed but stuck `Restart`-pending while v30 (superseded) kept running; a Jellyfin restart completed the upgrade
+5. Fixed Caddy endlessly retrying a public ACME cert for `truenas.home` — missing `http://` scheme prefix (every other `.home` vhost had it)
+6. Fixed `jellyseerr` avatar-cache `EACCES` — 11 stale `root:root` files left from before the Jellyseerr→Seerr migration
+7. Enabled `repullImages: true` on 11 Dockhand git-stacks — the nightly 3am auto-update job was only re-syncing config, never actually pulling new `:latest` images
+
+**Observability build-out** (full detail in `ai/OBSERVABILITY.md`):
+- 5 Grafana alert rules (Homelab Alerts folder): memory-near-limit, OOM-killed, restart-loop, scrape-target-down, container-unhealthy
+- Loki retention fixed (was completely unbounded since Aug 15) → 720h (30d), matching Prometheus
+- `homelab.tier=critical|noncritical` label added across 32 services (future alert-routing/dashboard grouping)
+- Container Rightsizing dashboard (`grafana.home/d/homelab-rightsizing`) — reworked twice tonight, final version uses sorted bar gauges + collapsible rows instead of illegible overlaid line graphs
+- Container memory limits rightsized based on a 7-day cAdvisor review (qbittorrent was at 98% of its old limit — raised; several previously-uncapped containers got a limit for the first time)
+- Dockhand itself upgraded 1.1.10→1.1.30 and its `/metrics` endpoint enabled + wired into Prometheus (bearer token via infisical-agent, `DOCKHAND_METRICS_TOKEN` in Infisical `/TrueNAS`)
+- Healthchecks added to autobrr/gamarr/suggestarr/grafana-alloy's prometheus+grafana (previously had none) — took 3 iterations (curl missing → wget missing → IPv6 `localhost` resolving to nothing but the app only binds IPv4)
+
+**Two real infra bugs found and fixed along the way**:
+- `config.alloy`/`loki-config.yaml` were bind-mounted from a stale, non-git-synced host path (predated this stack's Dockhand migration) — silently no-op'd the Loki retention fix and the first Dockhand-metrics attempt despite clean deploys. Fixed to relative paths matching the working `provisioning/` pattern.
+- cAdvisor caches a container's Docker `Health.Status` at discovery time and never refreshes it — confirmed by restarting `grafana-alloy-alloy`, which immediately fixed 5 stale `container_health_state=0` readings for containers `docker inspect` already showed as genuinely healthy. **Practical rule: restart `grafana-alloy-alloy` after adding/changing any healthcheck, don't just wait.**
+
+**Deferred / explicitly out of scope**:
+- Blackbox exporter (per-service uptime probing) — discussed at length; Dockhand's own metrics turned out to be environment-aggregate only (no per-container `name` label), so they don't substitute for it. Not built — no clear ask to build it yet.
+- Dockhand's own auto-update automation — user explicitly said leave as manual-trigger-only for now, consistent with `DOCKHAND_READINESS.md`'s existing critical-infra policy.
+- `loki`/`alloy` containers can never get a Docker healthcheck — their images have no shell/curl/wget at all. Documented, not worked around.
+- Cosmetic-only: Grafana's Alerting page shows a permanent "Loki" datasource error badge (Loki has no ruler component configured, so its native alert-rules API 404s) — attempted `manageAlerts: false` fix didn't take effect for reasons not fully root-caused; not worth further time.
+
+### Key Facts
+
+| Item | Value |
+|---|---|
+| Grafana | http://grafana.home, admin / `GRAFANA_ADMIN_PASSWORD` in Infisical `/observability` |
+| Rightsizing dashboard | `grafana.home/d/homelab-rightsizing/container-rightsizing` |
+| Alert rules | `grafana.home/alerting/list` → "Homelab Alerts" folder |
+| Loki datasource UID | `P8E80F9AEF21F6940` |
+| Prometheus datasource UID | `PBFA97CFB590B2093` |
+| Dockhand metrics token | `DOCKHAND_METRICS_TOKEN` in Infisical `/TrueNAS`, rendered by infisical-agent into `grafana-alloy/.env` |
+| grafana-alloy Dockhand stack id | 17 |
+
+---
+
 ## Session 2026-05-30 - Comicarr Setup (BLOCKED — needs credentials re-setup)
 
 ### Current State (handoff)
