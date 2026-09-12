@@ -53,6 +53,8 @@
 - [Tailscale authkey expiry incident](incident_tailscale_authkey_expiry.md) — auth key expiry (separate from node key) crash-loops the TrueNAS container; expiry now disabled, fix procedure + real compose path documented
 - [Never self-certify the security gate](feedback_no_self_certify_security_gate.md) — never manually write the commit-gate timestamp yourself, even after a genuinely clean /security-review run; a repeat violation, not a one-off
 - [Never move, only hardlink media](feedback_never_move_only_hardlink_media.md) — never mv/cp media between downloads and library by hand, never importMode:"move" — breaks hardlinks and torrent seed data; root-caused to stale /mnt/Data/media and /mnt/Data/downloads paths in CLAUDE.md/AGENTS.md (now fixed to /mnt/Data/Servarr)
+- [**Prefer Series/Movie over Season 0 specials**](feedback_prefer_series_movie_over_specials.md) — standing rule, not just an audit-workflow step; check any Season 0 content for duplication/misfiling whenever encountered, for any reason
+- [Franchise watch-order playlists](project_watch_order_playlists.md) — 9 built (6 SmartLists auto-refresh, 3 manual/static); see `media/scripts/watch_orders/README.md` for status table, rerun triggers, provider capability matrix
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**

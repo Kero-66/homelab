@@ -1,0 +1,18 @@
+{
+  "_comment": "Trigun watch order. Badlands Rumble (2010) is set after Vash has met the allies he has by early-to-mid series but before the later antagonists are introduced -- community consensus (fandomwire.com, thepopverse.com, myotakuworld.com, 2026-09-11 session) places it between episodes 10 and 11 of the 1998 series. Trigun Stampede (2023) is a separate reboot/reimagining, not a sequel -- deliberately excluded from this continuity playlist.",
+  "chronological_order": [
+    {
+      "series": "TRIGUN",
+      "season": 1,
+      "episodes": [1, 10]
+    },
+    {
+      "movie": "Trigun: Badlands Rumble"
+    },
+    {
+      "series": "TRIGUN",
+      "season": 1,
+      "episodes": [11, 26]
+    }
+  ]
+}
