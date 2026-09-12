@@ -15,6 +15,15 @@ prometheus.remote_write "demo" {
 // is a real ghcr.io/google/cadvisor:latest container (see compose.yaml, fix landed upstream in
 // v0.60.5+), which re-inspects health every housekeeping cycle. Job label kept distinct in case
 // anything else scrapes cadvisor.
+// instance = "truenas" (a fixed literal, not constants.hostname) throughout this file - found
+// live 2026-09-12: constants.hostname is the Alloy CONTAINER's own hostname, which changes on
+// every recreate (new container ID). That churned the `instance` label on every metric series
+// scraped through Alloy every time this stack deployed, causing duplicate/stale series and
+// dashboards flapping between "no data" (querying the now-orphaned old label) and real data
+// (once the new one had enough samples) - the ZFS Pool state panel's flapping was this bug, not
+// a real data problem. These metrics describe the TrueNAS HOST (via /rootproc, /sys, /rootfs
+// bind mounts) or other fixed on-host targets, not the Alloy container itself, so a fixed
+// hostname is the correct label regardless of which Alloy container happens to be running it.
 discovery.relabel "cadvisor_standalone" {
     targets = [{
       __address__ = "grafana-alloy-cadvisor:8080",
@@ -27,7 +36,7 @@ discovery.relabel "cadvisor_standalone" {
 
     rule {
         target_label = "instance"
-        replacement  = constants.hostname
+        replacement  = "truenas"
     }
 }
 
@@ -89,7 +98,7 @@ discovery.relabel "host_metrics" {
 
   rule {
     target_label = "instance"
-    replacement  = constants.hostname
+    replacement  = "truenas"
   }
 }
 
@@ -116,7 +125,7 @@ discovery.relabel "smartctl" {
 
   rule {
     target_label = "instance"
-    replacement  = constants.hostname
+    replacement  = "truenas"
   }
 }
 
@@ -147,7 +156,7 @@ discovery.relabel "logs_integrations_docker" {
 
      rule {
         target_label = "instance"
-        replacement  = constants.hostname
+        replacement  = "truenas"
     }
 
   }

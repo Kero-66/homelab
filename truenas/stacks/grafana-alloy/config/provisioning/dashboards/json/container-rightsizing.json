@@ -373,6 +373,72 @@
       }
     },
     {
+      "id": 103,
+      "title": "Network",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 10,
+      "title": "Network I/O - top 15 by combined rx+tx (5m)",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "cAdvisor's network metric category was disabled 2026-09-11 alongside disk/diskIO (a real CPU problem, see ai/OBSERVABILITY.md) even though network itself wasn't the cause - re-enabled 2026-09-12 once that was confirmed, and this panel added since none existed before despite the dashboard's name implying full container resource coverage.",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "expr": "topk(15, sum by (name) (rate(container_network_receive_bytes_total{name!=\"\", job=\"cadvisor-standalone\"}[5m]) + rate(container_network_transmit_bytes_total{name!=\"\", job=\"cadvisor-standalone\"}[5m])))",
+          "legendFormat": "{{name}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "sortBy": "Last *",
+        "sortByDesc": true
+      }
+    },
+    {
       "id": 102,
       "title": "Health",
       "type": "row",

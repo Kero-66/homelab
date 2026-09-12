@@ -1,7 +1,7 @@
 {
-  "title": "Host Resources",
+  "title": "TrueNAS Host",
   "uid": "homelab-host-resources",
-  "description": "Whole-host CPU/memory/load and per-device disk I/O, from prometheus.exporter.unix (added 2026-09-10 alongside the Valheim server prep). Complements Container Rightsizing, which only covers per-container metrics via cAdvisor. Disk I/O panel exists specifically to confirm the slow 'Data' HDD pool (sda/sdb) stays idle - Valheim and this monitoring stack both live on the 'Fast' NVMe pool (nvme0n1/nvme2n1) only. See truenas/HARDWARE_CONFIG.md for the device-to-pool mapping.",
+  "description": "TrueNAS host-level metrics ONLY (the physical box itself, not individual containers) - CPU/memory/load, per-device disk I/O, filesystem usage, and ZFS pool state, from prometheus.exporter.unix (added 2026-09-10 alongside the Valheim server prep) and node_exporter's zfs collector. Renamed from 'Host Resources' 2026-09-12 - the old title didn't make the TrueNAS-only scope obvious. Complements Container Rightsizing (per-container, via cAdvisor) and the SMARTctl Exporter Dashboard (per-drive SMART health, one level below 'pool'). See truenas/HARDWARE_CONFIG.md for the device-to-pool mapping.",
   "editable": true,
   "schemaVersion": 39,
   "tags": ["homelab", "resources", "host"],
