@@ -22,12 +22,15 @@
 #   as SERVER_PASS. Valheim requires 5+ characters and rejects a password that's
 #   a substring of the server name.
 #
-# ⚠️ BEFORE FIRST DEPLOY: set SERVER_NAME and WORLD_NAME below to real values.
-# WORLD_NAME fixes the save-file name — changing it later starts a brand new
-# world, it does not rename/migrate the existing one.
+# SERVER_NAME/WORLD_NAME below are live values ("Homelab Valheim"/"Midgard") — changing
+# WORLD_NAME starts a brand new world, it does not rename/migrate the existing one.
 #
-# Ports (forward on the router for friends outside the LAN — UDP only):
-#   2456-2458/udp
+# Ports: 2456-2458/udp
+# Access is Tailscale-only by explicit user decision (2026-09-12) — no router port
+# forwarding. TrueNAS is itself a tailnet node (100.98.14.66), so any tailnet member
+# reaches the server directly at 100.98.14.66:2456, no subnet-route approval needed
+# (that only applies to reaching OTHER LAN devices via the subnet router). LAN clients
+# connect via 192.168.20.22:2456 directly. See .claude/skills/tailscale/SKILL.md.
 #
 # Resource note: the host is an Intel N150 (Alder Lake-N, low-power mini PC) —
 # fine for Valheim's modest RAM needs, but single-thread CPU performance is the

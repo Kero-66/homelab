@@ -191,15 +191,15 @@ Subnet router for remote access.
 
 ### valheim
 
-Dedicated Valheim game server (`lloesche/valheim-server`). **Staged in repo, not yet deployed** — see `ai/todo.md` for the outstanding steps.
+Dedicated Valheim game server (`lloesche/valheim-server`). **Live since 2026-09-12** (Dockhand git-stack id 21) — confirmed working via a local LAN connection test.
 
 - No web UI, no Caddy/DNS entry — reached only via the Valheim game client over UDP
 - Config/world saves: `/mnt/Fast/docker/valheim/config`
 - Server binaries (SteamCMD): `/mnt/Fast/docker/valheim/server`
 - Secret: `VALHEIM_SERVER_PASS` in Infisical at `/TrueNAS` (5+ chars, must not be a substring of the server name) — rendered by infisical-agent via `truenas/stacks/infisical-agent/valheim.tmpl`
-- Ports: `2456-2458/udp` — must be forwarded on the router for players outside the LAN
-- Before first deploy: set real `SERVER_NAME`/`WORLD_NAME` in `truenas/stacks/valheim/compose.yaml` (changing `WORLD_NAME` later starts a new world, doesn't rename the old one)
-- Deploy as a new Dockhand git stack — follow `truenas/DOCKHAND_GITOPS_GUIDE.md` → "Migration Path" (`POST /api/git/stacks`, `stackName: "valheim"`, `composePath: "/truenas/stacks/valheim/compose.yaml"`)
+- Ports: `2456-2458/udp`
+- **Access: Tailscale only, no router port forwarding** (explicit user decision, 2026-09-12) — TrueNAS is itself a tailnet node (`100.98.14.66`), so any tailnet member reaches the server directly at `100.98.14.66:2456` with no subnet-route approval needed (that approval only applies to reaching *other* LAN devices through the subnet router, not the node's own address). Friends need to be added to the tailnet first — see `.claude/skills/tailscale/SKILL.md` → "Deploying Tailscale to a new device". LAN clients can still connect via `192.168.20.22:2456` directly.
+- `SERVER_NAME`/`WORLD_NAME` are set to "Homelab Valheim"/"Midgard" (changing `WORLD_NAME` later starts a new world, doesn't rename the old one)
 
 ---
 
