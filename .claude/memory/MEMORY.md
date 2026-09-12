@@ -55,6 +55,9 @@
 - [Never move, only hardlink media](feedback_never_move_only_hardlink_media.md) — never mv/cp media between downloads and library by hand, never importMode:"move" — breaks hardlinks and torrent seed data; root-caused to stale /mnt/Data/media and /mnt/Data/downloads paths in CLAUDE.md/AGENTS.md (now fixed to /mnt/Data/Servarr)
 - [**Prefer Series/Movie over Season 0 specials**](feedback_prefer_series_movie_over_specials.md) — standing rule, not just an audit-workflow step; check any Season 0 content for duplication/misfiling whenever encountered, for any reason
 - [Franchise watch-order playlists](project_watch_order_playlists.md) — 9 built (6 SmartLists auto-refresh, 3 manual/static); see `media/scripts/watch_orders/README.md` for status table, rerun triggers, provider capability matrix
+- [**Never manually run docker compose to work around a Dockhand deploy failure**](feedback_use_dockhand_not_manual_compose.md) — retry via Dockhand's own API/UI, don't circumvent it with direct docker commands
+- [Never poll docker directly, no exceptions](feedback_no_direct_docker_polling.md) — tightened to an absolute rule; the old "one-off is fine" carve-out was being used as a loophole
+- [**Dockhand git-stack delete doesn't remove containers**](feedback_dockhand_git_stack_delete_leaves_containers.md) — leaves an orphaned "Untracked" stack; the documented internal-stack delete API is also broken for this case, use the Dockhand UI instead
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**

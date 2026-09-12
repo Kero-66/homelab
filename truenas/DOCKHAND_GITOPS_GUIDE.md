@@ -380,6 +380,40 @@ docker logs <dockhand-container> | tail -20
 - Verify external networks work
 - Test dependent services
 
+## Tearing Down a Stack — Not As Simple As It Looks
+
+**`DELETE /api/git/stacks/<id>` does NOT stop or remove the actual containers.** Confirmed
+2026-09-12 (SigNoz teardown): the call returns `{"success":true}`, and both `/api/git/stacks` and
+`/api/stacks` immediately show the stack gone — but the containers keep running underneath.
+Dockhand's own container discovery then re-surfaces them as a **separate, new "Untracked" stack
+entry** (source `Untracked`, not `Git`) once you refresh the Stacks UI — a different record than
+the one you just deleted, not the same one coming back. Every API-level check will tell you the
+teardown is clean; only the Dockhand **UI's** Stacks page reveals the orphan. See
+`.claude/memory/feedback_dockhand_git_stack_delete_leaves_containers.md`.
+
+**The documented fix for that orphan is currently broken.** `DELETE /api/stacks/<name>` (the
+path this doc already recommends for `internal` stacks, and which worked previously for
+`maintainerr`) fails for an orphaned ex-git-stack with a 500 and, per Dockhand's own logs (via
+Loki, `container_name="ix-dockhand-dockhand-1"`), `Error removing compose stack: Error: No
+environment specified`. Tried `?environmentId=1`, `?environment=1`, `?envId=1`, `?env=TrueNAS` as
+query params on the DELETE call — identical error every time, so it isn't a missing/misnamed
+query param. Not root-caused. **Current workaround: delete the orphaned "Untracked" stack from
+the Dockhand web UI directly** (Stacks page → trash icon on that row) — this works even though
+the equivalent API call doesn't.
+
+**Full current teardown procedure for a git-managed stack, until this is fixed:**
+1. `DELETE /api/git/stacks/<id>` — removes Dockhand's git-tracking record (but not containers).
+2. Refresh the Dockhand UI's Stacks page and check for a new "Untracked" entry with the same
+   name — expect one to appear.
+3. Delete it from the UI (trash icon), not via `DELETE /api/stacks/<name>` — that API call is
+   confirmed broken for this case as of 2026-09-12.
+4. Only then clean up the repo (delete `truenas/stacks/<name>/`), any Infisical-agent
+   template/wiring, homepage tiles, Caddy vhosts, and on-disk data at
+   `/mnt/Fast/docker/<name>/` on TrueNAS.
+5. See `ai/todo.md` for the open item to actually root-cause the `DELETE /api/stacks/<name>`
+   500, and to check whether stopping a git stack before deleting it avoids creating the orphan
+   in the first place (not yet tested).
+
 ---
 
 ## Future Enhancements
