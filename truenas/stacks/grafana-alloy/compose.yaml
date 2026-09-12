@@ -277,6 +277,34 @@ services:
     networks:
       - grafana-alloy-network
 
+  # SMART disk health (2026-09-12) - TrueNAS's own SMART service (smartd) monitors the disks
+  # but doesn't expose those results to Prometheus/Grafana, so drive-failure warnings would
+  # only ever surface in the TrueNAS UI/email, not alongside everything else in this stack.
+  # prometheus-community/smartctl_exporter fills that gap: it shells out to smartctl per
+  # device and exposes the parsed attributes (health status, reallocated/pending sectors,
+  # temperature, power-on hours) as Prometheus metrics, scraped by Alloy like everything
+  # else here (see config.alloy's "smartctl" prometheus.scrape block). Needs `privileged`
+  # + root, same class of grant as Alloy/cAdvisor above - smartctl's ATA_12/ATA_16 SCSI
+  # commands are refused to non-root even with individual /dev/sdX access.
+  # Primary target is sda/sdb (the spinning Data pool - what actually degrades over time);
+  # the NVMe Fast pool is included too since smartctl reports NVMe wearout/media errors the
+  # same way. nvme1n1 (boot drive) is included for completeness, not actively watched.
+  smartctl-exporter:
+    image: prometheuscommunity/smartctl-exporter:latest
+    container_name: grafana-alloy-smartctl-exporter
+    restart: unless-stopped
+    mem_limit: 128m
+    privileged: true
+    user: root
+    labels:
+      - homelab.tier=critical
+    environment:
+      - TZ=Australia/Brisbane
+    ports:
+      - "127.0.0.1:9633:9633"
+    networks:
+      - grafana-alloy-network
+
 networks:
   grafana-alloy-network:
     name: grafana-alloy-network

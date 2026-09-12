@@ -335,3 +335,198 @@ groups:
           severity: critical
         annotations:
           summary: "Host available memory below 10% for 10+ minutes - real OOM risk, see #120 in ai/todo.md for per-container mem_limit rightsizing"
+
+  - orgId: 1
+    name: Disk Health
+    folder: Homelab Alerts
+    interval: 5m
+    rules:
+      # Known-bad metric per prometheus-community/smartctl_exporter#229/#265: don't gate
+      # solely on this being unhealthy without also watching for exporter/smartctl errors,
+      # but 0 is still the documented "failed" value and worth paging on immediately.
+      - uid: smart-status-failed
+        title: Disk SMART status failed
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: smartctl_device_smart_status
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.device }} is reporting SMART status FAILED - back it up / plan replacement now, this is the drive's own overall-health verdict"
+
+      # Delta over a day, not the absolute count - a drive can ship from the factory with a
+      # couple of reallocated sectors and stay fine for years; what matters is whether the
+      # count is actively climbing (peira.dev's writeup, see chat history 2026-09-12).
+      - uid: smart-reallocated-sectors-climbing
+        title: Reallocated sector count climbing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: increase(smartctl_device_attribute{attribute_name="Reallocated_Sector_Ct"}[24h])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }}'s Reallocated_Sector_Ct rose in the last 24h - new bad sectors are actively appearing, not just a static factory count"
+
+      - uid: smart-pending-sectors-climbing
+        title: Pending sector count climbing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: increase(smartctl_device_attribute{attribute_name="Current_Pending_Sector"}[24h])
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }}'s Current_Pending_Sector rose in the last 24h - sectors are awaiting remap, precursor to reallocation"
+
+      # HDD-only (sda/sdb, the Data pool) - 60C threshold per general HDD guidance, not yet
+      # calibrated against this host's actual idle baseline (see chat 2026-09-12). Revisit
+      # once a few weeks of real temperature data exist in Grafana - want to confirm this
+      # doesn't false-positive on normal always-on spinning-disk operating temps.
+      - uid: smart-hdd-temperature-high
+        title: HDD temperature high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: smartctl_device_temperature{device=~"/dev/sd[ab]", temperature_type="current"}
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [60]
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.device }} (Data pool HDD) has run above 60C for 10+ minutes - check case airflow"

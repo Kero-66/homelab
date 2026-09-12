@@ -99,6 +99,33 @@ prometheus.scrape "host_metrics" {
   scrape_interval = "15s"
 }
 
+// SMART disk health (2026-09-12, see compose.yaml's smartctl-exporter service and
+// ai/OBSERVABILITY.md) - scraped the same way as the dockhand/host_metrics jobs above,
+// just a plain HTTP target rather than an Alloy-native prometheus.exporter.* component
+// (no such component exists for smartctl_exporter). 60s matches the exporter's own
+// default poll interval - scraping faster wouldn't surface fresher data, just extra load.
+discovery.relabel "smartctl" {
+  targets = [{
+    __address__ = "grafana-alloy-smartctl-exporter:9633",
+  }]
+
+  rule {
+    target_label = "job"
+    replacement  = "integrations/smartctl"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+}
+
+prometheus.scrape "smartctl" {
+  targets         = discovery.relabel.smartctl.output
+  forward_to      = [ prometheus.remote_write.demo.receiver ]
+  scrape_interval = "60s"
+}
+
 // ###############################
 // #### Logging Configuration ####
 // ###############################
