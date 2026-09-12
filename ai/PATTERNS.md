@@ -651,13 +651,15 @@ SONARR_BASE="http://sonarr.home"
 ```
 
 ### Get queue (follow redirects with -L)
+**`pageSize` silently truncates — always check `.totalRecords` against what you actually got back, or just pass a pageSize comfortably above any realistic queue size (250+).** Confirmed 2026-09-12: searched a `pageSize=100` queue response for "Tekkaman" and got zero hits, concluded the queue was clear — the real queue had 138 records and the 5 stuck Tekkaman entries were in the truncated tail. No error, no warning, just fewer records than reality. Same trap applies to Radarr's `/api/v3/queue`.
 ```bash
-curl -sL "$SONARR_BASE/api/v3/queue?pageSize=100&apikey=$SONARR_KEY" | jq '.totalRecords, (.records[] | {title, status, protocol, trackedDownloadStatus, errorMessage})'
+curl -sL "$SONARR_BASE/api/v3/queue?pageSize=250&apikey=$SONARR_KEY" | jq '.totalRecords, (.records[] | {title, status, protocol, trackedDownloadStatus, errorMessage})'
+# if .totalRecords > records returned, raise pageSize further and re-fetch — don't trust a filtered/grepped empty result as proof of "not in queue"
 ```
 
 ### Get queue for specific protocol
 ```bash
-curl -sL "$SONARR_BASE/api/v3/queue?pageSize=100&apikey=$SONARR_KEY" | jq '.records[] | select(.protocol == "usenet") | {title, status, trackedDownloadStatus, errorMessage}'
+curl -sL "$SONARR_BASE/api/v3/queue?pageSize=250&apikey=$SONARR_KEY" | jq '.records[] | select(.protocol == "usenet") | {title, status, trackedDownloadStatus, errorMessage}'
 ```
 
 ### Find a series by name
@@ -711,6 +713,13 @@ Sonarr sometimes blocks auto-import with "release was matched to series by ID" f
 ./truenas/scripts/import_downloads.sh --apply <plan-file> # submits mapped entries, polls, reports cleared vs. still-stuck
 ```
 It also clears the now-orphaned queue entry check for you — a forced `ManualImport` bypasses Sonarr's normal completion pipeline, so the queue entry is never automatically marked resolved otherwise (Cleanuparr's queue_cleaner does not catch this pattern either).
+
+**The same bypass also orphans the SABnzbd download folder, for usenet grabs.** Confirmed 2026-09-12: a *normal* automatic import (Sonarr/Radarr's own completed-download-handling, triggered when a tracked queue item finishes) calls back to SABnzbd to delete the history entry + files (verified live: Star Wars Rebels/Clevatess folders were gone from `sabnzbd/completed` after normal auto-import). This callback is Sonarr/Radarr's own feature — unrelated to Cleanuparr, which has no SABnzbd/Usenet integration at all (a [feature request](https://github.com/Cleanuparr/Cleanuparr/issues/137) for it was closed/abandoned by the maintainer). A forced `ManualImport` skips this callback too, so the folder sits in `sabnzbd/completed` forever unless cleaned up by hand. To clean up after a forced import for a usenet-sourced grab:
+```bash
+# nzo_id == the downloadId used in the ManualImport payload
+curl -s "$SAB_BASE/api?mode=history&name=delete&value=<NZO_ID>&del_files=1&apikey=$SABKEY&output=json"
+```
+This reliably clears the SABnzbd history entry, but `del_files=1` does NOT reliably delete the actual files — confirmed it silently no-oped for 3 of 4 folders in the same batch (1 succeeded, 3 didn't, no warning in `mode=status`). Always verify the folder is actually gone afterward (`ssh` + `find`/`ls`, per the no-direct-docker-polling carve-out — this is filesystem, not container, inspection) and fall back to deleting the folder directly over SSH if SABnzbd's own API left it behind.
 
 **When this fails (permanent blocks):**
 - `"Not an upgrade for existing episode file"` → existing file is better quality, don't import
@@ -794,6 +803,22 @@ rm -f /tmp/qb_cook
 ```bash
 curl -s -b /tmp/qb_cook "$QBIT_BASE/api/v2/torrents/info" | jq '.[] | select(.name | ascii_downcase | test("keyword")) | {name, category, state, ratio, seeding_time}'
 ```
+
+### Partial re-grab of a large pack: download only the missing files
+When the only seeded release for a few missing episodes is a large multi-episode/BD-BOX pack that also contains content you already have (e.g. a box set where the TV episodes already imported but a handful of OVA/specials never did — see `ai/PATTERNS.md` "Unable to parse release" override above for the matching Sonarr/Radarr grab step), don't let qBittorrent download the whole thing. After the release override grab lands in qBittorrent:
+1. `GET /api/v2/torrents/files?hash=<HASH>` — list the file tree with `index`/`name`/`priority`, and identify which filenames correspond to the genuinely-missing episodes (titles in these packs rarely match Sonarr's episode titles directly — cross-reference by special/episode number, not by string match).
+2. Set every file's priority to 0 ("don't download") except the ones you need:
+```bash
+# IDs are PIPE-separated ("|"), not comma — comma returns "File IDs must be integers"
+curl -s -b /tmp/qb_cook -X POST "$QBIT_BASE/api/v2/torrents/filePrio" \
+  --data-urlencode "hash=$HASH" --data-urlencode "id=$SKIP_IDS_PIPE_SEPARATED" --data-urlencode "priority=0"
+curl -s -b /tmp/qb_cook -X POST "$QBIT_BASE/api/v2/torrents/filePrio" \
+  --data-urlencode "hash=$HASH" --data-urlencode "id=$KEEP_IDS_PIPE_SEPARATED" --data-urlencode "priority=1"
+```
+3. Verify with the same `files?hash=` call — only the kept files should show non-zero priority.
+4. qBittorrent then only fetches the needed pieces (the torrent's `progress` field reflects fraction of *wanted* data, not the full pack) — once those files finish, run `import_downloads.sh --plan`/`--apply` as usual; the unwanted files stay at 0 bytes and are ignored.
+
+Verified working 2026-09-12 (Tekkaman Blade — grabbed `[Moozzi2]` 91GB BD-BOX via override for 4 missing Season 0 OVA specials, set priority 0 on the other 85 files, downloaded only ~2-3GB of kept content).
 
 ---
 

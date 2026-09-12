@@ -4,6 +4,21 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-09-12 (later) - Tekkaman Blade specials gap-fill + BSG/SABnzbd process fixes (COMPLETE)
+
+### What was done
+1. **Tekkaman Blade Season 0 specials fixed end-to-end**: "The Prelude to a Long Battle" (the original ask) plus Twin Blood/Burning Clock/Missing Link were all missing files entirely — root cause, not a subtitle bug. Re-grabbed the `[Moozzi2]` BD-BOX (91GB) but used qBittorrent file-priority (`priority=0` on unwanted files) to only download the 4 needed OVA files (~2-3GB) — new documented pattern in `ai/PATTERNS.md` ("Partial re-grab of a large pack"). Manually mapped+imported via override (no parseable episode markers in filenames), then found English subs via Bazarr's **manual** search hitting the `subdl` provider (disabled for automatic search only, per todo#81) — a "1-49 complete" pack matched all 4 episodes individually. All 4 now have working `.en.cc.srt` files.
+2. **Battlestar Galactica reviewed**: confirmed Razor/The Plan/Blood & Chrome overlap with Radarr movies (Plan + Blood & Chrome already there with files; Razor was missing — user added it to Radarr). Miniseries (the one real Sonarr gap) searched+grabbed+imported. Swapped the BSG SmartList from native ReleaseDate-sort to an IMDb "Continuity Order" list (`ls062079166`) so Razor/Plan/Blood & Chrome land in correct story order instead of release order — same pattern as Macross/Gundam UC. **Bug found+fixed**: `smartlist.py`'s default owner (first user from `/Plugins/SmartLists/users`) picked the wrong Jellyfin user ("Addz") instead of kero66 — always pass `JELLYFIN_OWNER_USERID=1ecfce63139f4501a4d498e372e1ee3d` explicitly from now on.
+3. **Process correction, important**: initially wrongly concluded "SABnzbd has no cleanup mechanism at all" (Cleanuparr genuinely has zero SABnzbd/Usenet support — confirmed via the actual upstream GitHub issue, abandoned). User correctly pushed back — verified a **normal** automatic import *does* call back to SABnzbd to delete history+files (confirmed live: Star Wars Rebels/Clevatess folders gone post-import). The real, narrow cause: the manual-import escape hatch (used here, and in the structural-audit process generally) bypasses that callback too, same root cause as the already-documented orphaned-Sonarr-queue-entry issue. Documented in `ai/PATTERNS.md` next to that note, including that SABnzbd's own `del_files=1` on history-delete is unreliable (silently no-oped for 3 of 4 folders in one batch) — always verify via SSH+`find`, don't trust the API's `status:true`.
+4. **Real mistake, self-caught after user pushback**: checked Sonarr's queue for "Tekkaman" entries using the default/unspecified `pageSize` (100) and got zero hits, wrongly told the user the queue was clear. Actual queue had 138 records; the 5 stuck entries (orphaned from the same manual-import bypass as #3) were in the truncated tail. Fixed the documented example in `ai/PATTERNS.md`'s Sonarr API section to use `pageSize=250` and check `.totalRecords` — this was a real, not hypothetical, production query against a live queue, not a one-off.
+5. Cleaned up ~7.3GB of orphaned SABnzbd completed-download folders (Gundam Origin E01/E02/E03, BSG Miniseries) left behind by the same escape-hatch pattern; also manually imported Gundam Origin II & III into Radarr (they were misrouted to Sonarr originally — no "Origin" series exists there, it's Radarr-only content).
+
+### Open items
+- Tekkaman Blade torrent still seeding in qBittorrent (`tv-sonarr` category) — expected to be reaped by Cleanuparr's seeding-rule cron (runs every 3h), no action needed.
+- BSG watch-order ordering for Razor/Plan/Blood & Chrome mid-series placement is **not independently verified** — the IMDb list is episode-level and matched correctly for what's owned today (S1 + movies), but S2-4/Razor/Miniseries aren't in the library yet to expose whether the mid-series slot is actually right. Re-check once those land (see `media/scripts/watch_orders/README.md`).
+
+---
+
 ## Session 2026-09-12 - TrueNAS disk/pool health monitoring + alert bugfixes (DONE)
 
 ### Context
