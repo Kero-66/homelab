@@ -45,15 +45,6 @@ http://prowlarr.home {
 	reverse_proxy prowlarr:9696
 }
 
-# SigNoz (Observability - metrics, logs, traces)
-# Proxies to the host-exposed port, NOT the container DNS name — Caddy
-# intentionally does not join signoz-network, since that network's
-# ClickHouse has an unauthenticated admin default user (Foundry vendor
-# default, network-scoped) and Caddy shouldn't be exposed to it.
-http://signoz.home {
-	reverse_proxy 192.168.20.22:3301
-}
-
 # Grafana (Observability trial 2 - Loki logs + Prometheus metrics via Alloy)
 # Proxies to the host-exposed port, same pattern as signoz.home above.
 http://grafana.home {
