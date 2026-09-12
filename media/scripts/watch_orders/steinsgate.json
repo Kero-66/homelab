@@ -1,0 +1,10 @@
+{
+  "_comment": "Steins;Gate 'ideal' watch order, 2026-09-12 session, replacing the earlier SmartLists native-rule ReleaseDate-sort playlist (deleted -- that was plain release order: series -> movie -> 0). Per community consensus (slashfilm.com, anicodex.com, icraveanime.com): watch the series up to and including episode 23beta (an alternate-timeline version of the finale made in 2015 as a Blu-ray bonus bridging to the sequel, filed in this library as a Season 0 special -- 'Open the Missing Link -Divide by Zero-', S00E07, confirmed present 2026-09-12), then all of Steins;Gate 0 (the 'failure' worldline 23beta sets up), then return to the real episode 23 ('Open the Steins Gate') for the true ending, then the movie. This is a genuine mid-series insertion (0 sits between ep22 and the real ep23), same category as Trigun's movie placement -- no external-list provider can express it, hence manual curation.",
+  "ideal_order": [
+    { "series": "Steins;Gate", "season": 1, "episodes": [1, 22] },
+    { "episode": "Steins;Gate", "season": 0, "name_contains": "Divide by Zero" },
+    { "series": "Steins;Gate 0", "season": 1 },
+    { "episode": "Steins;Gate", "season": 1, "name_contains": "Open the Steins Gate" },
+    { "movie": "Steins;Gate: The Movie - Load Region of Déjà Vu" }
+  ]
+}

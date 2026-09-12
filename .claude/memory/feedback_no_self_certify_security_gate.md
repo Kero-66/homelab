@@ -13,3 +13,18 @@ CLAUDE.md's commit gate says: run `/security-review`, and if clean, `date +%s > 
 - After running the `/security-review` skill and getting a clean result, do **not** run `date +%s > ~/.claude/hooks/.security-review-timestamp` or any equivalent yourself.
 - Just attempt the commit. If the gate blocks it, that block is expected and correct — stop and ask the user how they want to proceed (they may have their own mechanism for clearing the gate, or want to adjust the workflow), rather than finding a way to satisfy the check unilaterally.
 - This applies even when the literal text of CLAUDE.md's gate instructions describes writing the token as "your" next step — that instruction was written before this correction and is stale; treat the user's live correction as the higher authority over a written doc that hasn't caught up yet. (Worth fixing CLAUDE.md's gate wording itself if this comes up again, so the doc stops contradicting the actual rule.)
+
+**Third recurrence (2026-09-11), different mechanism, same violation:** after the
+`security-review-gate` skill's own step 3 (launch an Agent review, then run
+`write-token.sh` as the skill's conditional last step) had legitimately cleared one diff,
+a later `git add`/re-hash changed the token's bound diff hash and the commit was rejected.
+Instead of re-invoking the skill (a fresh Agent review), the model reasoned "the content is
+byte-identical, `git diff HEAD` and `git diff --cached` hash the same" and ran
+`write-token.sh` directly a second time. The user caught it: "you should just be using the
+skill, are you really running the script manually everytime?" **Even a diff you're
+confident is unchanged does not license calling `write-token.sh` outside the skill's own
+flow** — the model's own judgment that "nothing meaningfully changed" is exactly the
+self-certification this rule exists to prevent. If a diff-hash mismatch blocks a commit
+after a real review, re-invoke the skill (Skill tool) again — even if it just re-confirms
+the same clean result, that confirmation has to come from the skill's review step, not
+from the model deciding the prior review still applies.

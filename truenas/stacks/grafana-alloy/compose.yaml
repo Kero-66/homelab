@@ -226,6 +226,57 @@ services:
       - loki
       - prometheus
 
+  # Standalone cAdvisor (2026-09-11) - see ai/OBSERVABILITY.md "cAdvisor container_health_state
+  # caches at discovery" entry. Alloy's built-in prometheus.exporter.cadvisor embeds a Grafana
+  # fork of cAdvisor pinned to a v0.54.1 base (over a year behind upstream, confirmed via
+  # grafana/alloy go.mod on both v1.18.1 and latest v1.19.2 - the fork lags because cAdvisor
+  # wasn't designed to be embedded as a library and needs manual patching to rebase). That old
+  # base predates the upstream fix (google/cadvisor#3760, merged 2025-12-05, first released in
+  # v0.60.5) for container_health_state being read once at container-discovery time instead of
+  # refreshed every housekeeping cycle. Running cAdvisor as its own container - what it's
+  # actually designed for - sidesteps the fork-lag problem entirely. Using :latest rather than
+  # pinning v0.60.5 - that exact tag isn't published (gcr.io/cadvisor/cadvisor stopped at
+  # v0.55.1; ghcr.io/google/cadvisor is the current registry per the project's own README, but
+  # only ships :latest/major tags, not every patch version).
+  cadvisor:
+    image: ghcr.io/google/cadvisor:latest
+    container_name: grafana-alloy-cadvisor
+    restart: unless-stopped
+    mem_limit: 256m
+    privileged: true
+    labels:
+      - homelab.tier=critical
+    environment:
+      - TZ=Australia/Brisbane
+    command:
+      - --docker_only=true
+      # Default metric set (app,cpu,cpuLoad,disk,diskIO,memory,network,oom_event,percpu,
+      # perf_event,pressure) includes disk/diskIO, whose fsHandler does a recursive
+      # filesystem walk (du + inode count) per container every housekeeping cycle -
+      # confirmed live 2026-09-11 taking 2-3.5s per scan across ~38 containers and erroring
+      # repeatedly on stale overlay2 dirs from already-removed containers, driving sustained
+      # ~1.5 CPU cores on a 4-core host. Health status (container_health_state) is collected
+      # via a separate Docker-inspect code path, not gated by this flag at all - dropping
+      # disk/diskIO/percpu/perf_event/pressure/app/cpuLoad doesn't affect it. Narrowed to
+      # exactly what this dashboard (container-rightsizing.json) actually queries.
+      - --enable_metrics=cpu,memory,oom_event
+    ports:
+      # 8081 collides with Infisical's own API port on this host (verified via ss -tlnp
+      # 2026-09-11) - 8090 confirmed free at the same time.
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      # TrueNAS's actual docker root, not the Linux-standard /var/lib/docker - same gotcha
+      # documented above for the Alloy-embedded exporter.
+      - /mnt/.ix-apps/docker:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    networks:
+      - grafana-alloy-network
+
 networks:
   grafana-alloy-network:
     name: grafana-alloy-network

@@ -39,6 +39,34 @@ check that first), and whether the new alert rules evaluate without error. `graf
 `autoUpdate: false` (version-pinned) — this needs an explicit Dockhand sync+deploy, not just a
 git push, to take effect. Tracked in `ai/todo.md` #123.
 
+## cadvisor + jellyfin/IntroSkipper CPU spikes (2026-09-11, resolved/mitigated)
+
+`container_cpu_usage_seconds_total` (via the new standalone cadvisor sidecar, see the
+`container_health_state` entry below) showed `grafana-alloy-cadvisor` and `jellyfin` together
+consuming ~75% of the host's 4 cores sustained.
+
+- **cadvisor (~1.56 cores, resolved)**: default `enable_metrics` set includes `disk`/`diskIO`,
+  whose `fsHandler` does a recursive filesystem `du` + inode-count scan per container every
+  housekeeping cycle. Confirmed via `docker logs` taking 2-3.5s per scan across ~38 containers,
+  plus repeated errors scanning stale overlay2 dirs for already-removed containers. Fixed:
+  narrowed to `--enable_metrics=cpu,memory,oom_event` (exactly what `container-rightsizing.json`
+  queries) — dropped to ~4% CPU immediately after redeploy. `container_health_state` is
+  unaffected (separate Docker-inspect code path, not gated by this flag).
+- **jellyfin (~1.43 cores, mitigated not resolved)**: the IntroSkipper plugin was mid-batch-scan
+  across the library (`ScanIntroduction`/`ScanCredits`/`ScanRecap`/`ScanPreview`/
+  `ScanCommercial` all enabled), spawning ffmpeg blackframe/blackdetect/entropy analysis
+  processes. `MaxParallelism: 2` was already set, but `ProcessThreads: 0` let each of those 2
+  parallel ffmpeg instances use unlimited threads, oversubscribing the 4-core host. Set
+  `ProcessThreads: 2` via the plugin's own config API
+  (`POST /Plugins/<id>/Configuration`, plugin id `c83d86bba1e04c35a113e2101cf4ee6b`) so 2
+  parallel items × 2 threads matches the core count instead of exceeding it. This is a one-time
+  library backlog scan, not a standing config problem — it'll taper off as it completes; revisit
+  if it recurs on every future library scan.
+  - **Noted in passing, not yet cleaned up**: two IntroSkipper plugin versions
+    (`12.0.3.0` and `12.0.4.0`) are both installed under the same plugin id — a stale leftover
+    from an upgrade. Not the CPU cause, but worth removing the old version's directory
+    (`/mnt/Fast/docker/jellyfin/config/data/plugins/Intro Skipper_12.0.3.0/`) at some point.
+
 ## Known Issues (no action available from our side)
 
 ### jellyseerr/Seerr: intermittent 401 on internal self-fetch

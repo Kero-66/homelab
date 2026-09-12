@@ -1,0 +1,16 @@
+{
+  "_comment": "VOTOMS watch order per HIDIVE's official viewing guide (news.hidive.com, 2020) plus web research on library seasons, 2026-09-12 session. TVDB merged several separate OVAs into one Jellyfin series (tvdbid-90521) as extra seasons: Season 2 = Brilliantly Shining Heresy (1994 OVA, picks up after main series), Season 3 = Pailsen Files (2007-08 OVA, prequel), Season 4 = Genei ~ Phantom Arc (OVA, sequel to Chirico's Return) -- confirmed by matching episode titles against web sources, not by season number alone. The standalone 'Pailsen Files' Movie (2009) is an alternate-cut retelling of the same OVA's story ('all new story about the end of the 100 year war' per its own synopsis, aired 2 years after the OVA) -- deliberately excluded here in favor of the fuller 12-episode OVA, same call as Zeta Gundam movies vs TV series. Case;Irvine and VOTOMS Finder have no relation to Chirico's story (unrelated side story / alternate universe) -- placed at the end as optional extras, per the guide.",
+  "chronological_order": [
+    { "series": "Armored Trooper VOTOMS", "season": 1, "episodes": [1, 13] },
+    { "movie": "Armored Trooper Votoms: The Last Red Shoulder" },
+    { "series": "Armored Trooper VOTOMS", "season": 1, "episodes": [14, 52] },
+    { "movie": "Armored Trooper Votoms: The Big Battle" },
+    { "movie": "Armored Trooper VOTOMS: Red Shoulder Document - Origin of Ambition" },
+    { "series": "Armored Trooper VOTOMS", "season": 3 },
+    { "series": "Armored Trooper VOTOMS", "season": 2 },
+    { "movie": "Armored Trooper Votoms: Chirico's Return" },
+    { "series": "Armored Trooper VOTOMS", "season": 4 },
+    { "movie": "Armored Trooper Votoms: Case; Irvine" },
+    { "movie": "Armored Trooper Votoms: Votoms Finder" }
+  ]
+}

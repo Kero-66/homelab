@@ -1,0 +1,9 @@
+{
+  "_comment": "Robotech watch order, 2026-09-12 session. 'The Shadow Chronicles' technically overlaps with (rather than following) the final episodes of the New Generation saga (Season 3) -- its story begins with events that occur during New Generation's last few episodes, per web research (TV Tropes, robotech.fandom.com). A true scene-level interleave isn't practical for a separate work, so following the common watch-guide simplification of placing it as a coda immediately after Season 3 completes.",
+  "chronological_order": [
+    { "series": "Robotech", "season": 1 },
+    { "series": "Robotech", "season": 2 },
+    { "series": "Robotech", "season": 3 },
+    { "movie": "Robotech: The Shadow Chronicles" }
+  ]
+}

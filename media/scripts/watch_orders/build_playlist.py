@@ -7,6 +7,18 @@ Each top-level key in the YAML (e.g. release_order, chronological_order)
 becomes a playlist named "<Franchise> (<Key, title-cased with underscores as spaces>)".
 Re-running deletes and recreates the playlist by name, so editing the YAML
 and re-running is the whole maintenance workflow -- no manual Jellyfin ID lookups.
+
+Entry shapes:
+  {"series": name, "season": N}                                  -- whole season, in order
+  {"series": name, "season": N, "episodes": [start, end]}         -- inclusive episode-number range
+  {"episode": series_name, "season": N, "name_contains": substr}  -- one episode by name match
+  {"movie": exact_title}                                          -- one movie
+
+Use this (manual curation) instead of SmartLists external-list rules when no reliable
+curated external list exists, or when a movie/OVA needs to slot mid-season -- something
+no simple field sort or external-list-order sort can express. See
+media/scripts/watch_orders/smartlist.py for the external-list-driven path, which is
+preferred when it works.
 """
 import json
 import os
@@ -58,6 +70,15 @@ def season_episodes(name, season):
     return _episode_cache[key]
 
 
+def episode_range(name, season, start, end):
+    """Inclusive episode-number range within one season, e.g. episodes 1-10."""
+    eps = season_episodes(name, season)
+    matches = [e for e in eps if start <= (e.get("IndexNumber") or 0) <= end]
+    if not matches:
+        raise SystemExit(f"no episodes in range {start}-{end}: {name!r} season {season}")
+    return matches
+
+
 def resolve_entry(entry):
     if "movie" in entry:
         name = entry["movie"]
@@ -67,6 +88,10 @@ def resolve_entry(entry):
         if not matches:
             raise SystemExit(f"movie not found in Jellyfin: {name!r}")
         return [matches[0]["Id"]]
+    if "series" in entry and "episodes" in entry:
+        start, end = entry["episodes"]
+        eps = episode_range(entry["series"], entry["season"], start, end)
+        return [e["Id"] for e in eps]
     if "series" in entry:
         eps = season_episodes(entry["series"], entry["season"])
         if not eps:

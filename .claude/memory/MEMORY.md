@@ -6,8 +6,10 @@
 - [Re-verify doc "✅ resolved" claims against live state; never call content bonus without checking Radarr/TMDB + researching](feedback_reverify_doc_claims_against_live_state.md) — a doc row is a cache of the process's output, not proof it ran
 - [**Never hand-roll ManualImport curl/jq — always use `import_downloads.sh`**](feedback_use_import_downloads_script_not_handrolled.md) — did this twice in one session despite the script existing; both had real bugs (wrong quality-id space, missing fields) the script avoids
 - [Dockhand git-stack file-only changes need force-recreate](feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md) — sync+deploy doesn't recreate the container if only a mounted file (not compose.yaml) changed; verify actual container content, don't trust job success
+- [**Verify actual mounted content, not just deploy success**](feedback_verify_actual_effect_not_deploy_success.md) — a clean deploy + healthy restart doesn't prove a config edit took effect; a stack whose mount paths you haven't already confirmed resolve to the git-synced source can silently absorb edits forever (found: grafana-alloy's config.alloy/loki-config.yaml were mounted from a stale pre-Dockhand path for two fix attempts before anyone noticed)
 - [Do not automate Bitwarden access](feedback_bitwarden_access.md) — scripts reading Bitwarden give Claude full vault access
 - [Never run infisical secrets table form](feedback_no_secret_table_output.md) — always use `infisical secrets get <KEY> --plain`, NEVER bare `infisical secrets` (prints all secrets in cleartext)
+- [Never run a secret fetch unassigned/with 2>&1](feedback_never_unassigned_secret_output.md) — capture into `VAR=$(...)` every time, even just to check existence; `2>&1` or a bare call leaks the real value to output
 - [No grep/head filtering on first run](feedback_no_grep_head.md) — always read raw output first, filter only if too large
 - [Never print secret values in output](feedback_no_secret_output.md) — suppress `infisical secrets set` table output, never echo secret vars
 - [Use service APIs not shell commands](feedback_use_apis.md) — Jellyfin/Sonarr/Bazarr all have APIs; reach for ffprobe/python only when APIs lack the data
@@ -26,6 +28,8 @@
 - [Robotech is not the same as its source shows](feedback_robotech_not_source_shows.md) — don't cross-reference Robotech against Macross/Southern Cross/Mospeada, it's a standalone release
 - [Sonarr `/queue` hides unmatched downloads](feedback_sonarr_queue_hides_unmatched.md) — pass `includeUnknownSeriesItems=true` or manually-grabbed "Unknown Series" downloads won't show as in-progress
 - [Answer questions, don't act on them](feedback_answer_questions_dont_act_on_them.md) — "how should we X" is not authorization to do X; reread terse messages literally, don't pattern-match to the prior topic
+- [**Don't poll `docker inspect`/`ps` directly over SSH**](feedback_no_direct_docker_polling.md) — use Grafana/Loki (the monitoring stack) for health/status checks instead; repeated user correction
+- [**Dockhand git-stack `sync`/cron can silently no-op — set `forceRedeploy:true`**](feedback_dockhand_sync_unreliable_verify_disk.md) — root cause found in Dockhand's source: both manual sync+deploy and the nightly cron gate on the same flaky `gitUpdated` diff flag; `forceRedeploy:true` bypasses it. Was found once before and never applied/documented — don't lose it again. Applied to arr-stack+grafana-alloy 2026-09-11, other 15 stacks still exposed
 - [Media library gap survey](project_media_gap_survey.md) — in-progress audit of missing Sonarr episodes/Radarr movies, see `media/docs/SONARR_STRUCTURAL_AUDIT.md` for the durable findings
 - [Sonarr↔Radarr movie migration](project_sonarr_radarr_movie_migration.md) — movies unmonitored in Sonarr specials still needing a file copy into Radarr
 - [Verify queue before reporting zero results](feedback_verify_queue_before_reporting_zero_results.md) — don't trust one immediate post-search queue check, grabs can lag
@@ -49,6 +53,8 @@
 - [Tailscale authkey expiry incident](incident_tailscale_authkey_expiry.md) — auth key expiry (separate from node key) crash-loops the TrueNAS container; expiry now disabled, fix procedure + real compose path documented
 - [Never self-certify the security gate](feedback_no_self_certify_security_gate.md) — never manually write the commit-gate timestamp yourself, even after a genuinely clean /security-review run; a repeat violation, not a one-off
 - [Never move, only hardlink media](feedback_never_move_only_hardlink_media.md) — never mv/cp media between downloads and library by hand, never importMode:"move" — breaks hardlinks and torrent seed data; root-caused to stale /mnt/Data/media and /mnt/Data/downloads paths in CLAUDE.md/AGENTS.md (now fixed to /mnt/Data/Servarr)
+- [**Prefer Series/Movie over Season 0 specials**](feedback_prefer_series_movie_over_specials.md) — standing rule, not just an audit-workflow step; check any Season 0 content for duplication/misfiling whenever encountered, for any reason
+- [Franchise watch-order playlists](project_watch_order_playlists.md) — 9 built (6 SmartLists auto-refresh, 3 manual/static); see `media/scripts/watch_orders/README.md` for status table, rerun triggers, provider capability matrix
 
 ## Quick Reference
 - **TrueNAS**: 192.168.20.22 (SSH as kero66@192.168.20.22) - **Version 25.10.1**

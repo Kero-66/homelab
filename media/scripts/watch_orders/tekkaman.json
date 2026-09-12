@@ -1,0 +1,12 @@
+{
+  "_comment": "Tekkaman Blade watch order, 2026-09-12 session. Confirmed placements (web research, macrossworld.com forums / anime-planet / TMDB): 'Prelude to a Long Battle' is a pre-series clip-show special, watched before the TV series. 'Missing Link' explicitly bridges the events between Tekkaman Blade and Tekkaman Blade II. 'Virgin Memory' is literally billed as 'Episode 00' of Tekkaman Blade II -- an unreleased episode included on the BD Box, airs before TBII's own episode 1. 'Twin Blood' (alternate-universe retelling of an early battle with different designs) and 'Burning Clock' (flashback-focused side story) are confirmed to happen 'early in' and 'during' the main series respectively, but no source gave a specific episode number -- rather than guess a false-precise mid-series slot, placed as optional side-story extras after the main series, before Missing Link.",
+  "chronological_order": [
+    { "movie": "Tekkaman Blade: The Prelude to a Long Battle" },
+    { "series": "Tekkaman Blade", "season": 1 },
+    { "movie": "Tekkaman Blade: Twin Blood" },
+    { "movie": "Tekkaman Blade: Burning Clock" },
+    { "movie": "Tekkaman Blade: Missing Link" },
+    { "movie": "Tekkaman Blade II: Virgin Memory" },
+    { "series": "Tekkaman Blade II", "season": 1 }
+  ]
+}

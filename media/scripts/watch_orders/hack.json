@@ -1,0 +1,18 @@
+{
+  "_comment": "The .hack franchise watch order, 2026-09-12 session. Library structure: TVDB merged .hack//SIGN (Season 1, 26 eps), .hack//Legend of the Twilight (Season 2, 12 eps), and .hack//Roots (Season 3, 26 eps) into one Jellyfin/Sonarr series named '.hack' (tvdbid-79099); .hack//Liminality is its own separate series. 'Intermezzo' and 'Unison' Season 0 specials had a cross-app TVDB-snapshot title mismatch (Jellyfin showed the wrong titles over these two files) -- fixed same session, see ai/todo.md #128, before building this. Order confirmed via web research (dothack Wiki, anime-planet, otakukan.com, dothackers.net forums, streamfromanywhere.com): SIGN -> Intermezzo/Unison (direct SIGN epilogue OVAs) -> GIFT (movie) -> Liminality (parallels the .hack games) -> Legend of the Twilight -> Roots -> G.U. Trilogy -> G.U. Returner (epilogue OVA) -> Quantum -> .hack//The Movie -> Versus: The Thanatos Report (bridges The Movie's 2024 and the Versus game's 2025, confirmed as the final entry via steamcommunity.com G.U. Last Recode discussion). 'Let's Meet Offline' movie is confirmed bonus content tied to the Legend of the Twilight release (not part of its 12 numbered episodes, not a duplicate -- see media/docs/SONARR_STRUCTURAL_AUDIT.md), placed as an optional extra right after Legend of the Twilight. .hack//Link and .hack//G.U. Last Recode: Resurrection are not owned -- skipped, matching the pattern used for Gundam UC/Votoms/Macross where unowned entries are simply absent rather than blocking the rest.",
+  "chronological_order": [
+    { "series": ".hack", "season": 1 },
+    { "episode": ".hack", "season": 0, "name_contains": "Intermezzo" },
+    { "episode": ".hack", "season": 0, "name_contains": "Unison" },
+    { "movie": ".hack//GIFT" },
+    { "series": ".hack//Liminality", "season": 1 },
+    { "series": ".hack", "season": 2 },
+    { "movie": ".hack//Legend of the Twilight: Let's Meet Offline" },
+    { "series": ".hack", "season": 3 },
+    { "movie": ".hack//G.U. Trilogy" },
+    { "movie": ".hack//G.U. Returner" },
+    { "movie": ".hack//Quantum" },
+    { "movie": ".hack//The Movie" },
+    { "movie": ".hack//Versus: The Thanatos Report" }
+  ]
+}
