@@ -530,3 +530,54 @@ groups:
           severity: warning
         annotations:
           summary: "{{ $labels.device }} (Data pool HDD) has run above 60C for 10+ minutes - check case airflow"
+
+      # node_exporter's zfs collector already reads /proc/spl/kstat/zfs/<pool>/state (found live
+      # 2026-09-12 - no new exporter needed) and publishes one series per (zpool, state) pair,
+      # value 1 on whichever state is current and 0 on the rest - see ai/OBSERVABILITY.md. A
+      # pool-level DEGRADED/FAULTED (a drive dropped from the mirror, resilver needed) is a
+      # more urgent signal than a single SMART attribute, and wasn't being watched at all
+      # before this alert existed despite the data already flowing.
+      - uid: zfs-pool-not-online
+        title: ZFS pool not online
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: node_zfs_zpool_state{state="online"}
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [1]
+              refId: C
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.zpool }} is not ONLINE (degraded/faulted/offline/suspended/unavail) - check `zpool status {{ $labels.zpool }}`, a drive may have dropped out of the mirror"
