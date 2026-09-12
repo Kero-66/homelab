@@ -66,6 +66,30 @@ consuming ~75% of the host's 4 cores sustained.
     (`12.0.3.0` and `12.0.4.0`) are both installed under the same plugin id — a stale leftover
     from an upgrade. Not the CPU cause, but worth removing the old version's directory
     (`/mnt/Fast/docker/jellyfin/config/data/plugins/Intro Skipper_12.0.3.0/`) at some point.
+  - **Follow-up identified 2026-09-12, not yet applied — `--housekeeping_interval` was never
+    set, so cAdvisor was (and still is) running its internal collection loop at the default
+    **1s**, independent of and 10x faster than the `cadvisor_standalone` Prometheus job's actual
+    10s scrape interval (`config.alloy`). The `disk`/`diskIO` fsHandler walk wasn't inherently
+    unaffordable — it was being *attempted* every 1s when a single full sweep across ~38
+    containers already took 2-3.5s, so cycles were queuing on top of each other. A documented
+    real-world case (akashrajpurohit.com, "Optimizing cAdvisor for Lower CPU Usage") got a 65%
+    CPU cut from `--housekeeping_interval=10s` alone, no metrics disabled. Setting this flag
+    (matching our scrape interval) is very plausibly enough on its own to make `disk`/`diskIO`
+    affordable again without permanently giving up per-container disk usage — untested here,
+    would need to be re-added and watched the same way the original spike was diagnosed
+    (`container_cpu_usage_seconds_total` via cadvisor-standalone) before trusting it. User
+    decided to document rather than apply for now — see `ai/todo.md`.
+  - **Why cAdvisor is the heavier option in the first place**: it was built at Google as
+    Kubernetes' per-container telemetry backend for real-time scheduling/autoscaling decisions,
+    which is why its default housekeeping loop is 1s regardless of scrape frequency. Docker's
+    own stats API (what Dockhand's per-container UI reads) was built for humans glancing at a
+    dashboard — it only streams the cheap cgroup `blkio` I/O-throughput counters live, and
+    computes actual disk *usage* on-demand rather than in a continuous background loop.
+    Dockhand's `/metrics` Prometheus endpoint (scraped separately, see the Dockhand Metrics
+    entry below) is a third, distinct thing again — environment-wide aggregates only
+    (`dockhand_containers_health{health="healthy"} 33`), no per-container label at all;
+    confirmed live against the raw endpoint 2026-09-12. Three different data sources, three
+    different cost/granularity tradeoffs, not one API with three views onto it.
 
 ## Known Issues (no action available from our side)
 
