@@ -4,6 +4,54 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-09-12 - TrueNAS disk/pool health monitoring + alert bugfixes (DONE)
+
+### Context
+User asked for SMART/disk-health monitoring on TrueNAS's spinning Data-pool drives, since none existed. Grew into a broader pass fixing real bugs the new alerts/dashboards immediately surfaced, plus renaming a mis-scoped dashboard and researching cAdvisor's CPU-cost tradeoffs.
+
+### What was done (all committed + deployed live, verified via Prometheus/Grafana API - no direct docker commands used)
+1. Added `smartctl-exporter` (prometheus-community/smartctl_exporter) to the grafana-alloy stack - privileged container, scraped by Alloy, same pattern as existing exporters. Added Grafana alert rules (SMART status failed, reallocated/pending sector deltas over 24h not absolute, HDD temp >60C uncalibrated) and imported the community "SMARTctl Exporter Dashboard" (Grafana 22604).
+2. Added a "ZFS pool not online" alert + Pool state panel using `node_zfs_zpool_state` (node_exporter's zfs collector - already flowing, no new exporter needed).
+3. **Found and fixed 3 real alert bugs during review**: (a) pre-existing `container-unhealthy` rule was firing constantly for every container without a Docker healthcheck - cAdvisor's fork returns `-1` for "no healthcheck" distinct from `0`=unhealthy, but the rule's `< 1` threshold conflated them; fixed to `== 0`. (b) my HDD temp alert's device regex used `/dev/sda` but the exporter labels bare `sda`; fixed. (c) sector-count alerts weren't filtered to `attribute_value_type="raw"`, so they queried unrelated normalized/threshold sub-fields too.
+4. **Found and fixed a bigger root-cause bug**: every `discovery.relabel` block in `config.alloy` set `instance = constants.hostname` - the Alloy CONTAINER's own ephemeral hostname, which changes every recreate. This caused dashboards (ZFS panel especially) to flap between no-data and real data on every deploy. Fixed to a stable `instance = "truenas"` literal across all 4 relabel blocks (host_metrics, cadvisor_standalone, smartctl, docker logs).
+5. Re-enabled cAdvisor's `network` metric category (safe - `disk`/`diskIO` was the actual CPU-spike cause in 2026-09-11, network was incidental collateral) and added a Network I/O panel to `container-rightsizing.json`, which never had one.
+6. Renamed "Host Resources" dashboard -> "TrueNAS Host" with a clearer host-only-scope description (user pointed out the old name didn't make that obvious).
+7. Removed the "Disk I/O" panel (always no-data) from a third dashboard, "Docker monitoring with service selection" - discovered this one is NOT file-provisioned/tracked in the repo at all (UI-imported at some point), edited directly via Grafana's API.
+8. Researched + documented (not applied) why cAdvisor is heavier than Dockhand's own per-container stats, and that cAdvisor's `--housekeeping_interval` was never explicitly set (default 1s, 10x faster than our actual 10s scrape interval) - very plausibly the real fix that would let `disk`/`diskIO` be re-enabled safely. See `ai/OBSERVABILITY.md` "cadvisor + jellyfin/IntroSkipper CPU spikes" entry and `ai/todo.md` #135.
+
+### Also resolved (not a real bug)
+User saw `grafana.home` redirect to TrueNAS's HTTPS signin mid-session - traced to Chrome's HTTPS-upgrade behavior triggering during a brief container-restart window (Caddy's `grafana.home` vhost is HTTP-only by design, was never touched). Not a regression; documented in this session's chat, no repo change needed.
+
+### Nothing left open from this session
+`ai/todo.md` #135 (housekeeping_interval tuning) is the only deferred item, explicitly by user request ("document it for now").
+
+---
+
+## Session 2026-09-12 - Gundam UC watch-order + gap-fill (IN PROGRESS — several searches/downloads still running)
+
+### Context
+Built out the Gundam Universal Century continuity playlist and library gaps. Full detail in `media/docs/SONARR_STRUCTURAL_AUDIT.md` ("Gundam UC audit — 2026-09-12") and `.claude/memory/project_media_gap_survey.md`.
+
+### What was done
+1. Scraped IMDb list `ls560971030` ("Gundam: Continuity Order", 23 items) in full — cross-referenced against owned library, requested 11 missing titles via Jellyseerr (Anime 1080p profile + `retain` tag), plus 2 more found via manual research the IMDb list itself was missing: **Cucuruz Doan's Island** (2022, UC 0079 TV-ep-15 remake) and **G-Saviour** (UC 0223, timeline endpoint).
+2. Drafted `media/scripts/watch_orders/gundam_uc.json` — manual playlist definition (not yet run) that will replace the SmartLists version once all content lands, since the IMDb list can't express Doan's Island's mid-series slot or G-Saviour's placement. **Do not run `build_playlist.py` on it yet** — titles are placeholder names needing verification against actual Jellyfin `Name` fields once imported, and not everything has downloaded yet.
+3. Ran the full per-series audit process (`media/docs/SONARR_ACQUISITION_PROCESS.md`) against the UC cluster via a background fork — found 4 mainline titles (1979 TV, Zeta, ZZ, 08th MS Team) were never actually in Sonarr despite Jellyseerr showing stale tracked status; requested all 4. Found and fixed a structural-flaw-#2 duplicate: "MS IGLOO 2: Gravity Front" has no standalone TVDB entry, it's Season 3 of a combined series (id 172, TVDB 81104) whose Seasons 1-2 duplicate Radarr movie entries (206/207) — added with only Season 3 monitored.
+4. **Removed two redundant TV-series adds** after catching that owned movie compilations already cover the same content: 1979 TV series (Sonarr id 170, unmonitored — owned as "Mobile Suit Gundam Collection" movies) and Zeta TV series (id 169, unmonitored then **re-monitored** after user deleted the "A New Translation" movies from Radarr in favor of the TV version instead — final state: Zeta TV is the one being chased now, not the movies).
+5. Deleted a mistaken Sonarr add: "Mobile Suit Gundam: The Origin - Advent of the Red Comet" (TV recut of the already-owned 6-film Origin OVA set, id 163) — zero files existed, clean removal.
+6. Confirmed Gundam Unicorn's Sonarr entry (id 165, 7 episodes) is the original OVA, not the redundant 23-episode "RE:0096" TV recut — no action needed there.
+
+### Still open / needs a follow-up session
+- **In-progress downloads to check on:** F91, Narrative, Cucuruz Doan's Island, Victory Gundam (full season), MS IGLOO Gravity Front (season 3, id 172) — this last one may fail to auto-import cleanly due to its combined-series metadata; if so use `truenas/scripts/import_downloads.sh` (never hand-roll ManualImport) to map it to episode ids 7763-7765.
+- **Searches still running as of session end, no result yet:** Zeta Gundam (id 169), Gundam Unicorn (id 165), Thunderbolt (id 164), Twilight AXIS (id 166).
+- **Deferred by user ("do the gap fixes later"):** Radarr movies "MS IGLOO: The Hidden One Year War" (id 206) and "MS IGLOO: Apocalypse 0079" (id 207) both `hasFile:false`, no search triggered yet.
+- **Needs a user decision, not autonomous action:** Radarr id 11 "Gundam" — confirmed to be a real unreleased Legendary Pictures live-action UC film, not junk metadata as an earlier session wrongly assumed. User said to leave it monitored.
+- **Once all downloads above land:** verify `gundam_uc.json`'s title strings against live Jellyfin `Name` fields, then run `build_playlist.py gundam_uc.json` once and update `media/scripts/watch_orders/README.md`'s status table to switch Gundam UC from SmartLists to Manual.
+
+### Process note
+This session had two `infisical secrets get` / SSH-to-TrueNAS calls initially fail with confusing errors (`invalid format` from ssh-add, empty curl responses) that turned out to be transient — retrying the exact same documented `ai/PATTERNS.md` command worked. Also needed `--projectId 5086c25c-310d-4cfb-9e2c-24d1fa92c152` explicitly since `$INFISICAL_PROJECT_ID` isn't set in this shell environment by default (found the ID from `~/.infisical/secrets-backup/` filenames, not a secret value). Sonarr's URL base path on this TrueNAS box is `/sonarr` (not root) — confirmed via a 307 redirect's `Location` header; likely the same applies to Radarr's `/radarr` base path, worth confirming rather than assuming next time.
+
+---
+
 ## Session 2026-09-10 - Valheim Server Prep + Host Resource Monitoring (BLOCKED — needs LAN/TrueNAS access to finish)
 
 ### Context
