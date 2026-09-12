@@ -206,7 +206,14 @@ groups:
               to: 0
             datasourceUid: PBFA97CFB590B2093
             model:
-              expr: container_health_state{name!=""}
+              # == 0 is required, not just a `< 1` threshold below: cAdvisor's fork used here
+              # (grafana/alloy's embedded build) returns -1 for "no HEALTHCHECK defined" - a
+              # distinct value from 0 ("unhealthy") and 1 ("healthy"), not documented upstream but
+              # confirmed live 2026-09-12 (every container without a compose healthcheck sits at
+              # -1 permanently). A bare `< 1` threshold treated -1 the same as failing and fired
+              # non-stop for every such container (alloy, loki, smartctl-exporter, valheim, etc)
+              # - see ai/OBSERVABILITY.md.
+              expr: container_health_state{name!=""} == 0
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -402,7 +409,7 @@ groups:
               to: 0
             datasourceUid: PBFA97CFB590B2093
             model:
-              expr: increase(smartctl_device_attribute{attribute_name="Reallocated_Sector_Ct"}[24h])
+              expr: increase(smartctl_device_attribute{attribute_name="Reallocated_Sector_Ct", attribute_value_type="raw"}[24h])
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -447,7 +454,7 @@ groups:
               to: 0
             datasourceUid: PBFA97CFB590B2093
             model:
-              expr: increase(smartctl_device_attribute{attribute_name="Current_Pending_Sector"}[24h])
+              expr: increase(smartctl_device_attribute{attribute_name="Current_Pending_Sector", attribute_value_type="raw"}[24h])
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -496,7 +503,11 @@ groups:
               to: 0
             datasourceUid: PBFA97CFB590B2093
             model:
-              expr: smartctl_device_temperature{device=~"/dev/sd[ab]", temperature_type="current"}
+              # Bare device names ("sda"/"sdb"), not "/dev/sda" - confirmed live 2026-09-12 the
+              # exporter strips the /dev/ prefix, which the original regex didn't account for
+              # and caused a permanent DatasourceNoData alert (sda=36C, sdb=39C at the time, both
+              # fine - this was a query bug, not a real temperature issue).
+              expr: smartctl_device_temperature{device=~"sd[ab]", temperature_type="current"}
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
