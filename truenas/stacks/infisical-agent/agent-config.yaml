@@ -61,6 +61,12 @@ templates:
     config:
       polling-interval: 5m
 
+  # Valheim dedicated server secrets
+  - source-path: /config/valheim.tmpl
+    destination-path: /output/valheim/.env
+    config:
+      polling-interval: 5m
+
   # SigNoz observability stack secrets
   - source-path: /config/signoz.tmpl
     destination-path: /output/signoz/.env

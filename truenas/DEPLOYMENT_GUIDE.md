@@ -13,6 +13,7 @@ This guide covers deploying all Custom App stacks on **TrueNAS Scale 25.10.1** w
 - `adguard-home` — local DNS (resolves `.home` → 192.168.20.22)
 - `homepage` — dashboard
 - `tailscale` — subnet router for remote access
+- `valheim` — dedicated Valheim game server (not yet deployed — staged in repo, see below)
 
 **Important:** Custom Apps cannot be created via the REST API. Use `midclt call -j app.create` via SSH — see `ai/PATTERNS.md` → "Create a new Custom App".
 
@@ -187,6 +188,18 @@ Subnet router for remote access.
 - Result: all `*.home` services work identically over Tailscale
 - Auth key: `TRUENAS_TAILSCALE_AUTH_KEY` in Infisical at `/TrueNAS`
 - State: `/mnt/Fast/docker/tailscale/`
+
+### valheim
+
+Dedicated Valheim game server (`lloesche/valheim-server`). **Staged in repo, not yet deployed** — see `ai/todo.md` for the outstanding steps.
+
+- No web UI, no Caddy/DNS entry — reached only via the Valheim game client over UDP
+- Config/world saves: `/mnt/Fast/docker/valheim/config`
+- Server binaries (SteamCMD): `/mnt/Fast/docker/valheim/server`
+- Secret: `VALHEIM_SERVER_PASS` in Infisical at `/TrueNAS` (5+ chars, must not be a substring of the server name) — rendered by infisical-agent via `truenas/stacks/infisical-agent/valheim.tmpl`
+- Ports: `2456-2458/udp` — must be forwarded on the router for players outside the LAN
+- Before first deploy: set real `SERVER_NAME`/`WORLD_NAME` in `truenas/stacks/valheim/compose.yaml` (changing `WORLD_NAME` later starts a new world, doesn't rename the old one)
+- Deploy as a new Dockhand git stack — follow `truenas/DOCKHAND_GITOPS_GUIDE.md` → "Migration Path" (`POST /api/git/stacks`, `stackName: "valheim"`, `composePath: "/truenas/stacks/valheim/compose.yaml"`)
 
 ---
 

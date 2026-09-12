@@ -1,0 +1,69 @@
+# =============================================================================
+# Valheim Stack - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# Dedicated Valheim game server (lloesche/valheim-server-docker — the de facto
+# standard image: bundles SteamCMD, auto-updates the server binary, and can
+# take scheduled world backups on its own).
+#
+# No web UI, no Caddy/DNS entry, no *arr integration — standalone game server
+# reachable only via the Valheim client over UDP. Not on any shared network.
+#
+# Storage layout:
+#   /mnt/Fast/docker/valheim/config → /config       (world saves, backups, server key — the
+#                                                     important, irreplaceable data)
+#   /mnt/Fast/docker/valheim/server → /opt/valheim  (SteamCMD-installed server binaries —
+#                                                     persisted only so restarts skip a full
+#                                                     re-download; safe to delete and let it
+#                                                     redownload)
+#
+# Secrets:
+#   VALHEIM_SERVER_PASS rendered by Infisical Agent from /TrueNAS (see
+#   truenas/stacks/infisical-agent/valheim.tmpl) into /mnt/Fast/docker/valheim/.env
+#   as SERVER_PASS. Valheim requires 5+ characters and rejects a password that's
+#   a substring of the server name.
+#
+# ⚠️ BEFORE FIRST DEPLOY: set SERVER_NAME and WORLD_NAME below to real values.
+# WORLD_NAME fixes the save-file name — changing it later starts a brand new
+# world, it does not rename/migrate the existing one.
+#
+# Ports (forward on the router for friends outside the LAN — UDP only):
+#   2456-2458/udp
+#
+# Resource note: the host is an Intel N150 (Alder Lake-N, low-power mini PC) —
+# fine for Valheim's modest RAM needs, but single-thread CPU performance is the
+# real ceiling for this game with several concurrent players. Watch server tick
+# rate/lag once live rather than assuming headroom.
+# =============================================================================
+
+services:
+  valheim:
+    image: lloesche/valheim-server
+    container_name: valheim
+    restart: unless-stopped
+    mem_limit: 4g
+    env_file:
+      - /mnt/Fast/docker/valheim/.env
+    environment:
+      - SERVER_NAME=Homelab Valheim
+      - WORLD_NAME=Midgard
+      - SERVER_PORT=2456
+      - SERVER_PUBLIC=false
+      - TZ=Australia/Brisbane
+      - UPDATE_CRON=0 4 * * *
+      - BACKUPS_CRON=0 * * * *
+      - BACKUPS_DIRECTORY=/config/backups
+      - BACKUPS_MAX_AGE=3
+      - BACKUPS_MAX_COUNT=10
+      - PUID=1000
+      - PGID=1000
+    labels:
+      - homelab.tier=noncritical
+      - homepage.group=Games
+      - homepage.name=Valheim
+      - homepage.icon=valheim.png
+      - homepage.description=Dedicated Valheim server
+    volumes:
+      - /mnt/Fast/docker/valheim/config:/config
+      - /mnt/Fast/docker/valheim/server:/opt/valheim
+    ports:
+      - "2456-2458:2456-2458/udp"

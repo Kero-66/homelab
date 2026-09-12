@@ -72,6 +72,11 @@
               url: http://sabnzbd:8080
               key: "{{HOMEPAGE_VAR_SABNZBD_API_KEY}}"
 
+- Games:
+    - Valheim:
+        icon: valheim.png
+        description: Dedicated Valheim server (no web UI — connect via game client)
+
 - RSS:
     - Commafeed:
         icon: mdi-rss

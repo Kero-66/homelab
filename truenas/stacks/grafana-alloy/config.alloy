@@ -60,6 +60,45 @@ prometheus.scrape "dockhand" {
   scrape_interval = "30s"
 }
 
+// Host-level metrics (CPU, memory, load average, per-device disk I/O, per-mountpoint
+// filesystem usage) - added 2026-09-10 alongside the Valheim game server prep, which is
+// expected to be the single heaviest CPU consumer on this host (see ai/OBSERVABILITY.md).
+// cAdvisor above only covers Docker containers plus a couple of whole-machine gauges
+// (machine_memory_bytes, machine_cpu_cores) - it has no CPU *utilization*, load average,
+// or disk I/O at all. Reuses the /rootproc, /sys, /rootfs host bind mounts already added
+// to the alloy service for cAdvisor's own introspection (see compose.yaml) - no new mounts
+// needed.
+//
+// Device -> pool mapping for reading the disk I/O panels (see truenas/HARDWARE_CONFIG.md):
+//   nvme0n1, nvme2n1 = "Fast" pool (NVMe mirror)      - Valheim + this monitoring stack live here
+//   sda, sdb         = "Data" pool (HDD mirror, SLOW) - media only, must stay near-idle
+//   nvme1n1          = boot drive, not in either pool
+prometheus.exporter.unix "host" {
+  procfs_path = "/rootproc"
+  sysfs_path  = "/sys"
+  rootfs_path = "/rootfs"
+}
+
+discovery.relabel "host_metrics" {
+  targets = prometheus.exporter.unix.host.targets
+
+  rule {
+    target_label = "job"
+    replacement  = "integrations/node_exporter"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+}
+
+prometheus.scrape "host_metrics" {
+  targets         = discovery.relabel.host_metrics.output
+  forward_to      = [ prometheus.remote_write.demo.receiver ]
+  scrape_interval = "15s"
+}
+
 // ###############################
 // #### Logging Configuration ####
 // ###############################

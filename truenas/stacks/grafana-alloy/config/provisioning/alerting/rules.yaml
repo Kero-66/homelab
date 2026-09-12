@@ -240,3 +240,98 @@ groups:
           severity: critical
         annotations:
           summary: "{{ $labels.name }}'s Docker healthcheck is failing (or the container has been stuck starting for 3+ minutes) - real per-container signal from cAdvisor's container_health_state, not just cAdvisor's own is-the-process-running check"
+
+  - orgId: 1
+    name: Host Health
+    folder: Homelab Alerts
+    interval: 1m
+    rules:
+      - uid: host-cpu-saturated
+        title: Host CPU saturated
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [85]
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU averaged over 85% busy for 10+ minutes - N150 is a low-power host, check whether the Valheim server or another container is the driver (Container Rightsizing dashboard's CPU panel)"
+
+      - uid: host-memory-low
+        title: Host memory available low
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [10]
+              refId: C
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host available memory below 10% for 10+ minutes - real OOM risk, see #120 in ai/todo.md for per-container mem_limit rightsizing"
