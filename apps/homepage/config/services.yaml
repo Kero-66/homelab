@@ -130,10 +130,6 @@
               url: http://fileflows:5000
 
 - Infrastructure:
-    - SigNoz:
-        icon: mdi-chart-line
-        href: http://signoz.home
-        description: Observability - metrics, logs, traces, alerting
     - Grafana:
         icon: mdi-chart-areaspline
         href: http://grafana.home

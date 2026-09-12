@@ -65,7 +65,7 @@
 - **NEVER store secrets in /tmp with predictable names** — use `mktemp -d` + cleanup immediately
 
 ## Common Gotchas
-- **NEVER poll `docker inspect`/`docker ps` directly over SSH for health/status checks** — use Grafana/Prometheus/Loki (the monitoring stack) instead. A single one-off inspect right after a deploy is fine; repeated polling loops are not.
+- **NEVER run `docker inspect`/`docker ps`/`docker logs` directly over SSH for health/status/existence checks — not even once.** Use Grafana/Prometheus/Loki (the monitoring stack) or the relevant app's own API (e.g. Dockhand's `/api/git/stacks/<id>`, `/api/jobs/<id>`) instead. There is no "single one-off is fine" exception — that carve-out was repeatedly used as a loophole and is now void. If no other source can answer the question, stop and ask the user rather than reaching for `docker` directly. See `.claude/memory/feedback_no_direct_docker_polling.md`.
 - **ALWAYS check response type before piping to jq** — APIs may return HTML not JSON
 - Use `jq` not `python3 -m json.tool`
 - SSH piped commands fail on TrueNAS — use separate steps

@@ -235,4 +235,5 @@ images. Enabled `repullImages: true` on every `autoUpdate: true` stack still tra
 (arr-stack, caddy, commafeed, downloaders, homepage, infisical, infisical-agent, jellyfin,
 maintainerr, suggestarr, tailscale). Left untouched: version-pinned stacks (autobrr, fileflows,
 grafana-alloy, recyclarr — pinned deliberately after past upgrade issues) and stacks with
-`autoUpdate: false` (gamarr, shokoanime, signoz).
+`autoUpdate: false` (gamarr, shokoanime). (SigNoz, also `autoUpdate: false`, was torn down
+2026-09-12 — see `ai/todo.md` #114.)
