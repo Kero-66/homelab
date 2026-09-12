@@ -431,3 +431,26 @@ curl -sL "http://sonarr.home/api/v3/episode?seriesId=<ID>&apikey=$SONARR_KEY" | 
 # 3. Filter runtime >= 60, cross-reference against Radarr's full movie list
 curl -sL "http://radarr.home/api/v3/movie?apikey=$RADARR_KEY" | jq -r '.[] | "\(.hasFile)\t\(.title) (\(.year))"'
 ```
+
+## Gundam UC audit — 2026-09-12
+
+Triggered by a fresh watch-order playlist project (`media/scripts/watch_orders/gundam_uc.json`, not yet run) that surfaced a much bigger structural gap than expected: several core mainline UC titles were never actually in the library at all, despite Jellyseerr showing stale `status: UNKNOWN` mediaInfo for them (a Jellyseerr-DB-vs-live-Sonarr mismatch, the same "doc/cache is not proof" trap as step 2a of the acquisition process, just at the Jellyseerr layer instead of a markdown doc).
+
+**Confirmed genuinely absent from Sonarr (114-series list, checked by exhaustive title grep, zero matches under any naming variant) — now requested via Jellyseerr, Anime (1080p) profile, `retain` tag:**
+- Mobile Suit Gundam (1979 TV series) — tmdbId 21731
+- Mobile Suit Zeta Gundam — tmdbId 13674
+- Mobile Suit Gundam ZZ — tmdbId 5660
+- Mobile Suit Gundam: The 08th MS Team — tmdbId 43887
+
+**Structural flaw #2 case (whole-season duplicate) — Mobile Suit Gundam MS IGLOO 2: Gravity Front:** this title has no standalone TVDB entry (`tvdbId: null` on its TMDB record), so a Jellyseerr/Sonarr request for it as its own series silently no-ops at the Sonarr layer (Jellyseerr's local request record looked successful — fresh `createdAt`, correct tags/profile — but nothing ever landed in Sonarr; confirmed by direct Sonarr series list re-check, twice). Root cause: TVDB bundles all three MS IGLOO installments into one combined series, `Mobile Suit Gundam: MS IGLOO` (tvdbId 81104):
+  - Season 1 = "The Hidden One Year War" — already owned via Radarr (movie, id 206, hasFile false as of this session's earlier check but requested)
+  - Season 2 = "Apocalypse 0079" — already owned via Radarr (movie, id 207)
+  - Season 3 = "Gravity Front" — the genuine gap
+
+  **Fix applied:** added tvdbId 81104 to Sonarr (id 172), qualityProfile Anime (1080p), `retain` tag, series-level `monitored: true` but **seasons 1 and 2 explicitly unmonitored** (to avoid duplicate-download waste per acquisition-process step 6b, since Radarr already owns that content as movies) and **only season 3 monitored**, confirmed by episode-title fetch after a manual `RefreshSeries` (episode titles: "Gravity Front: Take Out That Angel of Death!", "...Kings of the Jungle, Roll Out!", "...Odessa, Storm of Steel!"). `SeasonSearch` command queued for season 3 (command id 841177) — grab result not yet confirmed as of this write-up, needs a follow-up queue check.
+
+**Resolved since 2026-08-29 (confirm-and-close, no action needed):** `Mobile Suit Gundam 0083: Afterglow of Zeon` — tracked in `project_media_gap_survey.md` as a genuinely-missing recap movie with zero indexer results as of 2026-08-20, then noted 2026-08-29 as grabbed via Radarr (id 194). Re-checked live 2026-09-12: `hasFile: true`. Fully done, can be removed from any future "still open" gap list.
+
+**Flagged, not touched — needs your call:** Radarr id 11, title "Gundam" (tmdbId 534083, year 0, `status: announced`). Previously assumed junk placeholder metadata slated for deletion (2026-08-20 note in this doc), but it's actually a real, if unreleased, **live-action Legendary Pictures Gundam film** with a legitimate TMDB entry — not broken metadata, and not UC-canon (animated) content either way. Left monitored, untouched, pending your decision on whether to keep tracking it, retag it as non-UC, or remove it as out-of-scope for this library's anime-only collection.
+
+**Not audited this pass (time-boxed to the newly-surfaced core gaps above):** per-episode/per-season gap-level workflow (steps 1-4) for Gundam Wing, 0083 Stardust Memory, 0080 War in the Pocket, Origin I-VI, Char's Counterattack, Thunderbolt, Unicorn, Twilight Axis, Victory Gundam — these all have at least one Sonarr/Radarr entry and looked structurally sound at the series/movie level, but weren't checked episode-by-episode for partial gaps this session. Recommend as the next audit pass once the newly-requested titles (Zeta, ZZ, 1979 TV, 08th MS Team, Gravity Front, plus the 13 titles requested earlier this session) finish downloading.

@@ -1,0 +1,31 @@
+{
+  "_comment": "Gundam Universal Century manual watch order, drafted 2026-09-12. Supersedes the SmartLists version (IMDb list ls560971030, 'Gundam: Continuity Order') because that external list is missing two legitimate UC entries that need mid-sequence placement no external-list provider can express (same limitation as Trigun/Votoms/.hack/Steins;Gate, see README): (1) 'Mobile Suit Gundam: Cucuruz Doan's Island' (2022) -- a theatrical remake/expansion of TV episode 15, set UC 0079, slotted here right after that episode; (2) 'G-Saviour' (2000) -- live-action UC 0223 TV movie, the timeline's chronological endpoint, appended after Victory Gundam. IGLOO trilogy internal order corrected from release order to in-story chronology per Gundam Wiki/community sourcing (2026-09-12 session): Hidden One Year War (early war) -> Gravity Front (Battle of Odessa, mid-war) -> Apocalypse 0079 (final month, Solomon/A Baoa Qu) -- NOT release order, which is Hidden One Year War / Apocalypse 0079 / Gravity Front. DO NOT RUN until all 13 pending Jellyseerr requests (11 originally missing UC titles + Doan's Island + G-Saviour, requested 2026-09-12) finish importing -- build_playlist.py errors out on any title not yet present in Jellyfin. Series/movie 'name' values below are placeholders using common English titles; verify each against the exact Jellyfin library Name once imported (Sonarr/Radarr import naming can differ, e.g. punctuation or subtitle placement) before running -- exact-match lookup in build_playlist.py will fail silently loud (SystemExit) on any mismatch, which is the cue to fix the title string here, not to guess further.",
+  "chronological_order": [
+    { "movie": "Mobile Suit Gundam: The Origin I - Blue-Eyed Casval" },
+    { "movie": "Mobile Suit Gundam: The Origin II - Artesia's Sorrow" },
+    { "movie": "Mobile Suit Gundam: The Origin III - Dawn of Rebellion" },
+    { "movie": "Mobile Suit Gundam: The Origin IV - Eve of Destiny" },
+    { "movie": "Mobile Suit Gundam: The Origin V - Clash at Loum" },
+    { "movie": "Mobile Suit Gundam: The Origin VI - Rise of the Red Comet" },
+    { "series": "Mobile Suit Gundam", "season": 1, "episodes": [1, 15] },
+    { "movie": "Mobile Suit Gundam: Cucuruz Doan's Island" },
+    { "series": "Mobile Suit Gundam", "season": 1, "episodes": [16, 43] },
+    { "series": "Mobile Suit Gundam: The 08th MS Team", "season": 1 },
+    { "movie": "Mobile Suit Gundam MS IGLOO: The Hidden One Year War" },
+    { "series": "Mobile Suit Gundam MS IGLOO 2: Gravity Front", "season": 1 },
+    { "movie": "Mobile Suit Gundam MS IGLOO: Apocalypse 0079" },
+    { "series": "Mobile Suit Gundam Thunderbolt", "season": 1 },
+    { "series": "Mobile Suit Gundam 0080: War in the Pocket", "season": 1 },
+    { "series": "Mobile Suit Gundam 0083: Stardust Memory", "season": 1 },
+    { "series": "Mobile Suit Zeta Gundam", "season": 1 },
+    { "series": "Mobile Suit Gundam ZZ", "season": 1 },
+    { "movie": "Mobile Suit Gundam: Char's Counterattack" },
+    { "series": "Mobile Suit Gundam Unicorn", "season": 1 },
+    { "series": "Mobile Suit Gundam: Twilight AXIS", "season": 1 },
+    { "movie": "Mobile Suit Gundam: Narrative" },
+    { "movie": "Mobile Suit Gundam: Hathaway" },
+    { "movie": "Mobile Suit Gundam F91" },
+    { "series": "Mobile Suit Victory Gundam", "season": 1 },
+    { "movie": "G-Saviour" }
+  ]
+}
