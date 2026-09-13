@@ -48,19 +48,29 @@ loophole every time. Treat everything below as absolute, not a judgment call.
 ## Banned, no exceptions
 
 - **`docker ps` / `docker inspect` / `docker logs`** for health, status, or existence checks —
-  ever, not even once, not even "just to confirm after a deploy". Use Dockhand's UI (Stacks page)
-  or **`GET /api/containers?env=1`** (already documented in `ai/PATTERNS.md`'s "Dockhand API"
-  section — it returns full per-container health: `state`, `status` e.g. "Up 19 minutes
-  (healthy)", `health`, `mounts`, `networks`) for health/status instead. **Correction:** an
-  earlier version of this memory claimed Dockhand's API doesn't expose per-container health at
-  all — that was wrong, caused by testing `/api/containers` and `/api/stacks` *without* the
-  `env=1`/`environmentId=1` query param and getting empty results, then concluding the capability
-  didn't exist instead of checking `ai/PATTERNS.md` first (which already had the correct call).
-  `/api/stacks` genuinely is empty regardless of params — that endpoint is for "internal"
-  (non-git) stacks, and every stack here is git-managed — but `/api/containers?env=1` works.
-  Use Grafana/Prometheus/Loki for logs/metrics. Use the relevant app's own API for its own state.
-  If none of those can answer the question, stop and ask the user — don't decide unilaterally
-  that docker directly is the exception this time.
+  ever, not even once, not even "just to confirm after a deploy". Dockhand's API has full parity
+  with all three, confirmed live 2026-09-13:
+  - `GET /api/containers?env=1` — flat list, all containers, replaces `docker ps`: `state`,
+    `status` (e.g. "Up 19 minutes (healthy)"), `health`, `mounts`, `networks`, `ports`.
+  - `GET /api/containers/<id>?env=1` — full raw Docker inspect JSON for one container, replaces
+    `docker inspect`: complete `State` (including `Health.Log` — the actual healthcheck
+    probe output and exit codes, not just the summary status), `Config`, `Mounts`, everything.
+  - `GET /api/containers/<id>/logs?env=1&tail=<n>` — replaces `docker logs`, returns
+    `{"logs": "..."}` as plain text lines.
+  - `GET /api/containers/<id>/stats?env=1` — live cpu/memory/network/block IO, replaces
+    `docker stats`.
+  - Get `<id>` from the `?env=1` list call's `id` field, or from Dockhand's UI.
+  Use Dockhand's UI directly when a human is looking; use these endpoints when scripting.
+  **Correction:** an earlier version of this memory claimed Dockhand's API doesn't expose
+  per-container health at all — that was wrong, caused by testing `/api/containers` and
+  `/api/stacks` *without* the `env=1`/`environmentId=1` query param and getting empty results,
+  then concluding the capability didn't exist instead of checking `ai/PATTERNS.md` first (which
+  already had the list-with-`env=1` call documented, just not the per-container detail/logs/stats
+  variants above). `/api/stacks` genuinely is empty regardless of params — that endpoint is for
+  "internal" (non-git) stacks, and every stack here is git-managed.
+  Grafana/Loki remain the right tool for cross-container search, alerting, or history beyond a
+  container's current log buffer — the Dockhand endpoints above are for a quick point-in-time
+  check on one container, not a replacement for the observability stack.
 - **`docker exec` used as a diagnostic** (checking what binaries exist in an image, catting a
   config file to see what's "really" mounted, curling something from inside the container to
   test connectivity) — this is the same banned pattern as `docker inspect`, just spelled

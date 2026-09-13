@@ -394,6 +394,14 @@ curl -s -b "$COOKIE_JAR" -X POST "$DH/api/containers/$CONTAINER_ID/restart?env=1
 # curl -s -b "$COOKIE_JAR" -X POST "$DH/api/containers/$CONTAINER_ID/start?env=1"
 # curl -s -b "$COOKIE_JAR" -X POST "$DH/api/containers/$CONTAINER_ID/stop?env=1"
 
+# Health/status/logs/stats — full parity with docker inspect/logs/stats, confirmed live
+# 2026-09-13. Use these instead of SSH+docker for any of the below (see
+# .claude/memory/feedback_docker_policy.md).
+curl -s -b "$COOKIE_JAR" "$DH/api/containers/$CONTAINER_ID?env=1"           # full inspect JSON
+                                                                             # (State.Health.Log has real probe output+exit codes)
+curl -s -b "$COOKIE_JAR" "$DH/api/containers/$CONTAINER_ID/logs?env=1&tail=50"  # {"logs": "..."}
+curl -s -b "$COOKIE_JAR" "$DH/api/containers/$CONTAINER_ID/stats?env=1"    # live cpu/mem/net/io
+
 rm -f "$COOKIE_JAR"
 ```
 
@@ -406,8 +414,12 @@ Environment ID: `1` (TrueNAS)
 
 **Do not use `docker ps`/`inspect`/`logs` for health, status, or existence checks — not even
 once. See `.claude/memory/feedback_docker_policy.md` for the full sanctioned/banned list.** Use
-Dockhand's UI for container health, Grafana/Loki for logs/metrics, or the app's own API for its
-state. `docker compose up -d --force-recreate`/`restart` (from the git-synced compose path) and
+Dockhand's UI, or its API (`GET /api/containers?env=1` for status/health, `/api/containers/<id>?env=1`
+for full inspect, `/api/containers/<id>/logs?env=1` for logs, `/api/containers/<id>/stats?env=1`
+for live resource usage — see "Dockhand API" section above) — it has full parity with
+inspect/logs/stats. Grafana/Loki remain the right tool for cross-container search or history
+beyond one container's current log buffer. `docker compose up -d --force-recreate`/`restart`
+(from the git-synced compose path) and
 `docker exec <container> <that service's own binary>` for an already-documented action (e.g.
 `caddy reload`) remain sanctioned — see that memory file for the reasoning. The commands below
 are kept only as a reference for what NOT to reach for; they are not a runbook.
@@ -422,7 +434,8 @@ ssh kero66@truenas "sudo docker compose -f /path/to/compose.yaml restart"
 ```bash
 # docker ps, docker logs, docker exec <container> vainfo, etc. — all banned for
 # diagnosis/health-checking. If you need Jellyfin's VAAPI status, check its own
-# transcoding logs via the API or Grafana/Loki, not docker exec.
+# transcoding logs via the API, Dockhand's /api/containers/<id>/logs?env=1, or
+# Grafana/Loki — not docker exec.
 ```
 
 ### Docker network naming
@@ -1725,7 +1738,7 @@ confirmed live — re-check via `GET /api/datasources` if this ever changes.)
 | Use `curl` in jellystat healthcheck | `curl` not installed in that image | Use `wget --spider` |
 | `infisical secrets get X --env prod` | No prod environment exists | Use `--env dev` |
 | `infisical secrets get JELLYFIN_API_KEY --path /TrueNAS` | Key is at root path | Use `--path /` |
-| Need container status/health | `docker ps`/`inspect`/`logs` are banned for this, even with `sudo` | Check Dockhand's UI, or Grafana/Loki for logs — see `.claude/memory/feedback_docker_policy.md` |
+| Need container status/health/logs/stats | `docker ps`/`inspect`/`logs` are banned for this, even with `sudo` | Dockhand's UI, or its API (`/api/containers?env=1`, `/api/containers/<id>?env=1`, `/api/containers/<id>/logs?env=1`, `/api/containers/<id>/stats?env=1`) — see "Dockhand API" section above and `.claude/memory/feedback_docker_policy.md` |
 | `python3 -m json.tool` | Not as reliable, doesn't handle all edge cases | Use `jq` |
 | Bazarr partial settings POST | API requires full settings object | GET settings, modify, POST full object back |
 | Trust embedded subs in MKV releases | Encoders sometimes ship wrong subs (e.g. wrong show) | Use `use_embedded_subs: false` in Bazarr; verify with ffmpeg |
