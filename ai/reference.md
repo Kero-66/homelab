@@ -110,6 +110,10 @@ Recording rationale:
 - **JetKVM REST API**: No Tailscale endpoints — install is SSH-only. See [JetKVM docs](https://jetkvm.com/docs/advanced-usage/developing) for Developer Mode instructions.
 
 ## TrueNAS Scale Custom App Management (2026-02-12)
+**Note:** this section predates the Dockhand migration and only applies to genuine midclt/native
+apps now (Dockhand itself, AdGuard Home) — everything else is Dockhand-managed via git-stacks,
+see `truenas/DOCKHAND_GITOPS_GUIDE.md`. Also: use `kero66@TrueNAS`, not `root@TrueNAS` (root is
+break-glass only per CLAUDE.md).
 - **Documentation**:
   - [Custom App Screens | TrueNAS Documentation Hub](https://www.truenas.com/docs/scale/25.10/scaleuireference/apps/installcustomappscreens/)
   - [Installing Custom Apps | TrueNAS Apps Market](https://apps.truenas.com/managing-apps/installing-custom-apps/)
@@ -129,4 +133,6 @@ Recording rationale:
 - **Notes**:
   - TrueNAS 25.10 REST API cannot create Custom Apps — use `midclt call -j app.create` via SSH (see PATTERNS.md)
   - midclt tool can query apps: `midclt call app.query`, `midclt call app.get_instance APP_NAME`
-  - Docker networks created by TrueNAS use `ix-APP_NAME_default` naming convention
+  - Docker networks created by TrueNAS for midclt/native apps use `ix-APP_NAME_default` naming
+    — Dockhand-managed stacks use bare `<stack-name>_default` names instead, confirmed live
+    2026-09-13 (see `.claude/memory/feedback_docker_policy.md`)
