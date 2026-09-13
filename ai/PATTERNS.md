@@ -94,8 +94,9 @@ eval $(ssh-agent -s) > /dev/null
 infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --domain http://192.168.20.22:8081 --projectId "$PROJECT_ID" --plain 2>/dev/null | ssh-add - 2>/dev/null
 
 # Run SSH commands normally (agent provides the key automatically)
-ssh kero66@192.168.20.22 "sudo docker ps"
-ssh kero66@192.168.20.22 "sudo docker logs jellyfin --tail 50"
+# (example only — for container health/status/logs, use Grafana/Loki or the app's own
+# API instead of docker directly; see .claude/memory/feedback_docker_policy.md)
+ssh kero66@192.168.20.22 "ls /mnt/Fast/docker/jellyfin/"
 
 # Clean up agent when done
 ssh-agent -k > /dev/null
@@ -380,41 +381,25 @@ Environment ID: `1` (TrueNAS)
 
 ## Docker on TrueNAS
 
+**Do not use `docker ps`/`inspect`/`logs` for health, status, or existence checks — not even
+once. See `.claude/memory/feedback_docker_policy.md` for the full sanctioned/banned list.** Use
+Dockhand's UI for container health, Grafana/Loki for logs/metrics, or the app's own API for its
+state. `docker compose up -d --force-recreate`/`restart` (from the git-synced compose path) and
+`docker exec <container> <that service's own binary>` for an already-documented action (e.g.
+`caddy reload`) remain sanctioned — see that memory file for the reasoning. The commands below
+are kept only as a reference for what NOT to reach for; they are not a runbook.
+
 ### kero66 cannot use docker directly — must sudo
+This applies to the sanctioned commands too (compose/exec), not just the banned ones below:
 ```bash
-# WRONG (permission denied):
-ssh kero66@truenas "docker ps"
-
-# CORRECT:
-ssh kero66@truenas "sudo docker ps"
+ssh kero66@truenas "sudo docker compose -f /path/to/compose.yaml restart"
 ```
 
-### Check container status
+### Historical/banned examples (do not use for diagnosis)
 ```bash
-ssh -i "$KEYDIR/id" kero66@192.168.20.22 "sudo docker ps --format 'table {{.Names}}\t{{.Status}}'"
-```
-
-### View container logs
-```bash
-ssh -i "$KEYDIR/id" kero66@192.168.20.22 "sudo docker logs jellyfin --tail 50"
-```
-
-### Follow logs in real time
-```bash
-ssh -i "$KEYDIR/id" kero66@192.168.20.22 "sudo docker logs -f jellyfin"
-```
-
-### Exec into a container
-```bash
-ssh -i "$KEYDIR/id" kero66@192.168.20.22 "sudo docker exec jellyfin vainfo"
-```
-
-### Run vainfo inside Jellyfin container (Intel VAAPI check)
-```bash
-ssh -i "$KEYDIR/id" kero66@192.168.20.22 \
-  "sudo docker exec -e LIBVA_DRIVERS_PATH=/usr/lib/jellyfin-ffmpeg/lib/dri \
-   -e LIBVA_DRIVER_NAME=iHD \
-   jellyfin /usr/lib/jellyfin-ffmpeg/vainfo"
+# docker ps, docker logs, docker exec <container> vainfo, etc. — all banned for
+# diagnosis/health-checking. If you need Jellyfin's VAAPI status, check its own
+# transcoding logs via the API or Grafana/Loki, not docker exec.
 ```
 
 ### TrueNAS Docker network naming
@@ -886,6 +871,10 @@ services:
 ```
 
 ### Verify VAAPI is working inside container
+One-time hardware bring-up check only, not a recurring health check — there's no API that
+exposes VAAPI driver status, so this is a narrow, accepted exception to the no-diagnostic-exec
+rule in `.claude/memory/feedback_docker_policy.md`. Don't reach for this routinely; if
+transcoding breaks later, check Jellyfin's own transcode logs/API first.
 ```bash
 sudo docker exec \
   -e LIBVA_DRIVERS_PATH=/usr/lib/jellyfin-ffmpeg/lib/dri \
@@ -1049,18 +1038,23 @@ the sub will be consistently early or late (typically a few seconds constant off
 **Diagnosis**: Compare first dialogue timestamp in the external `.srt` against an embedded sub
 that IS correctly timed (e.g. an Italian or Japanese ASS track from the same encode group):
 
+Don't `docker run` a throwaway `linuxserver/ffmpeg` container for this (banned pattern — see
+`.claude/memory/feedback_docker_policy.md`). Jellyfin already runs with `jellyfin-ffmpeg` bundled
+— exec into that already-running container instead of spinning up a new one:
+
 ```bash
-# Check MKV tracks
-sudo docker run --rm -v '/mnt/Data/media/shows:/shows' linuxserver/ffmpeg \
-  -i "/shows/Series/Season 01/episode.mkv" 2>&1 | grep 'Stream'
+# Check MKV tracks (path is under the unified /mnt/Data/Servarr dataset, NOT the old
+# /mnt/Data/media — that path is legacy, see CLAUDE.md)
+sudo docker exec jellyfin /usr/lib/jellyfin-ffmpeg/ffmpeg \
+  -i "/data/shows/Series/Season 01/episode.mkv" 2>&1 | grep 'Stream'
 
 # Extract embedded sub to stdout and check first timestamps
-sudo docker run --rm -v '/mnt/Data/media/shows:/shows' linuxserver/ffmpeg \
-  -i "/shows/Series/Season 01/episode.mkv" \
+sudo docker exec jellyfin /usr/lib/jellyfin-ffmpeg/ffmpeg \
+  -i "/data/shows/Series/Season 01/episode.mkv" \
   -map 0:2 -f ass - 2>/dev/null | grep '^Dialogue:' | head -5
 
 # Check first timestamps in the external SRT
-head -20 "/mnt/Data/media/shows/Series/Season 01/episode.en.srt"
+head -20 "/mnt/Data/Servarr/shows/Series/Season 01/episode.en.srt"
 ```
 
 **Fix**: Shift the `.srt` timestamps by the measured offset (negative = make earlier):
@@ -1102,21 +1096,23 @@ If the offset drifts (different encode speed), use subsync instead — trigger v
 ---
 
 ### Remux subtitle into MKV (replace a bad embedded track)
+Don't `docker run` a throwaway `linuxserver/ffmpeg` container (banned pattern — see
+`.claude/memory/feedback_docker_policy.md`). Copy the subtitle onto the unified dataset first
+(it's already reachable from Jellyfin's `/data` mount, no need for a separate scratch bind), then
+exec into the already-running Jellyfin container to use its bundled ffmpeg:
 ```bash
 # Example: replace track 0:2 (English) with correct external sub
 # -map 0:0 (video) -map 0:1 (audio) -map 1:0 (new sub) -map 0:3..N (keep other subs+attachments)
-sudo docker run --rm \
-  -v '/mnt/Data/media/shows:/shows' \
-  -v '/mnt/library/repos/homelab/scratch:/scratch' \
-  linuxserver/ffmpeg \
-  -i "/shows/Show Name/Season 01/episode.mkv" \
-  -i /scratch/subtitle.ass \
+scp subtitle.ass kero66@192.168.20.22:/mnt/Data/Servarr/shows/Show\ Name/Season\ 01/subtitle.ass
+sudo docker exec jellyfin /usr/lib/jellyfin-ffmpeg/ffmpeg \
+  -i "/data/shows/Show Name/Season 01/episode.mkv" \
+  -i "/data/shows/Show Name/Season 01/subtitle.ass" \
   -map 0:0 -map 0:1 -map 1:0 -map 0:3 -map 0:4 ... \
   -c copy \
   -metadata:s:s:0 language=eng \
-  "/shows/Show Name/Season 01/episode.fixed.mkv"
+  "/data/shows/Show Name/Season 01/episode.fixed.mkv"
 # Then rename: mv episode.mkv episode.bak.mkv && mv episode.fixed.mkv episode.mkv
-# Verify then delete bak
+# Verify then delete bak and the copied subtitle.ass
 ```
 
 ---
@@ -1616,14 +1612,23 @@ NEW_PASS=$(infisical secrets get LOKI_PUSH_PASSWORD --env dev --path /observabil
 NEW_HASH=$(htpasswd -bnBC 10 "" "$NEW_PASS" | cut -d: -f2)
 sed -i '' "s|loki_push \$2y\$[0-9]*\\\$[A-Za-z0-9./]*|loki_push $NEW_HASH|" truenas/stacks/caddy/Caddyfile
 
-# 3. Deploy: scp the file, then reload (NOT restart — Caddy is Dockhand-managed,
-#    this is a config-only change)
-eval $(ssh-agent -s) > /dev/null
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --projectId "$INFISICAL_PROJECT_ID" \
-  --domain http://192.168.20.22:8081 --plain | ssh-add - 2>/dev/null
-scp truenas/stacks/caddy/Caddyfile kero66@192.168.20.22:/tmp/Caddyfile_new
-ssh kero66@192.168.20.22 "sudo cp /tmp/Caddyfile_new /mnt/Fast/docker/caddy/Caddyfile && rm /tmp/Caddyfile_new && sudo docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
-ssh-agent -k > /dev/null
+# 3. Deploy: commit+push (Caddy's compose mounts ./Caddyfile relative to Dockhand's git-clone
+#    directory, NOT /mnt/Fast/docker/caddy/ — scp'ing there does NOT reach the running
+#    container's actual bind-mount source, confirmed 2026-09-13 chasing a "white screen" bug),
+#    then sync the git stack and reload (NOT restart — config-only change)
+git add truenas/stacks/caddy/Caddyfile && git commit -m "fix(caddy): rotate loki_push hash"
+git push
+COOKIEJAR=$(mktemp)
+# ... log into Dockhand (see "Dockhand (Stack Deployment)" section), then:
+curl -s -b "$COOKIEJAR" -X POST "http://192.168.20.22:30328/api/git/stacks/<caddy-stack-id>/sync"
+ssh kero66@192.168.20.22 "sudo docker exec caddy caddy reload --config /etc/caddy/Caddyfile"
+# Verify the running container actually has the new content before trusting the reload:
+ssh kero66@192.168.20.22 "sudo docker exec caddy grep loki_push /etc/caddy/Caddyfile"
+# If that still shows the OLD hash, the container's bind mount is stale — force-recreate from
+# the git-clone path directly (see .claude/memory/feedback_docker_policy.md and
+# feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md):
+#   cd /mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/caddy/truenas/stacks/caddy
+#   sudo docker compose -f compose.yaml up -d --force-recreate
 
 # 4. Verify end-to-end. loki.home does NOT resolve from a Mac off the LAN's
 #    AdGuard DNS — use --resolve to force the IP rather than SSH-tunneling the
@@ -1690,7 +1695,7 @@ confirmed live — re-check via `GET /api/datasources` if this ever changes.)
 | Use `curl` in jellystat healthcheck | `curl` not installed in that image | Use `wget --spider` |
 | `infisical secrets get X --env prod` | No prod environment exists | Use `--env dev` |
 | `infisical secrets get JELLYFIN_API_KEY --path /TrueNAS` | Key is at root path | Use `--path /` |
-| `docker ps` as kero66 on TrueNAS | Permission denied | `sudo docker ps` |
+| Need container status/health | `docker ps`/`inspect`/`logs` are banned for this, even with `sudo` | Check Dockhand's UI, or Grafana/Loki for logs — see `.claude/memory/feedback_docker_policy.md` |
 | `python3 -m json.tool` | Not as reliable, doesn't handle all edge cases | Use `jq` |
 | Bazarr partial settings POST | API requires full settings object | GET settings, modify, POST full object back |
 | Trust embedded subs in MKV releases | Encoders sometimes ship wrong subs (e.g. wrong show) | Use `use_embedded_subs: false` in Bazarr; verify with ffmpeg |

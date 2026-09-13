@@ -42,3 +42,18 @@ documented escape hatch — bypasses the flaky detection, always deploys+force-r
 was already identified once in a prior session and never applied or written down — that's how it
 got lost.** Applied to `arr-stack` and `grafana-alloy` 2026-09-11; the other 15 git-stacks still
 have it `false`. See `ai/PATTERNS.md`'s Dockhand git-stack section for the full writeup.
+
+**Addendum (2026-09-13, confirmed live):** the two paths this memory describes are real and
+independently verified — `git-repos/TrueNAS/<stack>/...` and `stacks/TrueNAS/<stack>/...` can and
+do diverge (found again on `caddy`'s Caddyfile). A force-recreate run directly from the
+`git-repos/` directory (per `feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md`
+and `feedback_docker_policy.md`) fixes the *running container* immediately, because the compose
+file's relative bind mount (`./Caddyfile`) resolves against whatever directory you ran `docker
+compose` from — but it does **not** update Dockhand's own `stacks/` copy, which stays stale.
+This means after a manual force-recreate-from-git-repos, `stacks/TrueNAS/<stack>/` and the
+container's actual live content are no longer the same directory Dockhand's own sync writes to
+going forward — a future `sync` may write into `stacks/` (unused by the container now) while
+`git-repos/` (what's actually mounted) only updates on the next manual recreate. Not fully
+root-caused which path Dockhand intends as canonical vs. which one a given container actually
+binds from at any point in time; treat every deploy as unverified until you've diffed both paths
+against the container's actual content, not just one.

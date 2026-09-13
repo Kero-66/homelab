@@ -28,5 +28,5 @@ alone. If stale, SSH in and run
 `docker compose -p <stack> -f <git-clone-dir>/truenas/stacks/<stack>/compose.yaml up -d --force-recreate`
 directly against Dockhand's own synced compose file (same file Dockhand itself used — this isn't
 bypassing Dockhand's inventory, since project name and compose file both match what Dockhand
-already deployed). See [[feedback_dockhand_apps_no_raw_docker_commands]] for why raw
+already deployed). See [[feedback_docker_policy]] for why raw
 `docker restart` is still wrong here — recreate via compose, not a bare lifecycle command.
