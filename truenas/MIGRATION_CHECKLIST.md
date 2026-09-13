@@ -6,8 +6,11 @@
 
 ### ✅ Step 1: Identify Existing Configuration
 - [ ] Find existing compose file in repo (`apps/`, `networking/`, `media/`)
-- [ ] Check if service is currently running on workstation: `docker ps | grep <service>`
-- [ ] Inspect current container mounts: `docker inspect <service> | jq '.[].Mounts'`
+- [ ] Check if service is currently running on workstation/TrueNAS: use Dockhand's `GET
+      /api/containers?env=1` (filter by name) — not `docker ps` (see
+      `.claude/memory/feedback_docker_policy.md`)
+- [ ] Inspect current container mounts: `GET /api/containers/<id>?env=1` (`.Mounts`) — not
+      `docker inspect`
 - [ ] List current data directories: `ls -la <service-dir>/`
 
 ### ✅ Step 2: Review Similar Migrations
@@ -64,34 +67,36 @@ ssh kero66@192.168.20.22 "chown -R 1000:1000 /mnt/Fast/docker/<service>"
 - [ ] Create `truenas/stacks/<service>/compose.yaml`
 - [ ] Use **absolute paths**: `/mnt/Fast/docker/<service>/`
 - [ ] Reference env file if using Infisical: `env_file: /mnt/Fast/docker/<service>/.env`
-- [ ] Add to external networks if needed: `ix-jellyfin_default`, `ix-arr-stack_default`
-- [ ] Set proper health check (use `wget` not `curl` for Alpine images)
+- [ ] Add to external networks if needed — Dockhand-managed stacks use bare names
+      (`jellyfin_default`, `arr-stack_default`), NOT `ix-*` (that prefix is midclt-only,
+      confirmed live 2026-09-13 — check `docker network ls` if unsure)
+- [ ] Set a health check — **check what's actually in the image first** (`wget` vs `curl` vs
+      neither varies by base image; a wrong tool means the healthcheck always fails even though
+      the app works fine, confirmed on sportarr's Debian-based image which had `curl` not `wget`)
 - [ ] Document storage layout, secrets, and first-time setup in compose file comments
 
-### ✅ Step 9: Deploy via TrueNAS Web UI
-```
-1. Open TrueNAS Web UI: https://192.168.20.22
-2. Apps → Discover → Custom App
-3. Release Name: <service>
-4. Version: 1.0.0
-5. Paste compose YAML from truenas/stacks/<service>/compose.yaml
-6. Click Install
-7. Wait for deployment (check Apps → Installed)
+### ✅ Step 9: Register and deploy via Dockhand (git-stack)
+This replaces the old TrueNAS Web UI "Custom App" flow — that method is deprecated, everything
+new goes through Dockhand's git-sync (see `truenas/DOCKHAND_GITOPS_GUIDE.md`):
+```bash
+git add truenas/stacks/<service>/ && git commit -m "feat(<service>): add stack" && git push
+# Log into Dockhand (see "Dockhand (Stack Deployment)" in ai/PATTERNS.md), then:
+curl -s -b "$COOKIEJAR" -X POST "http://192.168.20.22:30328/api/git/stacks" \
+  -H "Content-Type: application/json" \
+  -d '{"stackName":"<service>","repositoryId":1,"environmentId":1,"composePath":"/truenas/stacks/<service>/compose.yaml","autoUpdate":true,"autoUpdateSchedule":"daily","autoUpdateCron":"0 3 * * *","deployNow":true}'
 ```
 
 ### ✅ Step 10: Verify Deployment
 ```bash
-# Check container status
-ssh kero66@192.168.20.22 "docker ps | grep <service>"
+# Check container status/health — via Dockhand's API, not docker ps/inspect
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='<service>']"
 
-# Check logs
-ssh kero66@192.168.20.22 "docker logs <service> --tail 50"
+# Check logs — via Dockhand's API, not docker logs
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<id>/logs?env=1&tail=50"
 
 # Test service endpoint
 curl http://192.168.20.22:<port>/
-
-# Check health status
-ssh kero66@192.168.20.22 "docker inspect <service> | jq -r '.[0].State.Health.Status'"
 ```
 
 ### ✅ Step 11: Update Documentation
@@ -130,7 +135,7 @@ docker rm <service>
 
 ### ✅ DO:
 - Follow the pattern from previous successful migrations
-- Check `docker inspect` output for actual mount points
+- Check actual mount points via Dockhand's `GET /api/containers/<id>?env=1` (`.Mounts`), not `docker inspect`
 - Create backups before every migration
 - Test health checks work before deploying
 - Document any deviations from standard setup

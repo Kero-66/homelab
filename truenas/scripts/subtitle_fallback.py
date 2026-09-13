@@ -20,7 +20,7 @@ Environment variables (required):
 
     # Path translation: Sonarr returns container paths, script writes to host paths
     SONARR_PATH_PREFIX   default: /data         (what Sonarr sees)
-    HOST_PATH_PREFIX     default: /mnt/Data/media  (actual host path)
+    HOST_PATH_PREFIX     default: /mnt/Data/Servarr  (actual host path)
 
 Usage:
     # All series with missing English subs:
@@ -40,7 +40,7 @@ Run pattern (from workstation, with keys from Infisical):
        SONARR_BASE=http://localhost:8989 \\
        JELLYFIN_BASE=http://localhost:8096 \\
        SONARR_PATH_PREFIX=/data \\
-       HOST_PATH_PREFIX=/mnt/Data/media \\
+       HOST_PATH_PREFIX=/mnt/Data/Servarr \\
        python3 /tmp/sub_fallback.py && rm /tmp/sub_fallback.py"
 """
 
@@ -59,7 +59,7 @@ BAZARR_BASE = os.environ.get("BAZARR_BASE", "http://bazarr:6767/bazarr/api")
 SONARR_BASE = os.environ.get("SONARR_BASE", "http://sonarr:8989")
 JELLYFIN_BASE = os.environ.get("JELLYFIN_BASE", "http://jellyfin:8096")
 SONARR_PATH_PREFIX = os.environ.get("SONARR_PATH_PREFIX", "/data")
-HOST_PATH_PREFIX = os.environ.get("HOST_PATH_PREFIX", "/mnt/Data/media")
+HOST_PATH_PREFIX = os.environ.get("HOST_PATH_PREFIX", "/mnt/Data/Servarr")
 
 BAZARR_KEY = os.environ.get("BAZARR_KEY", "")
 SONARR_KEY = os.environ.get("SONARR_KEY", "")

@@ -1,6 +1,10 @@
 #!/bin/bash
 # Script to identify and remove duplicate files in TrueNAS media folders
 # Run this directly on TrueNAS
+#
+# Deliberately targets the OLD /mnt/Data/media path, not /mnt/Data/Servarr — this
+# script audits legacy leftover content (see ai/todo.md #93), it is not meant to
+# be repointed at the current unified dataset.
 
 MEDIA_ROOT="/mnt/Data/media"
 SHOWS_DIR="$MEDIA_ROOT/shows"
