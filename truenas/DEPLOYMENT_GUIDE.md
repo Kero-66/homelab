@@ -132,7 +132,7 @@ Media server stack.
 - Jellystat: port 3001 → `http://jellystat.home`
 - Hardware transcoding: Intel N150 VAAPI via iHD driver (see `ai/PATTERNS.md` → Intel N150 VAAPI)
 - Config: `/mnt/Fast/docker/jellyfin/`
-- Media: `/mnt/Data/media/`
+- Media: `/mnt/Data/Servarr/` (unified dataset — `/mnt/Data/media` is the old, unmounted path)
 
 ### arr-stack
 
@@ -150,7 +150,7 @@ Media server stack.
 - qBittorrent: `http://qbittorrent.home`
 - SABnzbd: `http://sabnzbd.home`
 - Config: `/mnt/Fast/docker/downloaders/`
-- Downloads: `/mnt/Data/downloads/`
+- Downloads: `/mnt/Data/Servarr/downloads/` (unified dataset — `/mnt/Data/downloads` is the old, unmounted path)
 
 ### caddy
 
@@ -241,7 +241,8 @@ Before assigning any port, check:
 ```bash
 eval $(ssh-agent -s) > /dev/null
 infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
-ssh kero66@192.168.20.22 "sudo ss -tlnp | grep LISTEN; sudo docker ps --format 'table {{.Names}}\t{{.Ports}}'"
+ssh kero66@192.168.20.22 "sudo ss -tlnp | grep LISTEN"
+# For which container owns a port, use Dockhand's GET /api/containers?env=1 (.ports), not docker ps
 ssh-agent -k > /dev/null
 ```
 
@@ -261,10 +262,11 @@ curl -sk "https://192.168.20.22/api/v2.0/docker" \
 ### Infisical Agent Not Rendering Secrets
 
 ```bash
-eval $(ssh-agent -s) > /dev/null
-infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
-ssh kero66@192.168.20.22 "sudo docker logs infisical-agent --tail 30"
-ssh-agent -k > /dev/null
+# Via Dockhand's API instead of docker logs — see .claude/memory/feedback_docker_policy.md
+COOKIEJAR=$(mktemp)
+# ... log into Dockhand (see "Dockhand API" in ai/PATTERNS.md), then find infisical-agent's
+# container id from GET /api/containers?env=1, then:
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<id>/logs?env=1&tail=30"
 ```
 
 ### Caddy Not Proxying Correctly

@@ -233,12 +233,13 @@ Events: push (to main branch only)
 ## Monitoring & Validation
 
 ### Dockhand Logs
+Don't use `docker logs` (see `.claude/memory/feedback_docker_policy.md`) — use Dockhand's own
+API, which works even for its own container:
 ```bash
-# SSH to TrueNAS
-ssh kero66@192.168.20.22
-
-# View Dockhand container logs
-docker logs -f <dockhand-container-name>
+COOKIEJAR=$(mktemp)
+# ... log into Dockhand (see "Dockhand API" in ai/PATTERNS.md), then find its container id
+# from GET /api/containers?env=1, then:
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<dockhand-id>/logs?env=1&tail=50"
 
 # Expected output on sync:
 # [GitOps] Syncing repository: homelab
@@ -253,11 +254,10 @@ docker logs -f <dockhand-container-name>
 curl -I http://192.168.20.22:3000
 # Should return HTTP 200
 
-# Check Homepage container
-docker ps | grep homepage
-
-# View Homepage logs
-docker logs homepage
+# Check Homepage container status/logs — via Dockhand's API, not docker ps/logs
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='homepage']"
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<homepage-id>/logs?env=1"
 ```
 
 ### Git Sync Status
@@ -312,9 +312,8 @@ ls -la /tmp/test/truenas/stacks/homepage/compose.yaml
 
 **Solution**:
 ```bash
-# 1. Check Dockhand logs for detailed error
-ssh kero66@192.168.20.22
-docker logs <dockhand-container> | tail -50
+# 1. Check Dockhand logs for detailed error — via its API, not docker logs
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<dockhand-id>/logs?env=1&tail=50"
 
 # 2. Verify volumes are accessible
 ls -la /mnt/Fast/docker/homepage/
@@ -331,15 +330,21 @@ docker compose config  # Validates syntax without deploying
 
 ### Issue: External Networks Not Found
 
-**Symptom**: "network ix-jellyfin_default not found"
+**Symptom**: "network jellyfin_default not found" (or similar) — a compose file references an
+`external: true` network that doesn't exist yet.
+
+**Note on naming**: Dockhand-managed stacks create bare compose-style networks
+(`<stack-name>_default`, e.g. `jellyfin_default`) — the `ix-*` prefix only applies to genuine
+midclt/TrueNAS-native apps (Dockhand, AdGuard Home), confirmed live 2026-09-13. Don't assume
+either convention; check.
 
 **Solution**:
 ```bash
 # Verify networks exist
-docker network ls | grep ix-
+docker network ls | grep _default
 
-# If missing, ensure other stacks are deployed first
-# Networks are created by TrueNAS when deploying apps
+# If missing, ensure the stack that owns the network is deployed first
+# Networks are created when that stack's compose is first deployed
 ```
 
 ---
@@ -370,9 +375,8 @@ git add compose.yaml
 git commit -m "feat(<stack>): enable Dockhand GitOps"
 git push
 
-# Verify in Dockhand UI or logs
-ssh kero66@192.168.20.22
-docker logs <dockhand-container> | tail -20
+# Verify in Dockhand UI, or via its API (not docker logs)
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<dockhand-id>/logs?env=1&tail=20"
 ```
 
 **4. Verify functionality**
