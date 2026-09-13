@@ -36,7 +36,9 @@ ssh kero66@192.168.20.22 "sudo midclt call -j app.delete adguard-home"
 **Step 4 — verify the container is actually gone and port 53 is free:**
 
 ```bash
-ssh kero66@192.168.20.22 "sudo docker ps -a --filter name=adguard-home --format '{{.Names}} {{.Status}}'"
+# Container check via Dockhand's API, not docker ps (see .claude/memory/feedback_docker_policy.md)
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='adguard-home']"
 ssh kero66@192.168.20.22 "sudo ss -tlnp | grep :53; sudo ss -ulnp | grep :53"
 ```
 First command should print nothing. Second should also print nothing (if something does show up, stop and investigate before deploying — you'll get a port bind failure otherwise).
@@ -51,12 +53,14 @@ ssh kero66@192.168.20.22 "sudo docker compose -f /mnt/Fast/docker/adguard-home/c
 **Step 6 — verify:**
 
 ```bash
-ssh kero66@192.168.20.22 "sudo docker ps --filter name=adguard-home --format '{{.Names}} {{.Status}}'"
-ssh kero66@192.168.20.22 "sudo docker logs adguard-home --tail 30"
+# Status/logs via Dockhand's API, not docker ps/logs
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='adguard-home']"
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<adguard-id>/logs?env=1&tail=30"
 curl -s -o /dev/null -w '%{http_code}\n' http://192.168.20.22:3080
 dig @192.168.20.22 jellyfin.home +short
 ```
-`docker ps` should show `Up ... (healthy)`. The `curl` should print `200` (or `302`). `dig` should return `192.168.20.22`. If the AdGuard UI shows the first-run setup wizard instead of your existing config, stop — that means it's reading an empty/wrong conf path, don't proceed further.
+The status check should show `Up ... (healthy)`. The `curl` should print `200` (or `302`). `dig` should return `192.168.20.22`. If the AdGuard UI shows the first-run setup wizard instead of your existing config, stop — that means it's reading an empty/wrong conf path, don't proceed further.
 
 **Step 7 — confirm it's off midclt's app list:**
 
@@ -97,7 +101,8 @@ ssh kero66@192.168.20.22 "sudo midclt call -j app.delete tailscale"
 
 **Step 4 — verify gone:**
 ```bash
-ssh kero66@192.168.20.22 "sudo docker ps -a --filter name=tailscale --format '{{.Names}} {{.Status}}'"
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='tailscale']"
 ```
 Should print nothing.
 
@@ -114,8 +119,9 @@ ssh kero66@192.168.20.22 "sudo docker compose -f /mnt/Fast/docker/tailscale/comp
 
 **Step 7 — verify:**
 ```bash
-ssh kero66@192.168.20.22 "sudo docker ps --filter name=tailscale --format '{{.Names}} {{.Status}}'"
-ssh kero66@192.168.20.22 "sudo docker logs tailscale --tail 30"
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='tailscale']"
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<tailscale-id>/logs?env=1&tail=30"
 ```
 Logs should show `Backend state: Running`. Then check the Tailscale admin console (https://login.tailscale.com/admin/machines) — the `truenas` device should show as connected with its existing IP (100.98.14.66), not appear as a new device. If it's a new device, the state volume (`/mnt/Fast/docker/tailscale`) didn't mount — stop and check before doing anything else (don't approve a new subnet route without figuring out why first).
 
