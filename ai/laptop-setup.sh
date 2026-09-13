@@ -43,7 +43,7 @@ claude plugin install mempalace@mempalace
 echo ""
 echo "Copying hooks..."
 mkdir -p "$HOOKS_DIR"
-cp "$REPO_ROOT/ai/hooks/"*.sh "$HOOKS_DIR/"
+cp "$REPO_ROOT/.claude/setup/hooks/"*.sh "$HOOKS_DIR/"
 chmod +x "$HOOKS_DIR/"*.sh
 echo "  Hooks installed to $HOOKS_DIR"
 
