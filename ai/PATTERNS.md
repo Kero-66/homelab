@@ -159,8 +159,10 @@ curl -sk -H "Authorization: Bearer $TOKEN" "$BASE/api/v2.0/app" | jq '[.[] | {na
 ```
 
 ### Get app state and health
+Only shows midclt-managed apps (Dockhand, AdGuard Home) — a Dockhand-managed app bypasses
+TrueNAS's Custom App catalog entirely and won't appear here; check Dockhand's UI for those.
 ```bash
-APP=jellyfin
+APP=adguard-home
 curl -sk -H "Authorization: Bearer $TOKEN" "$BASE/api/v2.0/app/id/$APP" | jq '{state: .state, status: .status}'
 ```
 
@@ -191,9 +193,19 @@ curl -sk -H "Authorization: Bearer $TOKEN" "$BASE/api/v2.0/core/get_jobs?id=$JOB
 
 ## TrueNAS App Management
 
+**⚠️ Almost everything below is stale.** This section predates the Dockhand migration and every
+example app here (jellyfin, caddy, bazarr, arr-stack, downloaders, commafeed) is now
+Dockhand-managed via `docker compose`, not midclt. Per current CLAUDE.md, midclt is reserved for
+**Dockhand itself and AdGuard Home only** — confirm via `GET /api/git/stacks` if unsure whether a
+given app has migrated. For every Dockhand-managed app, use the "Dockhand API" / "Docker on
+TrueNAS" sections below instead of anything in this section. The examples below are kept only
+for the two apps that still genuinely use midclt.
+
 ### Get current compose config for an app
+Only meaningful for midclt-managed apps (Dockhand, AdGuard Home) — a Dockhand-managed app's
+compose lives in git, not behind this TrueNAS REST endpoint.
 ```bash
-APP=jellyfin
+APP=adguard-home
 TOKEN=$(infisical secrets get TRUENAS_API_TOKEN --env dev --path /TrueNAS --plain)
 BASE="https://192.168.20.22"
 
@@ -204,7 +216,13 @@ curl -sk -X POST \
   "$BASE/api/v2.0/app/config" | jq '.custom_compose_config'
 ```
 
-### Update app compose config (full workflow)
+### Update app compose config (full workflow) — ⚠️ BROKEN, DO NOT USE
+This demonstrates `PUT /api/v2.0/app/id/{name}`, which the "⚠️ NEVER use REST API PUT
+/app/id/{name}" warning further below in this same file explicitly bans (it triggers container
+recreation while the old one is still running, causing port conflicts). It also uses `jellyfin`
+as the example app, which is Dockhand-managed now anyway. Kept only as a historical
+what-not-to-do reference — use `midclt app.stop/update/start` (for the two remaining midclt
+apps) or `docker compose up -d --force-recreate` (for Dockhand apps) instead.
 ```python
 #!/usr/bin/env python3
 """Update a TrueNAS Custom App's compose config via API."""
@@ -280,12 +298,14 @@ print(payload)
 ```
 
 ### Update an existing app compose (midclt - safe pattern)
+Only applies to midclt-managed apps (Dockhand, AdGuard Home) — everything else is Dockhand-managed,
+see the `docker compose up -d --force-recreate` pattern instead.
 ```bash
 # SAFE: stop first to avoid port conflicts, then update, then start
 eval $(ssh-agent -s) > /dev/null
 infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
 
-APP_NAME=commafeed
+APP_NAME=adguard-home
 # 1. Stop first
 ssh kero66@192.168.20.22 "sudo midclt call -j app.stop $APP_NAME 2>&1 | tail -2"
 # 2. Push new compose
@@ -308,11 +328,12 @@ ssh-agent -k > /dev/null
 ```
 
 ### Delete and re-create an app (nuclear option)
+Only for midclt-managed apps (Dockhand, AdGuard Home).
 ```bash
 eval $(ssh-agent -s) > /dev/null
 infisical secrets get kero66_ssh_key --env dev --path /TrueNAS --plain 2>/dev/null | ssh-add - 2>/dev/null
 
-APP_NAME=caddy
+APP_NAME=adguard-home
 ssh kero66@192.168.20.22 "sudo midclt call -j app.delete $APP_NAME 2>&1 | tail -2"
 python3 -c "
 import json
@@ -325,24 +346,26 @@ ssh-agent -k > /dev/null
 
 ### Restart an app (single-service standalone app)
 ```bash
-# For standalone apps (jellyfin, caddy, etc.) — stop/start via midclt
+# Only for midclt-managed apps (Dockhand, AdGuard Home) — jellyfin/caddy/etc. are
+# Dockhand-managed now, use `docker compose restart` instead (see "Docker on TrueNAS")
 ssh kero66@192.168.20.22 "sudo midclt call -j app.stop APP_NAME && sudo midclt call -j app.start APP_NAME"
 ```
 
 ### ⚠️ midclt MUST use sudo — fails silently without it
 ```
 # WRONG — runs as .UNAUTHENTICATED, returns job ID but does nothing:
-ssh kero66@192.168.20.22 "midclt call app.start bazarr"
+ssh kero66@192.168.20.22 "midclt call app.start adguard-home"
 
 # CORRECT:
 ssh kero66@192.168.20.22 "sudo midclt call -j app.start APP_NAME"
 ```
 TrueNAS audit log will show `.UNAUTHENTICATED` Method Call errors if sudo is omitted.
 
-### ⚠️ Multi-service apps (arr-stack, downloaders) — no per-service restart via midclt
-midclt only operates at the app level. To restart a single container within arr-stack or downloaders,
-stop/start the whole app — there is no per-service equivalent. Plan config changes to minimize full
-stack restarts.
+### ⚠️ Multi-service midclt apps — no per-service restart
+This limitation only matters if a midclt-managed app ever has multiple services again — currently
+neither Dockhand nor AdGuard Home does. It applied historically to arr-stack/downloaders back when
+they were midclt-managed; they're Dockhand-managed now, where `docker compose restart <service>`
+already supports per-container restart, so this limitation no longer applies to them.
 
 ---
 
@@ -402,10 +425,17 @@ ssh kero66@truenas "sudo docker compose -f /path/to/compose.yaml restart"
 # transcoding logs via the API or Grafana/Loki, not docker exec.
 ```
 
-### TrueNAS Docker network naming
-- TrueNAS creates networks named `ix-<APP_NAME>_default`
-- Example: jellyfin stack → `ix-jellyfin_default`
-- To join from another stack: add `ix-jellyfin_default` as external network in compose
+### Docker network naming
+- **Dockhand-managed apps** (nearly everything now) create bare compose-style networks:
+  `<stack-name>_default` — e.g. jellyfin stack → `jellyfin_default`, arr-stack →
+  `arr-stack_default`. Join these as `external: true` networks with the bare name (confirmed live
+  2026-09-13: `docker network ls` shows `arr-stack_default`/`downloaders_default`, no `ix-` prefix).
+- **midclt/TrueNAS-native apps** (Dockhand, AdGuard Home only) get the `ix-<APP_NAME>_default`
+  prefix instead — see `.claude/memory/feedback_dockhand_network_names.md` for the full gotcha
+  (a wrong network name here makes a Dockhand deploy silently "succeed" while creating zero
+  containers).
+- When in doubt, check `docker network ls` for the actual name rather than assuming either
+  convention.
 
 ---
 
@@ -1063,7 +1093,7 @@ head -20 "/mnt/Data/Servarr/shows/Series/Season 01/episode.en.srt"
 python3 - <<'PYEOF'
 import re, shutil
 
-SRT = '/mnt/Data/media/shows/Series/Season 01/episode.en.srt'
+SRT = '/mnt/Data/Servarr/shows/Series/Season 01/episode.en.srt'
 SHIFT_MS = -3213  # negative = shift earlier; measure from comparing embedded vs external sub
 
 def shift_ts(match):

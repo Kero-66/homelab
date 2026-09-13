@@ -1,6 +1,6 @@
 ---
 name: feedback_docker_policy
-description: "Consolidated docker/Dockhand policy: what's sanctioned (compose up/restart per CLAUDE.md, exec into a managed container for its own documented action) vs banned (inspect/ps/logs, bare docker restart, docker run for utility tasks, using docker to check health when Dockhand's UI already shows it)"
+description: "Consolidated docker/Dockhand policy: what's sanctioned (compose up/restart per CLAUDE.md, exec into a managed container for its own documented action, GET /api/containers?env=1 for health) vs banned (inspect/ps/logs, bare docker restart, docker run for utility tasks)"
 metadata:
   type: feedback
 ---
@@ -49,8 +49,15 @@ loophole every time. Treat everything below as absolute, not a judgment call.
 
 - **`docker ps` / `docker inspect` / `docker logs`** for health, status, or existence checks —
   ever, not even once, not even "just to confirm after a deploy". Use Dockhand's UI (Stacks page)
-  for container health/status — its API does not expose per-container health in this version
-  (`/api/stacks`, `/api/containers` return empty; don't waste time hunting for an equivalent).
+  or **`GET /api/containers?env=1`** (already documented in `ai/PATTERNS.md`'s "Dockhand API"
+  section — it returns full per-container health: `state`, `status` e.g. "Up 19 minutes
+  (healthy)", `health`, `mounts`, `networks`) for health/status instead. **Correction:** an
+  earlier version of this memory claimed Dockhand's API doesn't expose per-container health at
+  all — that was wrong, caused by testing `/api/containers` and `/api/stacks` *without* the
+  `env=1`/`environmentId=1` query param and getting empty results, then concluding the capability
+  didn't exist instead of checking `ai/PATTERNS.md` first (which already had the correct call).
+  `/api/stacks` genuinely is empty regardless of params — that endpoint is for "internal"
+  (non-git) stacks, and every stack here is git-managed — but `/api/containers?env=1` works.
   Use Grafana/Prometheus/Loki for logs/metrics. Use the relevant app's own API for its own state.
   If none of those can answer the question, stop and ask the user — don't decide unilaterally
   that docker directly is the exception this time.
