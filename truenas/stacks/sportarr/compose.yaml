@@ -59,7 +59,7 @@ services:
       - /mnt/Fast/docker/sportarr/config:/config
       - /mnt/Data/Servarr:/data
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:1867/ || exit 1
+      test: curl -sf http://localhost:1867/ || exit 1
       interval: 30s
       timeout: 10s
       retries: 3
