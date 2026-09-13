@@ -2,6 +2,14 @@
 
 This guide covers migrating the frontend stack (Homepage, Caddy, AdGuard Home) from workstation to TrueNAS.
 
+**⚠️ Historical record — this migration is done.** The "Web UI → Apps → Discover → Custom App"
+deploy method below is deprecated; Homepage and Caddy are Dockhand-managed now (git-stacks), and
+AdGuard Home is the one remaining midclt app pending its own Dockhand migration (see
+`truenas/HOWTO_MIGRATE_ADGUARD_TAILSCALE.md`). For a new stack today, use the Dockhand git-stack
+flow in `truenas/DOCKHAND_GITOPS_GUIDE.md` instead. The `docker ps`/`logs`/`exec` verification
+commands below are also fixed to use Dockhand's API rather than raw docker, since Homepage/Caddy
+are Dockhand-managed and its API works for them.
+
 ## Overview
 
 **What's being migrated:**
@@ -61,10 +69,11 @@ Via TrueNAS Web UI:
 
 **Verify .env generated:**
 ```bash
-ssh kero66@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env | head -5'
+# Variable names only, never cat a live secrets file
+ssh kero66@192.168.20.22 "grep -oE '^[A-Z_]+=' /mnt/Fast/docker/homepage/.env | head -5"
 ```
 
-Should show: `HOMEPAGE_VAR_SONARR_API_KEY=...`
+Should show `HOMEPAGE_VAR_SONARR_API_KEY=` (name only) present.
 
 ### Step 4: Update Caddyfile
 
@@ -101,7 +110,7 @@ scp truenas/stacks/caddy/Caddyfile \
 
 **Verify Caddy started:**
 ```bash
-ssh kero66@192.168.20.22 'docker logs caddy --tail 20'
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<caddy-id>/logs?env=1&tail=20"
 ```
 
 ### Deploy Homepage
@@ -114,7 +123,8 @@ ssh kero66@192.168.20.22 'docker logs caddy --tail 20'
 
 **Verify Homepage started:**
 ```bash
-ssh kero66@192.168.20.22 'docker ps | grep homepage'
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='homepage']"
 curl http://192.168.20.22:3000/
 ```
 
@@ -212,17 +222,19 @@ firefox http://adguard.home
 
 **If widgets fail:**
 ```bash
-# Check Homepage logs
-ssh kero66@192.168.20.22 'docker logs homepage --tail 50'
+# Check Homepage logs — via Dockhand's API, not docker logs
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<homepage-id>/logs?env=1&tail=50"
 
-# Check API keys are loaded
-ssh kero66@192.168.20.22 'docker exec homepage env | grep HOMEPAGE_VAR'
+# Check API keys are loaded — full inspect JSON includes .Config.Env, not docker exec env
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<homepage-id>?env=1" | \
+  python3 -c "import sys,json; [print(e) for e in json.load(sys.stdin)['Config']['Env'] if 'HOMEPAGE_VAR' in e]"
 ```
 
 ### Verify All Containers Healthy
 
 ```bash
-ssh kero66@192.168.20.22 'docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(homepage|caddy|adguard)"'
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['name'], c['status']) for c in json.load(sys.stdin) if c['name'] in ('homepage','caddy','adguard-home')]"
 ```
 
 All should show `Up X minutes (healthy)`.
@@ -246,7 +258,7 @@ Since services now use `.home` domains, update Homepage's `services.yaml`:
 **Update on TrueNAS:**
 1. Edit `/mnt/Fast/docker/homepage/config/services.yaml`
 2. Replace IPs with .home domains
-3. Restart Homepage: `docker restart homepage`
+3. Restart Homepage: `docker compose -f <path>/compose.yaml restart` (not a bare `docker restart`)
 
 Or update locally and re-migrate.
 
@@ -256,7 +268,8 @@ Or update locally and re-migrate.
 
 **Check AdGuard is running:**
 ```bash
-ssh kero66@192.168.20.22 'docker ps | grep adguard'
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers?env=1" | \
+  python3 -c "import sys,json; [print(c['status']) for c in json.load(sys.stdin) if c['name']=='adguard-home']"
 ```
 
 **Test DNS from workstation:**
@@ -275,38 +288,46 @@ cat /etc/resolv.conf
 
 **Check Caddyfile loaded:**
 ```bash
-ssh kero66@192.168.20.22 'docker exec caddy cat /etc/caddy/Caddyfile | head -20'
+# Read the live git-synced file directly, not docker exec cat — also worth checking whether
+# the container actually mounts from this path (see feedback_dockhand_sync_unreliable_verify_disk.md,
+# a stale bind-mount source is a real, confirmed failure mode)
+ssh kero66@192.168.20.22 "head -20 /mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/caddy/truenas/stacks/caddy/Caddyfile"
 ```
 
 **Check Caddy logs:**
 ```bash
-ssh kero66@192.168.20.22 'docker logs caddy --tail 50'
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<caddy-id>/logs?env=1&tail=50"
 ```
 
 **Verify Caddy can reach services:**
 ```bash
-ssh kero66@192.168.20.22 'docker exec caddy wget -O- http://jellyfin:8096/health'
+# Test from outside the container instead of docker exec — Caddy itself proxying to
+# jellyfin.home already proves this; or curl jellyfin's own health endpoint directly
+curl -s http://jellyfin.home/health
 ```
 
 ### Homepage API Keys Missing
 
 **Check Infisical Agent rendered .env:**
 ```bash
-ssh kero66@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env'
+# Check variable NAMES only, never cat a live secrets file — see
+# .claude/memory/feedback_no_secret_output.md
+ssh kero66@192.168.20.22 "grep -c '=' /mnt/Fast/docker/homepage/.env; grep -oE '^[A-Z_]+=' /mnt/Fast/docker/homepage/.env"
 ```
 
-Should contain `HOMEPAGE_VAR_*` variables.
+Should show `HOMEPAGE_VAR_*` variable names present.
 
 **If empty, check Infisical Agent logs:**
 ```bash
-ssh kero66@192.168.20.22 'docker logs infisical-agent --tail 50'
+curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<infisical-agent-id>/logs?env=1&tail=50"
 ```
 
 **Manually restart agent:**
 ```bash
-ssh kero66@192.168.20.22 'docker restart infisical-agent'
+# Not a bare docker restart — see .claude/memory/feedback_docker_policy.md
+ssh kero66@192.168.20.22 "cd /mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/infisical-agent/truenas/stacks/infisical-agent && sudo docker compose restart"
 sleep 30
-ssh kero66@192.168.20.22 'cat /mnt/Fast/docker/homepage/.env'
+ssh kero66@192.168.20.22 "grep -c '=' /mnt/Fast/docker/homepage/.env"
 ```
 
 ### Port 53 Conflict (AdGuard DNS)
