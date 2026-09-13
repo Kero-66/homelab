@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ⚠️ STALE — Jackett is no longer deployed (no compose stack references it), superseded by
+# Prowlarr's native indexers. This script will not work as-is; kept for historical reference.
+#
 # Helper: list Jackett Torznab feed URLs and optionally add them to Prowlarr
 #
 # Environment variables used:

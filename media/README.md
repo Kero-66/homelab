@@ -297,8 +297,9 @@ bash scripts/configure_anime_indexers.sh     # Anime-specific (Nyaa, DMHY, BakaB
 # Check all Prowlarr indexers (13 total):
 sqlite3 prowlarr/prowlarr.db "SELECT Name FROM Indexers ORDER BY Name;"
 
-# Check Jackett is using FlareSolverr:
-docker logs jackett | grep FlareSolverr
+# Jackett is no longer deployed (Prowlarr's native indexers replaced it) — if checking
+# FlareSolverr usage for a current indexer, use Dockhand's API instead of docker logs:
+# curl -s -b "$COOKIEJAR" "http://192.168.20.22:30328/api/containers/<id>/logs?env=1" | grep FlareSolverr
 ```
 
 ### Jellyfin Setup (Automated)
@@ -421,12 +422,13 @@ Once your containers are up and running, you can test your connection is correct
 
 > [!Note]
 > If you run into issues try restarting the stack with `docker compose restart`.
+> **Gluetun is not currently deployed** in this repo (commented out in `truenas/stacks/downloaders/compose.yaml`) — this section is generic reference from the gluetun project, not a description of live infrastructure. If it's ever enabled, the `docker run`/`docker exec -it` below should NOT be used against a Dockhand-managed host — see `.claude/memory/feedback_docker_policy.md` — use `docker compose exec` from the git-synced compose path instead.
 ```bash
 docker run --rm --network=container:gluetun alpine:3.18 sh -c "apk add wget && wget -qO- https://ipinfo.io"
 ```
 If you'd like to test Gluetun connectivity from a container using the service jump into the `docker compose exec` console and run the `wget` command below. Tested with `qbittorrent` and `prowlarr` containers. Ensure you open the ports through the the `gluetun` container.
 ```bash
-docker exec -it container_name bash
+docker compose exec container_name bash
 wget -qO- https://ipinfo.io
 ```
 ### Passing Through Containers

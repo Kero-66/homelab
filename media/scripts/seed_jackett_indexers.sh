@@ -2,6 +2,9 @@
 # seed_jackett_indexers.sh
 # Purpose: Seed Jackett-based Torznab indexers into Prowlarr database
 # These indexers require Jackett to be running and accessible via Docker network
+#
+# ⚠️ STALE — Jackett is no longer deployed (no compose stack references it), superseded by
+# Prowlarr's native indexers. This script will not work as-is; kept for historical reference.
 
 set -euo pipefail
 

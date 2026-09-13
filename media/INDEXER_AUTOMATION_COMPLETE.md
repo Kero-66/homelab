@@ -1,5 +1,8 @@
 # ✅ COMPLETE: Indexer & FlareSolverr Automation Setup
 
+**Note:** Jackett (mentioned below) is no longer deployed — Prowlarr's native indexers replaced
+it since this was written. Historical record, not current setup.
+
 ## 🎯 Project Summary
 
 **Objective**: Fully automate Prowlarr indexer configuration with proper FlareSolverr proxy setup for Cloudflare protection.

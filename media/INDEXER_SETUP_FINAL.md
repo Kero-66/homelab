@@ -1,5 +1,8 @@
 # ✅ FINAL: Indexer Automation - Complete & Tested
 
+**Note:** Jackett (mentioned below) is no longer deployed — Prowlarr's native indexers replaced
+it since this was written. Historical record, not current setup.
+
 ## Status: WORKING ✅
 
 **12 Indexers fully automated and verified:**

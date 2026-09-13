@@ -1,5 +1,9 @@
 # Complete Indexer & FlareSolverr Automation Setup
 
+**⚠️ Historical — Jackett is no longer deployed.** No current compose stack references it;
+Prowlarr's native indexers (see this session's Sportarr/RuTracker work) replaced this setup.
+Kept for historical reference only.
+
 ## ✅ Current Status
 
 ### Prowlarr
