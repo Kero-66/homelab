@@ -84,3 +84,9 @@ templates:
     destination-path: /output/gamarr/.env
     config:
       polling-interval: 5m
+
+  # Sportarr secrets (own API key once generated, Prowlarr API key)
+  - source-path: /config/sportarr.tmpl
+    destination-path: /output/sportarr/.env
+    config:
+      polling-interval: 5m
