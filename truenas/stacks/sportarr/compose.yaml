@@ -13,6 +13,13 @@
 #   across separate bind mounts even on the same filesystem, and Sportarr's
 #   view of a download's path must match qBittorrent's/SABnzbd's exactly.
 #     /mnt/Data/Servarr -> /data
+#       /data/downloads/sports  (qBittorrent/SABnzbd category "sports" —
+#                                 same per-app category pattern as gamarr's
+#                                 /data/downloads/games; created empty,
+#                                 point the download clients' "sports"
+#                                 category save path here in their own UIs)
+#       /data/sports             (library root — set as Sportarr's root
+#                                 folder in Settings > Media Management)
 #
 # Secrets:
 #   Rendered by Infisical Agent from truenas/stacks/infisical-agent/sportarr.tmpl
