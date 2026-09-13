@@ -138,8 +138,7 @@ Fast/
 
 | Share Path | Mount Point | Description | Access |
 |------------|-------------|-------------|--------|
-| 192.168.20.22:/mnt/Data/media | /data/media | Media files | kero66 (1000:1000) |
-| 192.168.20.22:/mnt/Data/downloads | /data/downloads | Download directory | kero66 (1000:1000) |
+| 192.168.20.22:/mnt/Data/Servarr | /data/servarr | Unified media+downloads dataset (old `/mnt/Data/media`/`/mnt/Data/downloads` paths are unmounted, see CLAUDE.md) | kero66 (1000:1000) |
 | 192.168.20.22:/mnt/Fast/docker | /docker-configs | Container configs | kero66 (1000:1000) |
 
 **Network**: 192.168.20.0/24 (local network only)
@@ -255,8 +254,8 @@ Use the setup script or web UI to create datasets:
 **Enable NFS** (recommended for Linux Docker host):
 1. System Settings → Services → NFS → Enable
 2. Create NFS shares for:
-   - /mnt/Data/media → export to your Docker host
-   - /mnt/Data/downloads → export to your Docker host
+   - /mnt/Data/Servarr → export to your Docker host (unified dataset; old /mnt/Data/media and
+     /mnt/Data/downloads paths are unmounted, see CLAUDE.md)
    - /mnt/Fast/docker → export to your Docker host
 
 **SMB already enabled** ✓ (for Windows/Mac access)
@@ -267,7 +266,7 @@ Use the setup script or web UI to create datasets:
 2. **Mount TrueNAS shares** on Docker host (via NFS or run Docker on TrueNAS directly)
 3. **Update docker-compose.yml** paths:
    ```yaml
-   DATA_DIR=/mnt/Data/media
+   DATA_DIR=/mnt/Data/Servarr
    CONFIG_DIR=/mnt/Fast/docker
    ```
 4. **Start services** and verify

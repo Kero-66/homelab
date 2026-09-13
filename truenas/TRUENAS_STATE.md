@@ -1,6 +1,17 @@
 # TrueNAS State Assessment
 _Captured: 2026-05-31, refreshed 2026-08-15_
 
+**⚠️ SUPERSEDED — this snapshot predates (or just barely missed) the Dockhand migration
+completed 2026-08-15.** The "currently midclt-managed" list below is the single most
+out-of-date fact in this repo: caddy, commafeed, jellyfin, arr-stack, downloaders, homepage,
+fileflows, and tailscale are all Dockhand-managed now (docker compose via git-stacks) — midclt
+is reserved for Dockhand itself and AdGuard Home only, per current CLAUDE.md. The `/mnt/Data/media`
+and `/mnt/Data/downloads` paths below are also the old, unmounted, pre-unified-dataset paths
+(current: `/mnt/Data/Servarr/...`), and the `ix-*` network names only apply to genuine
+midclt/native apps now, not Dockhand-managed ones. Treat everything below as a historical
+snapshot, not current state — check `truenas/DOCKHAND_READINESS.md`, `GET /api/git/stacks`, or
+CLAUDE.md for what's actually true today.
+
 ## Hardware
 
 | Item | Value |
