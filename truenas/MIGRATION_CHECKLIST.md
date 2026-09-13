@@ -17,7 +17,7 @@
 - [ ] Check `truenas/scripts/` for existing migration scripts
 - [ ] Review completed migrations in `ai/todo.md` (look for "✅ COMPLETED" TrueNAS tasks)
 - [ ] Read `truenas/DEPLOYMENT_GUIDE.md` for deployment patterns
-- [ ] Check `.github/TROUBLESHOOTING.md` for known issues
+- [ ] Check `TROUBLESHOOTING.md` for known issues
 
 ### ✅ Step 3: Document Current State
 - [ ] Screenshot or note current service configuration
@@ -101,7 +101,7 @@ curl http://192.168.20.22:<port>/
 
 ### ✅ Step 11: Update Documentation
 - [ ] Mark task as completed in `ai/todo.md`
-- [ ] Add working commands to `.github/TROUBLESHOOTING.md`
+- [ ] Add working commands to `TROUBLESHOOTING.md`
 - [ ] Update `ai/reference.md` if using external documentation
 - [ ] Update MEMORY.md if new patterns discovered
 
@@ -172,6 +172,6 @@ docker compose -f <service>/compose.yaml up -d
 
 If stuck, check:
 1. `ai/todo.md` - Recent completed migrations
-2. `.github/TROUBLESHOOTING.md` - Known issues and solutions
+2. `TROUBLESHOOTING.md` - Known issues and solutions
 3. `truenas/DEPLOYMENT_GUIDE.md` - Step-by-step deployment instructions
 4. TrueNAS logs: Apps → <service> → Logs

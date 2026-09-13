@@ -13,7 +13,7 @@ Requires: `claude` CLI installed and authenticated, `git` available.
 What it does:
 1. Adds plugin marketplaces (caveman, mempalace)
 2. Installs plugins: context7, github, caveman, mempalace
-3. Copies hooks from `ai/hooks/` → `~/.claude/hooks/`
+3. Copies hooks from `.claude/setup/hooks/` → `~/.claude/hooks/`
 4. Installs `ai/settings.json` → `~/.claude/settings.json` (skips if exists)
 5. Clones `Kero-66/skills` fork → `~/repos/skills` and links all skills to `~/.claude/skills`
 

@@ -287,5 +287,5 @@ ssh kero66@192.168.20.22 "sudo docker exec caddy caddy reload --config /etc/cadd
 - **Architecture**: `truenas/README.md`
 - **Frontend stack**: `truenas/FRONTEND_STACK_DEPLOYMENT.md`
 - **Migration checklist**: `truenas/MIGRATION_CHECKLIST.md`
-- **Troubleshooting**: `.github/TROUBLESHOOTING.md`
+- **Troubleshooting**: `TROUBLESHOOTING.md`
 - **TrueNAS API**: https://www.truenas.com/docs/scale/api/

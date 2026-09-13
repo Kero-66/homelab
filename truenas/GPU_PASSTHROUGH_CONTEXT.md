@@ -179,7 +179,7 @@ sudo reboot
 ## Related Documentation
 
 - Main technical docs: `/mnt/library/repos/homelab/docs/GPU_PASSTHROUGH_STATE.md`
-- This context file: `/mnt/library/repos/homelab/.github/GPU_PASSTHROUGH_CONTEXT.md`
+- This context file: `/mnt/library/repos/homelab/truenas/GPU_PASSTHROUGH_CONTEXT.md`
 
 ## Quick Reference
 

@@ -97,7 +97,7 @@ We need agent/AI-agnostic documentation that works for Claude Code, GitHub Copil
 
 ## Common Gotchas
 - Don't use `python -m json.tool` → use `jq`
-- See: .github/TROUBLESHOOTING.md for full list
+- See: truenas/TROUBLESHOOTING.md for full list
 
 ## Active Work
 - See: ai/SESSION_NOTES.md for current session context
@@ -106,7 +106,7 @@ We need agent/AI-agnostic documentation that works for Claude Code, GitHub Copil
 ## For more details:
 - Architecture: truenas/README.md
 - Deployment: truenas/DEPLOYMENT_GUIDE.md
-- Troubleshooting: .github/TROUBLESHOOTING.md
+- Troubleshooting: truenas/TROUBLESHOOTING.md
 ```
 
 ---
@@ -224,4 +224,4 @@ Example:
 **Reference, don't duplicate:**
 - Deployment procedures → truenas/DEPLOYMENT_GUIDE.md
 - Architecture → truenas/README.md
-- Troubleshooting → .github/TROUBLESHOOTING.md
+- Troubleshooting → truenas/TROUBLESHOOTING.md

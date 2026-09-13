@@ -537,4 +537,4 @@ docker compose --profile media up -d
 **Need Help?** Check:
 - TrueNAS logs: Apps → <app name> → Logs
 - Agent logs: Apps → infisical-agent → Logs
-- [TROUBLESHOOTING.md](../../.github/TROUBLESHOOTING.md) for common issues
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues
