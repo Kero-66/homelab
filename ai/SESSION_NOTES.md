@@ -4,6 +4,29 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-09-15 - Maintainerr investigation: any-user watch status, stuck watch-sweep items, cross-app exclusion tagging (IN PROGRESS — see `ai/todo.md` #136)
+
+### Context
+User reported (a) tagging delays / cleanup seeming inconsistent, (b) worry that watch-status checks across all Jellyfin household users could delete something they hadn't personally watched. Investigated live against Maintainerr's own API (`http://192.168.20.22:6246`, no auth) and its source (`github.com/Maintainerr/Maintainerr`, cloned read-only to scratchpad each time, never committed).
+
+### Findings
+1. **`isWatched` (the rule property both cleanup rules use) is watched-by-any-user, confirmed via source** (`jellyfin-adapter.service.ts` → `getAllUserItemData` iterates every Jellyfin user). No per-user toggle exists for it. User wants "watched by me" — needs a second rule condition using the `seenBy` property (`[list] Viewed by (username)`, app id 6 / property id 1) with `CONTAINS kero66`, ANDed onto the existing `isWatched` condition, on both rule groups (episode collection id 2, movie collection id 3). Not applied yet — needs doing via Maintainerr's UI, no API path found for adding rule conditions.
+2. **Tekkaman Blade tag-not-clearing, resolved as user error, not a bug**: user had un-excluded the Radarr-side (movie) exclusion but not the separate Sonarr-side (show) exclusion — Maintainerr tracks exclusions per media item with no cross-linking between a title's show and movie entries, and only untags Sonarr once *zero* exclusion rows remain for that item.
+3. **`.hack` — 7 of 8 watched episodes stuck for ~3 weeks, self-resolved by a manual trigger, root cause NOT confirmed.** Full writeup + next steps in `ai/todo.md` #136. Short version: watched (`Played:true`, confirmed via Jellyfin API) 08-25 through 09-04, never appeared in Maintainerr's cleanup collection despite the full-library sweep running clean (no errors, no fallback warnings) every ~8h the whole time per Loki (retained back to 08-21). A manually-triggered `POST /api/rules/2/execute` (after bumping log level to debug) picked up all 7 in a single run. Debug logging is **currently ON** (`POST /api/logs/settings {"level":"debug",...}` — was `info`) specifically to catch this if it recurs on another show; revert once confirmed stable.
+4. **Confirmed cleanup/deletion itself is NOT broken** — corrected an earlier wrong read of the data (all `addDate`s clustering to the last 2 days looked like a stuck rebuild, but Loki logs show normal steady-state adds+deletes happening on schedule, e.g. real Sonarr episode deletions logged 09-14 00:03).
+5. **Cross-app tag propagation is one-way by design**: Maintainerr's `retain` Sonarr/Radarr tag is Maintainerr→arr only (`servarr-tag.service.ts`, Behavior B), applied/removed only through Maintainerr's own exclude/un-exclude actions. A `retain` tag set by hand directly in Sonarr/Radarr is never read back as an exclusion signal — this was silently assumed otherwise and is worth remembering for any future "why didn't Maintainerr respect this tag" question.
+
+### Open (see `ai/todo.md` #136 for full detail)
+- Add the `seenBy CONTAINS kero66` condition to both rule groups (watched-by-me, not watched-by-anyone).
+- Revert Maintainerr log level `debug`→`info` once satisfied the `.hack`-style gap isn't recurring (or leave on and watch if it happens again).
+- `.hack` stuck-item root cause still unknown — candidates are a cache-eviction gap or the `checkAutomaticMediaServerLink` resync path, not confirmed.
+- Minor, not chased: the 7 newly-recovered `.hack` items got `addDate` backdated to match existing items (2026-09-13) instead of the actual add date (09-15) — could be a display artifact or a real timestamp bug.
+
+### Process note
+Used Grafana's Loki datasource-proxy (`ai/PATTERNS.md` "Querying it back") for all maintainerr log inspection — no `docker logs` used. Cloned Maintainerr's GitHub source read-only into the scratchpad directory (never committed, deleted after each use) to read actual rule-property/getter/tag-sync implementation rather than guessing from the UI — this was essential; several plausible-sounding theories (Jellyfin v12 auth header change, snapshot ceiling exceeded, rule-removed-orphan blacklist) were each ruled out by reading the real code before being reported to the user, and should be re-checked from source rather than assumed if this class of question comes up again.
+
+---
+
 ## Session 2026-09-12 to 2026-09-13 - Tekkaman Blade specials: subtitles not loading + wrong episode titles + re-source to clean release group (COMPLETE)
 
 Follow-up to the same-day session below. The 4 Season 0 specials fixed there had working `.en.cc.srt` sidecar files per Bazarr, but the user reported "still missing subtitle" on Fire TV, and separately that titles/order looked wrong.
