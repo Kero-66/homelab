@@ -4,6 +4,32 @@ This file captures active session context, decisions, and in-progress research t
 
 ---
 
+## Session 2026-09-15 (later) - `watch-orders-runner` built and deployed + SmartLists-vs-manual decision framework sharpened (COMPLETE)
+
+### What was built
+1. **New Dockhand stack `watch-orders-runner`** (`truenas/stacks/watch-orders-runner/`) — a minimal `python:3.13-alpine` container + plain sleep loop (no cron daemon) that reruns `build_playlist.py` daily for every manual-JSON franchise (fixed list in `entrypoint.sh`, matching `README.md`'s "Manual" rows). Gives the manual playlists the auto-grow-on-existing-entries + self-prune-on-removal behavior the user wanted, without needing MDBList hosting or a third-party tool (Linearr evaluated and rejected — needs a Jellyfin username+password due to an upstream Jellyfin bug on API-key playlist auth, not worth the credential downgrade for what it adds over a scheduled rerun of our own script).
+2. **`build_playlist.py` fixes**: `JELLYFIN_OWNER_USERID` override (was always picking `/Users[0]`, unsafe unattended — same bug already fixed once in `smartlist.py`), `JELLYFIN_BASE_URL` override (container has no `.home` DNS guarantee, unlike an SSH host shell).
+3. **Real design fix, prompted by direct user pushback ("what's the point of it growing automatically if you can't even create the playlist with gaps")**: `build_playlist.py` was all-or-nothing — one missing title blocked the *entire* file, so an in-progress franchise like Gundam UC could never get a playlist at all no matter how much was already downloaded, defeating the whole point of automating reruns. Fixed: missing-content lookups now raise a distinct `MissingContent` exception, caught per-entry and skipped-with-a-logged-reason instead of aborting; the playlist builds from whatever resolves. Confirmed live: Gundam UC now has a real 162-item playlist, cleanly skipping the 6 still-missing entries (both IGLOO movies, G-Saviour, Narrative, Gundam ZZ — see `ai/todo.md` #137), auto-completing as each lands.
+4. **6 title-string bugs found+fixed in `gundam_uc.json`** via live verification against Sonarr/Radarr (not guessed): Radarr uses an en-dash not a hyphen for Origin IV/VI, a colon not a dash for Origin V, Hathaway's real title has no resemblance to the placeholder, "Narrative" has no colon, IGLOO 2 is season 3 of a combined series not its own series.
+
+### Two real mistakes made and fixed live during deployment (both navigation errors, not process gaps)
+- Assumed a relative bind-mount (`../../../media/scripts/watch_orders`) would resolve against a full monorepo clone the way `infisical-agent`'s own `./` template mount does — wrong: Dockhand's git sync for a stack only checks out that stack's *own* folder, so the mount silently resolved to an empty auto-created directory instead of erroring. Fixed by switching to the same scp-to-`/mnt/Fast/docker/<name>/` pattern every other Dockhand app's non-compose config already uses.
+- Used a stale/orphaned pre-Dockhand-migration `compose.yaml` path (`.../stacks/infisical-agent/compose.yaml`, missing the `/TrueNAS/` environment segment) for a manual force-recreate, which broke `infisical-agent`'s mounts and crash-looped it (`Unable to locate /config/agent-config.yaml`) until caught and fixed against the correct path (`.../stacks/TrueNAS/infisical-agent/compose.yaml`). Both paths coexist on disk; only one is live.
+
+### Dockhand version check (user updated it mid-session)
+Confirmed running `v1.0.47` (2026-09-12), which per its changelog + `Finsys/dockhand#1523` already fixes the documented "'always redeploy' git stacks don't actually force-recreate" bug — meaning this repo's own `forceRedeploy: true` workaround (applied to `arr-stack`/`grafana-alloy` 2026-09-11) **was itself not working** before this fix. Updated `.claude/memory/feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md`, `feedback_dockhand_sync_unreliable_verify_disk.md`, `MEMORY.md`, and `ai/PATTERNS.md` to reflect this. The separate "`sync` silently doesn't write the file" bug is **not** confirmed fixed by this release — still verify by diffing on-disk paths for anything that matters.
+
+### SmartLists vs. manual-runner decision framework (sharpened this session, see `media/scripts/watch_orders/README.md`)
+Walked through several real comparisons (Attack on Titan, Zoids, Maison Ikkoku — all genuinely zero-judgment release-order cases where SmartLists wins outright; corrected a factual error along the way — IMDb lists CAN do episode-level ordering, proven by the working Clone Wars list, not just Trakt as the README previously claimed). Landed on a sharper rule than "chronological needs the runner": **verification cost is paid either way** (the Gundam UC IMDb list sat live with real gaps until we happened to check it — proof that trusting an external curator isn't actually free). So the dividing line isn't capability, it's judgment: SmartLists wins for zero-opinion cases (plain release-order/genre-rule matches, genuine unattended growth for wholly new titles); the runner is now the safer default for anything with real curatorial judgment in it (which version counts, where side content slots), since building it ourselves means not re-trusting a stranger's future edits forever.
+
+### Declined, not pursued
+`ranaldsgift/KefinTweaks` (client-side JS plugin) would add playlist-sourced home-screen sections and fix Jellyfin's playlist-always-restarts-from-item-1 behavior — user explicitly declined ("js injection isn't fun to work with"). See `ai/todo.md` #139, closed.
+
+### Open follow-ups
+See `ai/todo.md` #137 (IGLOO 2 title-vs-content ambiguity), #138 (check whether an IMDb list now covers Steins;Gate's exact order, given the IMDb-episode-level correction above).
+
+---
+
 ## Session 2026-09-15 - Maintainerr investigation: any-user watch status, stuck watch-sweep items, cross-app exclusion tagging (IN PROGRESS — see `ai/todo.md` #136)
 
 ### Context

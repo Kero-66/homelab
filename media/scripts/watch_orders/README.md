@@ -5,14 +5,38 @@ Built 2026-09-12. Two methods, pick based on whether a franchise needs a movie/O
 
 - **SmartLists** (`smartlist.py`) — auto-refreshing, driven by an IMDb/Trakt/MDBList/TMDB external
   list or native field-sort rules. Use when it works; check first.
-- **Manual playlist** (`build_playlist.py` + a `<franchise>.json`) — a plain Jellyfin playlist
-  built once from a curated JSON. Does **not** auto-refresh on new/re-slotted content — rerun the
-  script when content changes. It already self-prunes on *removal* for free, no rerun needed:
-  Jellyfin drops a dead item reference from a playlist automatically when the item is deleted
-  (confirmed empirically, Tekkaman Blade session 2026-09-13 — a Radarr file swap silently dropped
-  the playlist from 60 to 56 items with no error). Necessary whenever a movie/OVA needs mid-season
-  placement, since no external-list provider supports episode-level ordering except Trakt
-  (paywalled, see below).
+- **Manual playlist** (`build_playlist.py` + a `<franchise>.json`, via `watch-orders-runner`) — a
+  plain Jellyfin playlist, rebuilt daily from a curated JSON. Auto-grows within any already-written
+  entry (a new episode airing in a referenced season splices in on the next daily sweep, no JSON
+  edit) and self-prunes on *removal* for free (Jellyfin drops a dead item reference from a playlist
+  automatically when the item is deleted — confirmed empirically, Tekkaman Blade session
+  2026-09-13). Builds a **partial** playlist from whatever's available if some entries aren't
+  downloaded yet, rather than an all-or-nothing block (fixed 2026-09-15, see `build_playlist.py`'s
+  module docstring). A genuinely new title still needs a human to add a JSON line — inherent to
+  hand-curated order, not fixable by more automation (confirmed 2026-09-15, see the MDBList/Linearr
+  writeup below).
+
+  **Correction (2026-09-15): IMDb lists CAN do episode-level ordering** (proven — the Star Wars:
+  Clone Wars SmartList below is 39/39 episodes including the film, via a plain IMDb list). The
+  earlier "no external-list provider supports episode-level ordering except Trakt" claim in this
+  README was wrong for IMDb specifically — only MDBList/TMDB/Letterboxd are structurally
+  movie/show-only. **The real reason a franchise needs the manual path isn't "mid-season insertion
+  is impossible externally" — it's one of these two narrower things:** (1) no existing public list
+  encodes the exact structure wanted (a real *availability* gap — worth actually searching for
+  before assuming, not asserting from category alone), or (2) the correct order depends on a
+  decision specific to what *we* own/prefer (e.g. Gundam UC's movie-trilogy-over-TV-series choice)
+  that no generic external list can make for us.
+
+  **A further, sharper point (2026-09-15): even a *found* external list still needs the same
+  verification effort as building one ourselves.** The Gundam UC IMDb list sat live, apparently
+  fine, until we happened to actually check it against what we own and found it was both missing
+  entries and using the wrong version of the content — proof that "trust an external curator" isn't
+  free, it's a standing risk of silent drift, whether checked once or never. Given verification cost
+  is paid either way, prefer building it ourselves for anything with real curatorial judgment in it
+  (which movie/version counts, where side content slots) — SmartLists' remaining clear win is only
+  the *zero-judgment* case: plain release-order sorts / genre-rule matches where there's no opinion
+  being encoded at all (see Attack on Titan/Zoids/Maison Ikkoku checks below), where it also gets
+  genuine unattended growth for wholly new titles that the manual path can never replicate.
 
 **Considered and rejected (2026-09-15): hosting our own curated order on MDBList instead of a
 local JSON.** SmartLists has no native "hand-specify this exact order" concept — the *only* way to
