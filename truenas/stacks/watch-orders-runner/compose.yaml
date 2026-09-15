@@ -26,10 +26,11 @@
 #
 # Playlist removal is already automatic for free (Jellyfin drops a dead item
 # reference from a playlist when the item is deleted) -- this container only
-# needs to handle growth. A franchise whose content isn't fully downloaded yet
-# (e.g. Gundam UC as of 2026-09-15) fails loudly per-file in the logs and is
-# retried next run -- harmless, and it starts working the moment the content
-# lands, no manual trigger needed.
+# needs to handle growth. build_playlist.py builds a PARTIAL playlist from
+# whatever's already available and logs (not fails on) any entry that isn't
+# downloaded yet -- a franchise mid-acquisition (e.g. Gundam UC as of
+# 2026-09-15) gets a real, usable playlist today from what you already have,
+# not nothing, and the missing entries splice in automatically once they land.
 # =============================================================================
 
 services:

@@ -33,7 +33,7 @@ externally just to get SmartLists' auto-refresh.
 | Macross | SmartLists | IMDb list `ls560970728` ("Continuity Order") | 163 items, 2026-09-11 |
 | Monogatari | SmartLists | native rule, sort by ReleaseDate — release order is the community-*preferred* order here, not a stand-in for continuity (chronological "removes a lot of the fun") | 107 items, 2026-09-11 |
 | Gurren Lagann | SmartLists | native rule, sort by ReleaseDate — the 2 movies are recap compilations of the same TV series, no separate continuity slot exists for them | 33 items, 2026-09-11 |
-| Gundam Universal Century | Manual (`gundam_uc.json`) | Superseded the SmartLists IMDb-list version (`ls560971030`) 2026-09-15: that list was missing Doan's Island/G-Saviour (mid-sequence, same limitation as Trigun/Votoms/etc.) and used the raw 43-episode 1979 TV series instead of the community-preferred movie trilogy. **Blocked** on several titles still missing content (IGLOO x2, G-Saviour, Gundam ZZ, `Mobile Suit Gundam Narrative`) — see `ai/todo.md`. `watch-orders-runner` retries it automatically every sweep, no manual trigger needed once the content lands. | not yet built — blocked, see `_comment` in the JSON |
+| Gundam Universal Century | Manual (`gundam_uc.json`) | Superseded the SmartLists IMDb-list version (`ls560971030`) 2026-09-15: that list was missing Doan's Island/G-Saviour (mid-sequence, same limitation as Trigun/Votoms/etc.) and used the raw 43-episode 1979 TV series instead of the community-preferred movie trilogy. **Partially built, mid-acquisition** — several titles still missing content (IGLOO x2, G-Saviour, Gundam ZZ, `Mobile Suit Gundam Narrative`) get skipped (not blocking) every sweep, see `ai/todo.md`; the rest of the sequence is live and splices in the missing entries automatically once each lands. | partial, growing daily as content downloads — see container logs for exactly what's still missing |
 | Star Wars: The Clone Wars | SmartLists | IMDb list `ls544963772` (chronological, incl. film) | 39/39 episodes, 2026-09-11 |
 | Trigun | Manual (`trigun.json`) | community consensus (movie between ep10/11) | 27 items, 100% content owned, 2026-09-12 |
 | Votoms | Manual (`votoms.json`) | HIDIVE viewing guide + library season mapping | 81 items, 100% content owned, 2026-09-12 |
@@ -65,9 +65,12 @@ What this buys, and what it doesn't:
   the JSON, same as it always did. No amount of automation removes this decision; it's inherent to
   hand-curated chronological order (confirmed this isn't unique to our approach — even the
   MDBList-hosting alternative considered and rejected above needs the same manual step).
-- A franchise missing content (e.g. Gundam UC as of 2026-09-15) fails loudly in the container's
-  logs every sweep and is simply retried next time — harmless, and it starts working the moment
-  the content lands, no manual trigger needed.
+- **A franchise still mid-acquisition gets a real, partial playlist today, not nothing** —
+  `build_playlist.py` builds from whatever resolves and logs (not fails on) any entry it can't find
+  yet, so e.g. Gundam UC gets a playlist covering however much is downloaded right now, and the
+  missing entries splice in automatically as each one lands. Originally shipped as an all-or-nothing
+  design (one missing title blocked the whole file) — changed 2026-09-15 after this defeated the
+  actual point of automating reruns for an in-progress franchise.
 
 **Considered and rejected: a real Jellyfin plugin, TrueNAS host crontab, or Linearr** (a
 third-party "show sequencer" tool, evaluated 2026-09-15) — see `.claude/memory/` /

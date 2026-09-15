@@ -19,8 +19,11 @@ while true; do
       continue
     fi
     echo "$(date -Iseconds) watch-orders-runner: building $name"
+    # build_playlist.py exits 0 and builds a partial playlist for entries
+    # still missing content -- a nonzero exit here is a real bug (bad JSON,
+    # missing JELLYFIN_KEY), not "still downloading", and is worth noticing.
     if ! python3 /scripts/build_playlist.py "$f"; then
-      echo "$(date -Iseconds) watch-orders-runner: FAILED $name (see error above, e.g. missing content) -- will retry next sweep"
+      echo "$(date -Iseconds) watch-orders-runner: FAILED $name (see error above) -- will retry next sweep"
     fi
   done
   echo "$(date -Iseconds) watch-orders-runner: sweep complete, sleeping ${INTERVAL_SECONDS}s"
