@@ -1,0 +1,16 @@
+# Watch-orders runner secrets - rendered by Infisical Agent
+# DO NOT EDIT - this file is auto-generated every 5 minutes
+# Source: Infisical project, dev environment, /media path (reuses the same
+# Jellyfin API key every other media-stack integration uses)
+#
+{{- with secret "5086c25c-310d-4cfb-9e2c-24d1fa92c152" "dev" "/media" }}
+{{- range . }}
+{{- if eq .Key "JELLYFIN_API_KEY" }}
+JELLYFIN_KEY={{ .Value }}
+{{- end }}
+{{- end }}
+{{- end }}
+# Not a secret (Jellyfin user GUID, not a credential) - kept here rather than
+# in compose.yaml so it lives with the rest of this stack's config in one
+# place. kero66's Jellyfin user id, confirmed live via /Users.
+JELLYFIN_OWNER_USERID=1ecfce63139f4501a4d498e372e1ee3d

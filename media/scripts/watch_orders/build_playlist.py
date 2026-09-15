@@ -3,6 +3,10 @@
 
 Usage: JELLYFIN_KEY=... python3 build_playlist.py macross.yaml
 
+Playlist ownership defaults to the first user returned by /Users -- unusable for
+unattended/scheduled runs since ordering isn't guaranteed to be a specific person.
+Set JELLYFIN_OWNER_USERID to pin it explicitly (same override as smartlist.py).
+
 Each top-level key in the YAML (e.g. release_order, chronological_order)
 becomes a playlist named "<Franchise> (<Key, title-cased with underscores as spaces>)".
 Re-running deletes and recreates the playlist by name, so editing the YAML
@@ -26,7 +30,11 @@ import sys
 import urllib.parse
 import urllib.request
 
-BASE = "http://jellyfin.home"
+# jellyfin.home (via Caddy) works from a host shell (SSH session, workstation)
+# where AdGuard resolves .home -- a container on the jellyfin_default network
+# has no such guarantee, so it overrides this to the Docker service name
+# instead (see truenas/stacks/watch-orders-runner/compose.yaml).
+BASE = os.environ.get("JELLYFIN_BASE_URL", "http://jellyfin.home")
 KEY = os.environ["JELLYFIN_KEY"]
 
 
@@ -108,6 +116,9 @@ def resolve_entry(entry):
 
 
 def user_id():
+    override = os.environ.get("JELLYFIN_OWNER_USERID")
+    if override:
+        return override
     users = call("/Users")
     return users[0]["Id"]
 

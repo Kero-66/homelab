@@ -90,3 +90,9 @@ templates:
     destination-path: /output/sportarr/.env
     config:
       polling-interval: 5m
+
+  # Watch-orders runner secrets (Jellyfin API key, reused from jellyfin.tmpl's source)
+  - source-path: /config/watch-orders-runner.tmpl
+    destination-path: /output/watch-orders-runner/.env
+    config:
+      polling-interval: 5m

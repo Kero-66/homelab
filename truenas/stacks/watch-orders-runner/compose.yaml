@@ -1,0 +1,57 @@
+# =============================================================================
+# Watch-Orders Runner - TrueNAS Scale (Dockhand-managed)
+# =============================================================================
+# Periodically reruns the manual franchise-watch-order playlists
+# (media/scripts/watch_orders/*.json, built by build_playlist.py) so new
+# episodes/seasons already covered by an existing entry splice in automatically,
+# without a human remembering to rerun the script. Genuinely new titles (never
+# referenced by any entry) still need a human to add a line to the JSON first --
+# see media/scripts/watch_orders/README.md.
+#
+# Deliberately minimal: python:alpine + a plain sleep loop, no cron daemon/app
+# (build_playlist.py is stdlib-only, no pip install needed either). Mounts
+# media/scripts/watch_orders/ directly from Dockhand's git clone of this repo
+# (relative path, same technique as infisical-agent's own templates) --
+# scripts/JSON edits in the repo take effect on the next scheduled Dockhand
+# sync, no scp step.
+#
+# Playlist removal is already automatic for free (Jellyfin drops a dead item
+# reference from a playlist when the item is deleted) -- this container only
+# needs to handle growth. A franchise whose content isn't fully downloaded yet
+# (e.g. Gundam UC as of 2026-09-15) fails loudly per-file in the logs and is
+# retried next run -- harmless, and it starts working the moment the content
+# lands, no manual trigger needed.
+# =============================================================================
+
+services:
+  watch-orders-runner:
+    image: python:3.13-alpine
+    container_name: watch-orders-runner
+    restart: unless-stopped
+    mem_limit: 128m
+    user: "1000:1000"
+    labels:
+      - homelab.tier=noncritical
+    entrypoint: ["/scripts-runner/entrypoint.sh"]
+    environment:
+      # Once a day is plenty -- new episodes don't need minute-level latency,
+      # and this keeps Jellyfin request volume trivial.
+      - INTERVAL_SECONDS=86400
+      # Docker service name, not jellyfin.home -- this container has no
+      # guaranteed .home DNS resolution (see build_playlist.py's BASE comment).
+      - JELLYFIN_BASE_URL=http://jellyfin:8096
+    env_file:
+      - /mnt/Fast/docker/watch-orders-runner/.env
+    volumes:
+      # media/scripts/watch_orders/ from Dockhand's git clone of this repo --
+      # relative path resolves against this stack's own directory, three
+      # levels up to the repo root, then into media/scripts/watch_orders.
+      - ../../../media/scripts/watch_orders:/scripts:ro
+      # This stack's own entrypoint (also git-synced, see above)
+      - ./entrypoint.sh:/scripts-runner/entrypoint.sh:ro
+    networks:
+      - jellyfin_default
+
+networks:
+  jellyfin_default:
+    external: true

@@ -6,9 +6,25 @@ Built 2026-09-12. Two methods, pick based on whether a franchise needs a movie/O
 - **SmartLists** (`smartlist.py`) — auto-refreshing, driven by an IMDb/Trakt/MDBList/TMDB external
   list or native field-sort rules. Use when it works; check first.
 - **Manual playlist** (`build_playlist.py` + a `<franchise>.json`) — a plain Jellyfin playlist
-  built once from a curated JSON. Does **not** auto-refresh — rerun the script if content changes.
-  Necessary whenever a movie/OVA needs mid-season placement, since no external-list provider
-  supports episode-level ordering except Trakt (paywalled, see below).
+  built once from a curated JSON. Does **not** auto-refresh on new/re-slotted content — rerun the
+  script when content changes. It already self-prunes on *removal* for free, no rerun needed:
+  Jellyfin drops a dead item reference from a playlist automatically when the item is deleted
+  (confirmed empirically, Tekkaman Blade session 2026-09-13 — a Radarr file swap silently dropped
+  the playlist from 60 to 56 items with no error). Necessary whenever a movie/OVA needs mid-season
+  placement, since no external-list provider supports episode-level ordering except Trakt
+  (paywalled, see below).
+
+**Considered and rejected (2026-09-15): hosting our own curated order on MDBList instead of a
+local JSON.** SmartLists has no native "hand-specify this exact order" concept — the *only* way to
+get a custom order out of it is `Sort: External List Order`, which requires the order to live on
+an external list (MDBList/IMDb/Trakt/TMDB/Letterboxd). We could create our own MDBList lists and
+point SmartLists at them, but it buys nothing over the status quo: removal is already automatic
+(above), and addition/re-sequencing needs the same manual curation work either way — it would just
+move from editing this repo's JSON to editing mdblist.com's UI, adding an external account/API-key
+dependency for no functional gain. Decision: prefer an existing well-curated external list when one
+exists (current practice for Macross/BSG/Black Butler/etc.); fall back to a manual JSON here when it
+doesn't (Gundam UC, Trigun, Votoms, .hack, Tekkaman, Steins;Gate) — never host our own curation
+externally just to get SmartLists' auto-refresh.
 
 ## Status
 
@@ -17,7 +33,7 @@ Built 2026-09-12. Two methods, pick based on whether a franchise needs a movie/O
 | Macross | SmartLists | IMDb list `ls560970728` ("Continuity Order") | 163 items, 2026-09-11 |
 | Monogatari | SmartLists | native rule, sort by ReleaseDate — release order is the community-*preferred* order here, not a stand-in for continuity (chronological "removes a lot of the fun") | 107 items, 2026-09-11 |
 | Gurren Lagann | SmartLists | native rule, sort by ReleaseDate — the 2 movies are recap compilations of the same TV series, no separate continuity slot exists for them | 33 items, 2026-09-11 |
-| Gundam Universal Century | SmartLists | IMDb list `ls560971030` ("Continuity Order") | 24 items, 2026-09-11 |
+| Gundam Universal Century | Manual (`gundam_uc.json`) | Superseded the SmartLists IMDb-list version (`ls560971030`) 2026-09-15: that list was missing Doan's Island/G-Saviour (mid-sequence, same limitation as Trigun/Votoms/etc.) and used the raw 43-episode 1979 TV series instead of the community-preferred movie trilogy. **Blocked** on several titles still missing content (IGLOO x2, G-Saviour, Gundam ZZ, `Mobile Suit Gundam Narrative`) — see `ai/todo.md`. `watch-orders-runner` retries it automatically every sweep, no manual trigger needed once the content lands. | not yet built — blocked, see `_comment` in the JSON |
 | Star Wars: The Clone Wars | SmartLists | IMDb list `ls544963772` (chronological, incl. film) | 39/39 episodes, 2026-09-11 |
 | Trigun | Manual (`trigun.json`) | community consensus (movie between ep10/11) | 27 items, 100% content owned, 2026-09-12 |
 | Votoms | Manual (`votoms.json`) | HIDIVE viewing guide + library season mapping | 81 items, 100% content owned, 2026-09-12 |
@@ -29,17 +45,44 @@ Built 2026-09-12. Two methods, pick based on whether a franchise needs a movie/O
 | Robotech | Manual (`robotech.json`) | 3 seasons → `The Shadow Chronicles` as a coda. Technically overlaps the tail of Season 3 rather than following it cleanly, but a scene-level interleave isn't practical — using the common watch-guide simplification | 86 items, 100% content owned, 2026-09-12 |
 | Tekkaman Blade | Manual (`tekkaman.json`) | `Prelude to a Long Battle` (pre-series clip-show) → Season 1 → `Twin Blood`/`Burning Clock` (side-story extras, no confirmed exact episode slot so placed here rather than guessed) → `Missing Link` (confirmed bridge to TBII) → `Virgin Memory` (billed as TBII's own "Episode 00") → Tekkaman Blade II | 60 items, 100% content owned, 2026-09-12 |
 
-## When a manual playlist needs a rerun
+## Automation (`watch-orders-runner`, added 2026-09-15)
 
-The three manual playlists are plain Jellyfin playlists (fixed item IDs at creation time) — they
-do **not** watch the library. Since all three had **complete** content when built, nothing will
-silently go stale. Rerun `build_playlist.py <franchise>.json` only if:
+Manual playlists are automatically rerun daily by a small dedicated container —
+`truenas/stacks/watch-orders-runner/` (Dockhand-managed, `python:3.13-alpine` + a plain sleep
+loop, no cron daemon). It loops over a **fixed, explicit list** of franchise JSONs (hardcoded in
+`entrypoint.sh`, must be kept in sync with this README's "Manual" rows — deliberately not a glob
+over `*.json`, since this directory also holds JSONs superseded by the SmartLists path, e.g.
+`macross.json`, which must never be rerun or it'd create a duplicate playlist).
 
-- New content is acquired for that franchise (a new movie/OVA/season) that should be inserted
-  into the curated order — add an entry to the JSON first, then rerun.
-- An item is deleted and later re-added as a genuinely new library item (rare — quality
-  upgrades/replacements keep the same episode ID, so this normally does *not* require a rerun).
+What this buys, and what it doesn't:
+- **Removal was already free** before this existed — Jellyfin silently drops a dead item
+  reference from a playlist when the underlying item is deleted (confirmed empirically, Tekkaman
+  Blade session 2026-09-13). No script involvement either way.
+- **Growth within an already-referenced season/series is now automatic** — `season_episodes()`
+  queries Jellyfin live on every run, so a new episode airing in a season a JSON entry already
+  points at (e.g. `{"series": "X", "season": 1}`) splices in on the next daily sweep, no JSON edit.
+- **A genuinely new title (never referenced by any entry) still needs a human** — add a line to
+  the JSON, same as it always did. No amount of automation removes this decision; it's inherent to
+  hand-curated chronological order (confirmed this isn't unique to our approach — even the
+  MDBList-hosting alternative considered and rejected above needs the same manual step).
+- A franchise missing content (e.g. Gundam UC as of 2026-09-15) fails loudly in the container's
+  logs every sweep and is simply retried next time — harmless, and it starts working the moment
+  the content lands, no manual trigger needed.
 
+**Considered and rejected: a real Jellyfin plugin, TrueNAS host crontab, or Linearr** (a
+third-party "show sequencer" tool, evaluated 2026-09-15) — see `.claude/memory/` /
+`ai/SESSION_NOTES.md` for that day's session for the full reasoning. Short version: a Jellyfin
+plugin is disproportionate effort for a script rerun; TrueNAS-level crontab sits outside this
+repo's git-IaC/Dockhand pattern that every other scheduled thing here follows; Linearr requires a
+Jellyfin username+password (not a revocable API key, due to an upstream Jellyfin bug on its
+playlist endpoints) and doesn't actually add capability over what a scheduled rerun of our own
+script already provides for this Jellyfin-only, niche-anime-franchise use case.
+
+Manually forcing a rerun any time (e.g. right after adding a new JSON entry, without waiting for
+the next daily sweep) still works exactly as before:
+```bash
+JELLYFIN_KEY=... python3 build_playlist.py <franchise>.json
+```
 A rerun deletes and recreates the playlist by name — safe to do any time, no manual ID lookups.
 
 ## External-list provider capability matrix (checked from plugin source, not just docs)
