@@ -9,11 +9,20 @@
 # see media/scripts/watch_orders/README.md.
 #
 # Deliberately minimal: python:alpine + a plain sleep loop, no cron daemon/app
-# (build_playlist.py is stdlib-only, no pip install needed either). Mounts
-# media/scripts/watch_orders/ directly from Dockhand's git clone of this repo
-# (relative path, same technique as infisical-agent's own templates) --
-# scripts/JSON edits in the repo take effect on the next scheduled Dockhand
-# sync, no scp step.
+# (build_playlist.py is stdlib-only, no pip install needed either).
+#
+# Scripts come from /mnt/Fast/docker/watch-orders-runner/scripts, staged via
+# scp -- NOT a relative git-synced mount. Tried that first (same trick as
+# infisical-agent's own templates) and it silently failed: Dockhand's git sync
+# for a stack only checks out that stack's OWN truenas/stacks/<name>/ folder,
+# not the whole repo, so a relative path reaching outside it (up to
+# media/scripts/watch_orders) resolved to a host path that had never been
+# populated -- Docker created it as an empty directory rather than erroring,
+# so the container ran fine but had nothing to execute. Confirmed live
+# 2026-09-15. media/scripts/watch_orders/*.json editors: scp the changed
+# file(s) to /mnt/Fast/docker/watch-orders-runner/scripts/ afterward, same as
+# every other Dockhand app's non-compose config in this repo (Caddyfile,
+# homepage config, etc) -- see truenas/DEPLOYMENT_GUIDE.md.
 #
 # Playlist removal is already automatic for free (Jellyfin drops a dead item
 # reference from a playlist when the item is deleted) -- this container only
@@ -43,11 +52,11 @@ services:
     env_file:
       - /mnt/Fast/docker/watch-orders-runner/.env
     volumes:
-      # media/scripts/watch_orders/ from Dockhand's git clone of this repo --
-      # relative path resolves against this stack's own directory, three
-      # levels up to the repo root, then into media/scripts/watch_orders.
-      - ../../../media/scripts/watch_orders:/scripts:ro
-      # This stack's own entrypoint (also git-synced, see above)
+      # media/scripts/watch_orders/*.py and *.json, staged via scp -- see the
+      # note above. NOT git-synced; update on every edit to the source files.
+      - /mnt/Fast/docker/watch-orders-runner/scripts:/scripts:ro
+      # This stack's own entrypoint IS git-synced fine (relative path within
+      # this stack's own directory, same trick infisical-agent uses).
       - ./entrypoint.sh:/scripts-runner/entrypoint.sh:ro
     networks:
       - jellyfin_default
