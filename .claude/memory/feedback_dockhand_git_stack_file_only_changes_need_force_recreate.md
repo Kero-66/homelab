@@ -1,9 +1,18 @@
 ---
 name: feedback_dockhand_git_stack_file_only_changes_need_force_recreate
-description: "Dockhand git-stack sync+deploy does not pick up changes to a bind-mounted file (e.g. Caddyfile) unless compose.yaml itself also changed — must force-recreate against Dockhand's synced compose file"
+description: "FIXED upstream in Dockhand v1.0.47 (2026-09-12, confirmed running 2026-09-15) — was: git-stack sync+deploy does not pick up changes to a bind-mounted file unless compose.yaml itself also changed"
 metadata:
   type: feedback
 ---
+
+**Fixed upstream 2026-09-12 (Dockhand v1.0.47, `Finsys/dockhand#1523`), confirmed running here
+2026-09-15.** The changelog: `"always redeploy" git stacks now force-recreate so config changes
+take effect`. The linked GitHub issue confirms this was exactly the bug below — `forceRedeploy`
+was being read and then discarded by the git-change-detection check. This means the workaround
+this repo applied (`forceRedeploy: true` on `arr-stack`/`grafana-alloy`, 2026-09-11) **was not
+actually working** before v1.0.47 either — so any deploy on those two stacks that relied on it
+between 2026-09-11 and 2026-09-12 may not have force-recreated. Kept below for historical context
+and because a fresh TrueNAS/Dockhand instance on an older version would still hit this.
 
 For a Dockhand git-stack whose compose.yaml bind-mounts a config file with a relative path
 (e.g. caddy's `./Caddyfile:/etc/caddy/Caddyfile:ro`, resolved against Dockhand's own git clone

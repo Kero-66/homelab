@@ -43,6 +43,16 @@ was already identified once in a prior session and never applied or written down
 got lost.** Applied to `arr-stack` and `grafana-alloy` 2026-09-11; the other 15 git-stacks still
 have it `false`. See `ai/PATTERNS.md`'s Dockhand git-stack section for the full writeup.
 
+**Addendum (2026-09-15): the `forceRedeploy: true` escape hatch this memory recommends was itself
+broken until Dockhand v1.0.47** (2026-09-12, `Finsys/dockhand#1523`, fixed — see
+`feedback_dockhand_git_stack_file_only_changes_need_force_recreate.md`). It was being read and
+then silently discarded by the same git-change-detection flag it was supposed to bypass, so any
+stack relying on it before that date may not have actually force-recreated when you thought it
+did. This is now fixed upstream (confirmed running here 2026-09-15) — but it only fixes the
+deploy/recreate side. **The `sync` silent-file-write-failure this memory documents is a separate
+bug, not mentioned in the v1.0.47/v1.0.48 changelogs — still unconfirmed whether it's fixed.**
+Keep verifying by diffing on-disk paths for anything that matters until re-tested.
+
 **Addendum (2026-09-13, confirmed live):** the two paths this memory describes are real and
 independently verified — `git-repos/TrueNAS/<stack>/...` and `stacks/TrueNAS/<stack>/...` can and
 do diverge (found again on `caddy`'s Caddyfile). A force-recreate run directly from the

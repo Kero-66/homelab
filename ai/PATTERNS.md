@@ -1307,6 +1307,19 @@ Dockhand *environment* name, not literal for other environments):
 - `/mnt/.ix-apps/app_mounts/dockhand/data/git-repos/TrueNAS/<stack>/` — Dockhand's raw git clone of the whole repo, stack subdir mirrors this repo's `truenas/stacks/<stack>/` path
 - `/mnt/.ix-apps/app_mounts/dockhand/data/stacks/TrueNAS/<stack>/` — the LIVE path compose actually runs from; relative bind-mounts in compose.yaml (`./config.alloy`, `./config/...`) resolve here, not against `/mnt/Fast/docker/<stack>/`
 
+**✅ Fixed upstream in Dockhand v1.0.47 (2026-09-12), confirmed running here 2026-09-15**
+(changelog: `"always redeploy" git stacks now force-recreate so config changes take effect (#1523)`).
+The GitHub issue (`Finsys/dockhand#1523`) confirms this was exactly the `forceRedeploy` bug
+described below — the setting was being read and then silently discarded by the git-change check,
+so `forceRedeploy: true` (the workaround this repo already applied to `arr-stack`/`grafana-alloy`)
+**was itself not actually working** on any Dockhand version before v1.0.47. Leave the setting
+applied (harmless, and it's the documented mechanism going forward) but don't assume the older
+`arr-stack`/`grafana-alloy` deploys that relied on it before 2026-09-12 actually force-recreated —
+verify those specific historical deploys took effect if it ever matters, they may not have. This
+does NOT fix the separate `sync` silent-file-write-failure issue two paragraphs below — nothing in
+the v1.0.47/v1.0.48 changelogs mentions that; still verify by diffing on-disk paths for anything
+you actually care about.
+
 **⚠️ Root cause identified (2026-09-11) via Dockhand's own public source (`github.com/Finsys/dockhand`,
 `src/lib/server/git-deploy-policy.ts` + `git.ts`'s `deployGitStack`): both the nightly
 `autoUpdateCron` job and this manual `sync`+`deploy` API pair route through the same
