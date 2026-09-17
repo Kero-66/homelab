@@ -4,7 +4,90 @@ Findings from log/metric review via Grafana (Loki logs + Prometheus/cAdvisor met
 `grafana-alloy` stack, http://grafana.home). See `ai/PATTERNS.md` "Querying it back" for the
 Loki datasource-proxy query pattern used to pull these.
 
-## Host-level metrics added for Valheim prep (2026-09-10, staged — not yet deployed)
+## Observability coverage audit (2026-09-18)
+
+Full audit of what is actually collected vs what is running, prompted by a crash-looping
+container that a casual check had missed. Method and verified numbers:
+
+- **Metrics coverage is complete.** All 37 running containers (per Dockhand
+  `/api/containers?env=1`) appear in cAdvisor's `container_memory_working_set_bytes`. All 5
+  scrape targets are `up`: `cadvisor-standalone`, `integrations/node_exporter`,
+  `integrations/smartctl`, `prometheus.scrape.dockhand`, `prometheus`.
+- **Log coverage had a real hole — fixed this session.** 6 of 37 running containers had
+  **zero** log lines in Loki over 30 days. `loki.process "docker_logs"` used
+  `stage.drop { expression = "(alloy|grafana|loki)" }` — an *unanchored substring* match.
+  Every container in this stack is named `grafana-alloy-*`, so it also silently dropped
+  `grafana-alloy-cadvisor`, `-prometheus` and `-smartctl-exporter`, which were plainly
+  meant to be kept. This already cost real diagnostic ability: the 2026-09-11 cAdvisor CPU
+  investigation (below) had to fall back to reading `docker logs` directly precisely
+  because Loki had never held a single cAdvisor line. Fixed by anchoring to
+  `^grafana-alloy-(alloy|grafana|loki)$`. `infisical-db` and `qbittorrent` also looked
+  silent in a 24h window but are simply low-volume — they do log.
+- **No filesystem-space alert existed — added this session.** The `Disk Health` group
+  covered SMART status, reallocated/pending sectors, temperature and pool-online state,
+  but nothing fired when a pool merely filled up, which is the most likely way this box
+  actually breaks. Found `/mnt/Data/Servarr` at **94% used (420GB free of 6.49TB)** with
+  nothing watching it. Added `filesystem-space-low` (>90% for 15m, warning).
+- **Memory is overcommitted 2.1x with no swap.** Sum of container `mem_limit` values is
+  **32.8GB on a 15.4GB host**, `SwapTotal` is **0**. Actual container working set is ~7.4GB
+  and ZFS ARC ~1.4GB (of an 8GB `arc_c_max`), so ARC is *not* the reason available memory
+  looks low — the pressure is genuine. `Host memory available low` was observed firing
+  during this audit at 6% available. Limits are caps rather than reservations so the
+  overcommit is not inherently fatal, but it means there is no headroom if several
+  containers peak together, and nothing can spill to swap.
+- **History depth is shorter than retention implies.** Prometheus is configured
+  `--storage.tsdb.retention.time=30d` and Loki `retention_period: 720h`, but host metrics
+  only go back ~3-6 days (node_exporter was deployed recently) and cAdvisor series resolve
+  at 14d but not 30d. Don't assume a 30-day lookback will return data.
+
+### The structural gap: nothing alerts on logs
+
+**All 14 alert queries target Prometheus. Zero target Loki.** Loki has no `ruler` block in
+`loki-config.yaml`, so it cannot evaluate log-based rules at all (this is also the cause of
+the cosmetic "Loki Error badge" entry further down). Consequence: any failure that exists
+*only* as a log line is invisible to alerting — Dockhand deploy failures, the 43 registry
+`toomanyrequests` rate-limit hits seen over 7 days, jellyseerr/infisical auth failures, and
+*arr import failures. This is the real reason a human watching Dockhand's UI saw problems
+that a metrics-only check reported as all-clear. Closing it means either configuring Loki's
+ruler or adding Grafana-managed rules backed by the Loki datasource.
+
+### An alert that exists but cannot fire (false confidence)
+
+`Container healthcheck failing` (uid `container-unhealthy`) queries
+`container_health_state{name!=""} == 0`. Verified 2026-09-18: **all 37 series read 1**,
+including the 5 containers Dockhand reports as having *no healthcheck at all*. So nothing
+can ever drive it to 0 under current conditions. This repo's own notes already said so —
+the Dockhand Metrics entry below calls `container_health_state` "not useful for alerting",
+and the 2026-09-10 entry documents that it caches at discovery and never refreshes — yet
+the rule's summary text asserts the opposite ("real per-container signal"). An alert that
+looks like coverage but cannot detect the condition is worse than a missing one.
+
+Meanwhile `dockhand_containers_health` and `dockhand_container_restarts_total` *are* scraped
+(job `prometheus.scrape.dockhand`) and are accurate, and **no alert rule consumes them**.
+That is the obvious replacement signal for container health.
+
+### Known collection boundary: stdout only
+
+Loki collects container **stdout/stderr** via `loki.source.docker`. The *arr apps write
+their real application logs to `config/logs/*.txt` inside their config dirs, not to stdout —
+which is why a Sonarr error search over 6h returns only a handful of stdout lines while the
+app's own log file is far more detailed. Log coverage being "complete" means every container's
+stdout is captured, not that every app's internal log is searchable in Grafana.
+
+**Method note — how the earlier miss happened.** A 6-hour Loki window and the
+*current-state* APIs (`/api/git/stacks` `syncStatus`, `/api/alertmanager/.../v2/alerts`)
+all returned clean while a container was actively OOM-crash-looping. Snapshot endpoints
+only show what is wrong *right now*; an alert that fires and clears between checks leaves
+no trace there. Query the underlying counters over a wide window instead — see
+`ai/PATTERNS.md` "Checking for issues".
+
+## Host-level metrics added for Valheim prep (2026-09-10 — DEPLOYED, verified live 2026-09-18)
+
+**Status corrected 2026-09-18**: this entry previously said "staged — not yet deployed".
+It has since been deployed — `integrations/node_exporter` is `up`, and `node_memory_*`,
+`node_filesystem_*`, `node_zfs_*` all return data. The open questions it listed are
+answered: the exporter starts cleanly against the existing mounts, and `/mnt/Fast` and
+`/mnt/Data` mountpoints do come through the filesystem collector's default excludes.
 
 Prepped in the same cloud session as the Valheim server stack (no LAN access, nothing live —
 see `ai/SESSION_NOTES.md`). Until now this stack only had **container-level** metrics
@@ -31,7 +114,14 @@ Valheim nor this monitoring stack ever touch the slow `Data` HDD pool.
   (sda/sdb)**, plus filesystem-used-% by mountpoint for `/mnt/Fast`, `/mnt/Data`, `/`. Device
   → pool mapping per `truenas/HARDWARE_CONFIG.md`.
 
-**Not yet verified live** (no LAN access this session): whether `prometheus.exporter.unix`
+**Stale claim corrected 2026-09-18**: the paragraph below says `grafana-alloy` is
+`autoUpdate: false` (version-pinned) and needs an explicit Dockhand sync+deploy. Live check
+via `GET /api/git/stacks` shows `autoUpdate=true, forceRedeploy=true, repullImages=true` —
+it picks changes up on the daily sync like every other stack. (The `Dockhand Auto-Update
+Config` section further down also lists grafana-alloy as version-pinned; same correction
+applies.) Trigger a sync explicitly if you need a change applied before the next daily run.
+
+**Not yet verified live** (no LAN access at the time this was written): whether `prometheus.exporter.unix`
 actually starts cleanly against the existing mounts, whether the filesystem collector's
 default `mount_points_exclude` regex lets `/mnt/Fast`/`/mnt/Data` through as expected (it's
 node_exporter's stock default, not overridden here — if either mountpoint doesn't show up,

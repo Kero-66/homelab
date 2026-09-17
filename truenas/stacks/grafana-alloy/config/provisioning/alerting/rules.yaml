@@ -592,3 +592,58 @@ groups:
           severity: critical
         annotations:
           summary: "{{ $labels.zpool }} is not ONLINE (degraded/faulted/offline/suspended/unavail) - check `zpool status {{ $labels.zpool }}`, a drive may have dropped out of the mirror"
+
+      # Added 2026-09-18. The Disk Health group covered SMART failures, sector counts,
+      # temperature and pool-online state, but nothing fired when a pool simply filled
+      # up - the most likely way this box actually breaks. Found /mnt/Data/Servarr at
+      # 94% used (420GB free of 6.49TB) with no alert covering it.
+      #
+      # The many 0%-used mountpoints need no size filter - they cannot cross 90%. But
+      # note ZFS child datasets each report the *pool's* free space, so when the Data
+      # pool genuinely fills, every dataset under it crosses 90% at once and this will
+      # fire ~15 times for what is one problem. Group-by in the notification policy (or
+      # a mountpoint allowlist) is the fix if that noise ever matters.
+      - uid: filesystem-space-low
+        title: Filesystem running out of space
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              expr: 100 - (node_filesystem_avail_bytes{mountpoint=~"/mnt/.*|/",fstype!="tmpfs"} / node_filesystem_size_bytes * 100)
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: reduce
+              expression: A
+              reducer: last
+              refId: B
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [90]
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.mountpoint }} is over 90% full - imports and downloads will start failing once it hits 100%"

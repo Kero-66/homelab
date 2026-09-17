@@ -176,9 +176,16 @@ loki.source.docker "default" {
 loki.process "docker_logs" {
   forward_to = [loki.write.local.receiver]
 
+  // Anchored + fully-qualified on purpose. The previous pattern "(alloy|grafana|loki)"
+  // was an unanchored substring match, so it also silently dropped
+  // grafana-alloy-cadvisor, -prometheus and -smartctl-exporter (every container in this
+  // stack is named grafana-alloy-*). That cost real diagnostic ability: the 2026-09-11
+  // cAdvisor CPU investigation had to read `docker logs` directly because Loki had never
+  // held a single cAdvisor line. Only the three self-referential log producers below are
+  // excluded - they would otherwise log about ingesting their own logs.
   stage.drop {
     source     = "container_name"
-    expression = "(alloy|grafana|loki)"
+    expression = "^grafana-alloy-(alloy|grafana|loki)$"
   }
 }
 

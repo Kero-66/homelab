@@ -30,7 +30,14 @@ services:
     image: ghcr.io/flaresolverr/flaresolverr:latest
     container_name: flaresolverr
     restart: unless-stopped
-    mem_limit: 1536m
+    # 768m -> 1024m (2026-09-18): was OOM-killed 12x in 7d with working set peaking at
+    # ~800MB, i.e. genuinely starved. Briefly set to 1536m earlier the same day, then
+    # settled at 1024m. Deliberately NOT raised further: this host has
+    # SwapTotal=0 and container mem_limits already sum to ~32.8GB against 15.4GB of RAM,
+    # and FlareSolverr spawns Chrome instances that leak. The cgroup OOM kill is the
+    # containment mechanism here - it kills only this noncritical container, which
+    # self-heals, rather than letting the host OOM killer pick an arbitrary victim.
+    mem_limit: 1024m
     labels:
       - homelab.tier=noncritical
     environment:
