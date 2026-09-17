@@ -92,6 +92,8 @@ externally just to get SmartLists' auto-refresh.
 | Black Butler | SmartLists | native rule (`SeriesName contains "Black Butler" AND NotContains "II"`), sort by ReleaseDate — same "only S1 owned, might continue" situation as BSG, but here release order genuinely matches the correct sequence (Book of Circus/Book of Murder/movie all released in the right order), so no ordering tradeoff. "Black Butler II" excluded by name as a guard against the non-canon S2 spinoff ever polluting the list if added later | 25 items, 2026-09-12 |
 | Blue Gender | No playlist | "The Warrior" confirmed to be a pure recap compilation with an alternate ending (not new content) — same category as the excluded Gundam 0083 recap; left as an optional standalone alternate, not part of any combined list |
 | Robotech | Manual (`robotech.json`) | 3 seasons → `The Shadow Chronicles` as a coda. Technically overlaps the tail of Season 3 rather than following it cleanly, but a scene-level interleave isn't practical — using the common watch-guide simplification | 86 items, 100% content owned, 2026-09-12 |
+| Evangelion (Rebuild) | Manual (`evangelion.json`) | The four Rebuild films (1.0 / 2.0 / 3.0 / 3.0+1.0). Numbered sequential continuation, so chronological = release order, single variant. **Deliberately excludes the 1995 TV series and End of Evangelion** (not owned) — Rebuild is an alternate continuity, not a recap, so if either is acquired it stays a separate list rather than being spliced in | 4 items, 100% owned, all resolved 2026-09-18 |
+| Megazone 23 | Manual (`megazone23.json`) | Three sequential OVAs (1985/86/89), one continuous story, chronological = release order. **Partial by design** — we own III Part 1 but not Part 2; it splices in automatically if acquired | 3 items, all resolved 2026-09-18 |
 | Broken Blade | Manual (`broken_blade.json`) | 6-film series (2010-11). Chronological order IS release order — the films are sequential numbered chapters of one story, no curatorial judgement involved. Order + English titles confirmed against en.wikipedia.org/wiki/Broken_Blade against their Japanese titles. Excludes the 2014 12-episode TV mini-series (a re-edit of these same films, not owned; keep standalone if ever acquired, per the Blue Gender/0083 recap convention) | 6 items, 100% owned, all resolved 2026-09-18 |
 | Tekkaman Blade | Manual (`tekkaman.json`) | `Prelude to a Long Battle` (pre-series clip-show) → Season 1 → `Twin Blood`/`Burning Clock` (side-story extras, no confirmed exact episode slot so placed here rather than guessed) → `Missing Link` (confirmed bridge to TBII) → `Virgin Memory` (billed as TBII's own "Episode 00") → Tekkaman Blade II | 60 items, 100% content owned, 2026-09-12 |
 
@@ -121,6 +123,35 @@ What this buys, and what it doesn't:
   missing entries splice in automatically as each one lands. Originally shipped as an all-or-nothing
   design (one missing title blocked the whole file) — changed 2026-09-15 after this defeated the
   actual point of automating reruns for an in-progress franchise.
+
+### Reading a "gap": watched-and-cleaned vs never-acquired
+
+**A season that starts partway in is normally not a gap at all** — it is content you watched,
+which maintainerr then removed. This trips up every fresh look at the library, so check it before
+reporting anything as missing:
+
+- Bakemonogatari showing S1 starting at E6, `.hack` starting at S1E9, Clone Wars S1 starting at
+  E6, BSG S1 starting at E3 — all the same thing: the early episodes were watched and cleaned up.
+- The natural steady state of a playlist here is therefore **"what's left to watch"**, not "the
+  whole franchise". A playlist shrinking over time is the system working.
+- A genuine acquisition gap looks different: entries that never resolve at all (a whole series or
+  movie absent), which `build_playlist.py` reports every sweep as
+  `series/movie not found in Jellyfin`. Those are the ones worth chasing — see Gundam UC.
+
+Do **not** "fix" a partial season by re-downloading it unless you actually intend to rewatch.
+
+### Genuine structural issue found 2026-09-18: Monogatari S5 duplicates S6
+
+Unlike the above, this one is real. Season 5 holds two *batched multi-episode* files
+(S5E1 = S6E1-E4 concatenated, S5E5 = S6E5-E7), while Season 6 carries all 14 episodes properly
+split. Same content, worse form, present twice — the same failure class as the Made in Abyss and
+Attack on Titan recap-movie grabs (an earlier automated pass over-reaching and pulling content
+that wasn't needed). S5 should be removed. A Monogatari playlist built while both exist would
+either duplicate those arcs or pick the batched files.
+
+Monogatari's order itself needs no further research: **release order is the recommended order**
+(community consensus — chronological "removes a lot of the fun"), as already noted in the Status
+table.
 
 ### How playlists interact with maintainerr (documented 2026-09-18)
 

@@ -1,0 +1,9 @@
+{
+  "_comment": "Neon Genesis Evangelion 'Rebuild' film tetralogy, 2026-09-18 session. These four films are a self-contained retelling/continuation continuity, separate from the 1995 TV series and End of Evangelion (neither of which we own -- if either is acquired later it should NOT be spliced into this list; the Rebuild films are a deliberate alternate continuity, not a recap of the series, and mixing them produces a nonsensical order). Chronological order IS release order: the films are numbered 1.0, 2.0, 3.0, 3.0+1.0 and each follows directly from the previous. No curatorial judgement involved, hence a single variant. All four confirmed present as real files (LocationType=FileSystem) at build time.",
+  "chronological_order": [
+    { "movie": "Evangelion: 1.0 You Are (Not) Alone" },
+    { "movie": "Evangelion: 2.0 You Can (Not) Advance" },
+    { "movie": "Evangelion: 3.0 You Can (Not) Redo" },
+    { "movie": "Evangelion: 3.0+1.0 Thrice Upon a Time" }
+  ]
+}

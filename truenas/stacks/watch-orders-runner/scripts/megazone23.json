@@ -1,0 +1,8 @@
+{
+  "_comment": "Megazone 23 OVA series, 2026-09-18 session. Three sequential OVA installments (1985, 1986, 1989) telling one continuous story, so chronological order is release order and there is no curatorial judgement to make. PARTIAL BY DESIGN: we own Part 1 of Megazone 23 III but not Part 2 -- the entry list covers what exists, and build_playlist.py will splice Part 2 in automatically on the next sweep if it is ever acquired (it would go last). Note the third installment's library title uses hyphens ('Megazone 23 III - Part 1 - The Awakening of Eve') and must match exactly; build_playlist.py does an exact Name match, not a fuzzy one.",
+  "chronological_order": [
+    { "movie": "Megazone 23" },
+    { "movie": "Megazone 23 II" },
+    { "movie": "Megazone 23 III - Part 1 - The Awakening of Eve" }
+  ]
+}

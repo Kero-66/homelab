@@ -21,7 +21,7 @@
 # harmless log line per sweep and self-heals if the content is ever re-acquired.
 set -eu
 
-FRANCHISES="trigun.json votoms.json hack.json steinsgate.json robotech.json tekkaman.json gundam_uc.json macross.json broken_blade.json"
+FRANCHISES="trigun.json votoms.json hack.json steinsgate.json robotech.json tekkaman.json gundam_uc.json macross.json broken_blade.json evangelion.json megazone23.json"
 INTERVAL_SECONDS="${INTERVAL_SECONDS:-86400}"
 
 while true; do
