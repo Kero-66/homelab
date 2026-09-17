@@ -1,0 +1,32 @@
+{
+  "_comment": "Star Wars: The Clone Wars, CHRONOLOGICAL (in-universe) order, 2026-09-18 session. This is the franchise's canonical example of air order != story order: the show was broadcast out of sequence throughout its run, so chronological viewing reorders episodes heavily across seasons (e.g. it opens on S02E16 'Cat and Mouse', then S01E16 'The Hidden Enemy', then the 2008 theatrical film, and only then reaches S01E01 'Ambush'). Source: the official StarWars.com chronological episode order article (starwars.com/news/star-wars-the-clone-wars-chronological-episodeorder), fetched and transcribed in full 2026-09-18 - all 134 entries. Wikipedia confirms such an official order exists and was promoted by the official Star Wars account, but does not reproduce the list, which is why the StarWars.com article is the source of record here. The 134 individual entries are collapsed into 27 contiguous ranges below; this is purely a compression of the same sequence, no reordering. PARTIAL BY DESIGN: only Season 1 (from E6 - E1-E5 were watched and cleaned up by maintainerr) and Season 2 are currently owned, so most entries below resolve to nothing today and splice in automatically as seasons are acquired - the full order is encoded now so that no JSON edit is ever needed for that. The 2008 theatrical film is likewise included but not currently owned; note its Jellyfin title must match exactly for it to resolve.",
+  "chronological_order": [
+    { "series": "Star Wars: The Clone Wars", "season": 2, "episodes": [16, 16] },
+    { "series": "Star Wars: The Clone Wars", "season": 1, "episodes": [16, 16] },
+    { "movie": "Star Wars: The Clone Wars" },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [1, 1] },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [3, 3] },
+    { "series": "Star Wars: The Clone Wars", "season": 1, "episodes": [1, 15] },
+    { "series": "Star Wars: The Clone Wars", "season": 1, "episodes": [17, 21] },
+    { "series": "Star Wars: The Clone Wars", "season": 2, "episodes": [1, 3] },
+    { "series": "Star Wars: The Clone Wars", "season": 2, "episodes": [17, 19] },
+    { "series": "Star Wars: The Clone Wars", "season": 2, "episodes": [4, 14] },
+    { "series": "Star Wars: The Clone Wars", "season": 2, "episodes": [20, 22] },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [5, 7] },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [2, 2] },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [4, 4] },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [8, 8] },
+    { "series": "Star Wars: The Clone Wars", "season": 1, "episodes": [22, 22] },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [9, 11] },
+    { "series": "Star Wars: The Clone Wars", "season": 2, "episodes": [15, 15] },
+    { "series": "Star Wars: The Clone Wars", "season": 3, "episodes": [12, 22] },
+    { "series": "Star Wars: The Clone Wars", "season": 4, "episodes": [1, 22] },
+    { "series": "Star Wars: The Clone Wars", "season": 5, "episodes": [2, 13] },
+    { "series": "Star Wars: The Clone Wars", "season": 5, "episodes": [1, 1] },
+    { "series": "Star Wars: The Clone Wars", "season": 5, "episodes": [14, 20] },
+    { "series": "Star Wars: The Clone Wars", "season": 6, "episodes": [1, 13] },
+    { "series": "Star Wars: The Clone Wars", "season": 7, "episodes": [5, 8] },
+    { "series": "Star Wars: The Clone Wars", "season": 7, "episodes": [1, 4] },
+    { "series": "Star Wars: The Clone Wars", "season": 7, "episodes": [9, 12] }
+  ]
+}

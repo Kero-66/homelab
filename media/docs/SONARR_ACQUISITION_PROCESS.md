@@ -172,7 +172,7 @@ curl -sL "http://sonarr.home/api/v3/episode?seriesId=<ID>&apikey=$SONARR_KEY" | 
 ```
 Numbered seasons (1+) are usually where the real, worth-chasing gaps are. Season 0 (specials) is where all three structural-flaw patterns above hide — triage those separately from real gaps.
 
-**Critical: "Season 0 = specials" is not the same as "Season 0 = movies."** Every monitored+missing Season 0 item needs to go through this workflow, not just the ones ≥60min. Runtime is a triage *signal* for which pattern you're probably looking at (step 2c below), not a filter for what counts as worth checking — a 4-minute purchaser-bonus OVA short is just as real a gap as a 90-minute film, and gets missed entirely if you only ever query `runtime>=60`. (Confirmed miss 2026-08-20: Gundam 0083's "The Mayfly of Space 1/2" bonus shorts, 4min/12min, were skipped this way across an entire audit pass.)
+**Critical: "Season 0 = specials" is not the same as "Season 0 = movies."** Every monitored+missing Season 0 item needs to go through this workflow, not just the ones ≥60min. Runtime is neither a classifier nor a filter (see 2c below, which retires that inference) — a 4-minute purchaser-bonus OVA short is just as real a gap as a 90-minute film, and gets missed entirely if you only ever query `runtime>=60`. (Confirmed miss 2026-08-20: Gundam 0083's "The Mayfly of Space 1/2" bonus shorts, 4min/12min, were skipped this way across an entire audit pass.)
 
 **2. `monitored` — already covered by STEP 0, Signal 1.** Kept here as a pointer so the numbering below still reads: an unmonitored Season 0 special means someone already decided it's not wanted, and "no Radarr entry" is not on its own a justification to add one. If you have not run STEP 0 yet, stop and run it — it is the gate, not this step.
 
@@ -180,13 +180,15 @@ Numbered seasons (1+) are usually where the real, worth-chasing gaps are. Season
 
 **2b. Never classify Season 0 content as bonus/non-story from runtime or title pattern alone — check Radarr/TMDB AND actually research what it is, every time.** Runtime (step 2c below) is a triage *signal* for which pattern you're probably looking at, not a substitute for verification. Confirmed failure (2026-08-31): almost wrote off `.hack`'s "Online Jack" (nine 2-4min Season 0 specials) as a bonus Blu-ray extra purely from its short runtime, before checking anything — it turned out to be real narrative content (an in-universe news-show tied directly into the .hack//G.U. game story). Conversely, don't skip the Radarr check either: several other short/long .hack specials that looked like open gaps already had real files sitting in Radarr under a different title (structural flaw #1) — the doc's own step 3 below covers this, but it's easy to skip when an item "feels" like bonus content and step 4's web-research check gets skipped along with it.
 
-**2c. For each Season 0 gap, check runtime next** (renumbered 2026-09-18 — this and 2b above were *both* labelled "2b", and 2b's "step 2b below" pointer was self-referential) — this tells you which pattern you're likely looking at:
-- **≥60min** → probably a movie. Check the Movie audit cross-reference method below.
-- **<60min** → probably NOT core story content (bonus feature, alt broadcast cut, anniversary featurette, promotional short). Don't assume it's junk though — verify via research (step 4) before deprioritizing, since some short specials genuinely matter to the user.
+**2c. Runtime is NOT a way to judge what a piece of content is** (rewritten 2026-09-18 — owner's call: "length isn't a good enough judgement to determine what an episode is". Also renumbered: this and 2b were *both* labelled "2b", and 2b's "step 2b below" pointer was self-referential.)
 
-Runtime is the *weakest* signal in this document and 2b overrides it whenever they disagree. It is a hint about which pattern to check first, never a verdict on its own.
+The old version of this step said `≥60min → probably a movie` and `<60min → probably NOT core story content`. **That inference is retired.** It was wrong often enough to cause real misses, and the doc's own incident log proves it twice over:
+- `.hack`'s "Online Jack" — nine specials of 2-4 minutes each — is genuine narrative content (an in-universe news show tied into the .hack//G.U. game story), and was nearly written off on runtime alone.
+- Gundam 0083's "The Mayfly of Space 1/2" bonus shorts (4min/12min) were skipped across an *entire* audit pass because the query filtered on `runtime>=60`.
 
-**3. For movie-length specials, check Radarr/TMDB directly — don't trust fuzzy title matching alone:**
+Runtime is fine to **collect** (step 1 pulls it) as context, and a very long item is a reasonable prompt to check Radarr/TMDB *first* rather than last. But it never decides what something is, and it must never narrow the set of items you examine. Classification comes from step 2b: check Radarr/TMDB, then research what the content actually is. Every monitored+missing Season 0 item goes through that, regardless of length.
+
+**3. For EVERY Season 0 item, check Radarr/TMDB directly — don't trust fuzzy title matching alone.** (Was "for movie-length specials" — corrected 2026-09-18 along with 2c, since gating this check on runtime is the same retired inference. `.hack` had short *and* long specials already sitting in Radarr under different titles, so length told you nothing about whether to look.)
 ```bash
 grep -i "<keyword>" radarr_all.txt   # cached full Radarr list, see SONARR_STRUCTURAL_AUDIT.md "How to regenerate this data"
 curl -sL -G "http://radarr.home/api/v3/movie/lookup" --data-urlencode "term=<exact special title>" --data-urlencode "apikey=$RADARR_KEY" | jq '.[] | {title, year, tmdbId}'
