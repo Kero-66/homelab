@@ -6,42 +6,20 @@ For the actual API commands (release search, the manual-mapping override, queue/
 
 **For any manual import (stuck queue item, escape-hatch grab, folder scan) — always use `truenas/scripts/import_downloads.sh` (`--plan`/`--apply`/`--scan-folder`). Never hand-roll a `ManualImport` curl/jq command.** Confirmed failure twice in one session (2026-08-31): hand-rolled imports for both a Sonarr episode batch and a Radarr movie batch each had a real bug the script's hardened code avoids (wrong `quality.id` — pulled from the wrong endpoint's id-space — and missing `languages`/`indexerFlags`/`releaseGroup` fields), and both reported a false "success" message while the queue item silently never cleared. The script checks the queue afterward automatically; a hand-rolled command does not, so the failure is invisible unless someone thinks to check.
 
-## STEP 0 — Is it actually missing? (rewritten 2026-09-18, was step 7)
+## STEP 0 — Is it actually missing?
 
-**Run this before anything else, on every item, every time.** `hasFile: false` does NOT mean
-"missing". On this setup maintainerr deletes watched content, so the *normal steady state* of a
-library is full of episodes that are absent because they were watched — not because they were
-never acquired. Chasing those re-downloads content deliberately thrown away.
+**Run before anything else, on every item, every time.** `hasFile:false` does not mean "missing".
+maintainerr deletes watched content here, so a library full of absent-but-watched episodes is the
+normal steady state. Chasing those re-downloads content deliberately thrown away.
 
-This check used to be step 7, *after* step 6 ("search-and-grab"). That ordering is what produced
-the Made in Abyss and Attack on Titan recap-movie grabs: the acquisition decision was made before
-the "was this actually wanted?" question was asked. It is now step 0 and is a hard gate.
+Two questions, two different signals — **do not conflate them**:
+- *"Should I grab this in Sonarr?"* → `monitored`. That is all it answers.
+- *"Was this watched?"* → **jellystat only.** `monitored:false` covers three different causes
+  (watched-and-cleaned, skipped recap, owned in Radarr), so it cannot answer this.
 
-The old check ("files exist in `/mnt/Data/media/.recycle`") was also **broken**: `/mnt/Data/media`
-is a legacy pre-migration path that no app has written to since the 2026-08-24 unified-dataset
-migration (see `CLAUDE.md` — "never search or write there"). It could only ever return "nothing
-found", which reads as "not a watched-and-cleaned item" — i.e. it silently failed open, toward
-grabbing. Replaced with the authoritative checks below.
-
-**These signals answer two DIFFERENT questions. Don't conflate them** (this exact mistake was made
-and caught on 2026-09-18):
-- *"Should I chase this **in Sonarr**?"* → `monitored` answers it, and only that. `monitored:false`
-  = don't grab it here. It does **not** mean the content is unwanted, and it is **never** a reason
-  not to add a Radarr entry — see the Standing rule below.
-- *"Was this watched?"* → **only jellystat answers it.** `monitored:false` does **not** mean
-  watched; it lumps together watched-and-cleaned, deliberately-skipped recaps, and content owned
-  in Radarr instead.
-
-Worked proof (Monogatari, 2026-09-18): 12 episodes were `monitored:false, hasFile:false`. Reading
-that as "all watched and cleaned" was wrong — the owner had watched exactly **5**. The true split
-was 5 watched, 4 never-wanted recaps (Episode 5.5, Summary I/II/III), and 3 that are the
-Kizumonogatari films, tracked as Sonarr Season 0 specials but legitimately owned in Radarr
-(structural flaw #1). One signal, three different causes.
-
-**Signal 0 — jellystat, the authoritative watch record.** Jellyfin itself is NOT usable for this:
-once maintainerr deletes the file, the item goes `LocationType: Virtual` and its `UserData` resets
-to `played:false, playCount:0` — verified 2026-09-18, so play state does not survive deletion.
-Jellystat keeps its own playback database and does survive.
+**Signal 0 — jellystat, the authoritative watch record.** Jellyfin cannot answer this: once the
+file is deleted the item goes `LocationType: Virtual` and `UserData` resets to `played:false`.
+Jellystat keeps its own playback database.
 ```bash
 JS=$(infisical secrets get JELLYSTAT_API_KEY --env dev --path /media --plain \
   --projectId "$INFISICAL_PROJECT_ID" --domain http://192.168.20.22:8081 2>/dev/null)
@@ -58,74 +36,55 @@ account is **kero66**; `/Users[0]` on this server is `Addz`, so never assume ind
 curl -sL "http://sonarr.home/api/v3/episode?seriesId=<ID>&apikey=$SONARR_KEY" \
   | jq -r '.[] | "S\(.seasonNumber)E\(.episodeNumber) hasFile=\(.hasFile) monitored=\(.monitored) id=\(.id)"'
 ```
-- `hasFile:false, monitored:false` → **Do not grab it in Sonarr.** A decision was already taken
-  that Sonarr's specials lane isn't where this lives. It does *not* tell you *why* (see the three
-  causes above), does *not* mean the content is unwanted, and does *not* block adding it to Radarr
-  or as its own series if that is the correct placement. If you need to know whether it was
-  watched, use Signal 0. See the corrected Standing rule below.
-- `hasFile:false, monitored:true` → continue to Signal 2.
+- `monitored:false` → **don't grab it in Sonarr.** Says nothing about whether the content is
+  wanted, and never blocks a Radarr/separate-series add — see the Standing rule below.
+- `monitored:true` → continue.
 
-**Signal 1b — has it even aired?** Check `airDate`/`hasAired` before treating a monitored gap as
-real. Monogatari's single monitored+missing episode (S7E1 `WAZAMONOGATARI: Karen Ogre`) is simply
-`unaired` — a future episode, not a gap. Same pattern as the Lord of Mysteries "TBA" Season 0 rows
-in the audit index.
+**Signal 1b — has it aired?** Check `airDate`/`hasAired`. An unaired future episode is not a gap.
 
-**Signal 2 — Sonarr history (authoritative; distinguishes "never had it" from "had it, removed it").**
+**Signal 2 — Sonarr history: never had it, or had it and removed it?**
 ```bash
 curl -sL "http://sonarr.home/api/v3/history?episodeId=<EPISODE_ID>&apikey=$SONARR_KEY" \
   | jq -r '.records[]? | "\(.date[0:19]) | \(.eventType) | \(.data.reason // "-")"'
 ```
-- Contains `episodeFileDeleted` with reason **`Manual`** → the file was acquired and later removed
-  deliberately. **That is maintainerr's fingerprint** (it deletes through the API, which Sonarr
-  records as `Manual`). NOT a gap.
-- Contains `downloadFolderImported` at any point → we have had this file before, so it is **not a
-  never-acquired gap**. It does *not* prove it was watched (that is Signal 0's job — a file can also
-  be removed by a failed upgrade, a quality purge, or manual cleanup). Either way, re-grabbing
-  something we deliberately removed needs a reason beyond `hasFile:false`.
-- Reason `Upgrade` is just a quality replacement, and `MissingFromDisk` is Sonarr noticing a file
-  vanished — neither means "wanted again".
-- **No import history at all** → genuinely never acquired. This is a real gap; proceed.
+- `episodeFileDeleted` reason **`Manual`** → deliberately removed after acquisition. This is
+  maintainerr's fingerprint (it deletes via the API, which Sonarr records as `Manual`). Not a gap.
+- Any `downloadFolderImported` → we have had this file, so it is not a never-acquired gap. Does not
+  prove it was watched (Signal 0's job — could be a failed upgrade or quality purge). Either way,
+  re-grabbing something deliberately removed needs a reason beyond `hasFile:false`.
+- `Upgrade` = quality replacement; `MissingFromDisk` = Sonarr noticing a file vanished. Neither
+  means "wanted again".
+- **No import history** → genuinely never acquired. Real gap; proceed.
 
-Worked example (verified 2026-09-18) — `.hack` S1E1-E8 read as an obvious "gap": eight consecutive
-missing episodes at the very start of a series. Signal 1 shows all eight `monitored:false` while
-E9+ are `monitored:true, hasFile:true`. Signal 2 on E1 shows
-`2026-09-15 episodeFileDeleted | Manual`, preceded by successful imports back in March. Conclusion:
-watched and cleaned up, exactly as intended — nothing to chase. A season that *starts partway in*
-is the classic shape of this.
+A season that *starts partway in* is the classic shape of watched-and-cleaned, not of a gap.
+Playlists built from what exists therefore shrink to "what's left to watch" — that is the system
+working, not a fault.
 
-**Corollary for playlists:** the watch-order playlists are built from what exists, so they
-naturally shrink to "what's left to watch". A shrinking playlist is the system working — see
-`truenas/stacks/watch-orders-runner/scripts/README.md`.
+## Standing rule: `monitored:false` is the RESULT of a placement decision, not a verdict on the content
 
-## Standing rule (CORRECTED 2026-09-18): unmonitored is the RESULT of a placement decision, not a verdict on the content
+**It means "do not grab this in Sonarr". That is all it means.** The lifecycle:
 
-**`monitored:false` on a Sonarr Season 0 special means "do not grab this *in Sonarr*". That is all it means.** It is the *record of a decision already taken*, not evidence the underlying content is unwanted.
+1. Make the placement decision (next section) — Radarr, its own Sonarr series, or genuinely a special?
+2. If Radarr or a separate series, **unmonitor the Sonarr special** — that lane isn't where it lives.
+3. `monitored:false` then just stops Sonarr grabbing it. Nothing more is implied.
 
-The normal lifecycle is:
-1. The placement decision gets made (see "What the structural audit is actually FOR") — does this belong in Radarr, as its own Sonarr series, or genuinely as a special?
-2. If the answer is Radarr or a separate series, **the Sonarr special is unmonitored** — because Sonarr's specials lane is not where it lives.
-3. From then on, `monitored:false` simply stops Sonarr grabbing it. Nothing more is implied.
+So a special is very often unmonitored *precisely because Radarr owns it* — Kizumonogatari is three
+unmonitored Sonarr S0 entries and three fully-owned Radarr films, correct in every respect.
 
-So **very often a special is unmonitored precisely BECAUSE Radarr owns it.** Kizumonogatari is exactly this: three unmonitored Sonarr S0 entries, three fully-owned Radarr films. Correct in every respect.
+Therefore: **never treat the flag as a blocker on a Radarr or separate-series add** — that add is
+the placement decision doing its job. And to learn whether content is wanted at all, find out *why*
+it's unmonitored (covered elsewhere? watched? genuinely unwanted?), don't infer intent from the flag.
 
-**What this section used to say, and why it was wrong.** The earlier version read: *"that is a hard 'not wanted' signal for the underlying content in any app… before adding a Radarr entry, check that counterpart's monitored status first and treat false as a stop, not something to route around."* That is backwards, and following it breaks the audit: it would forbid adding the Radarr entry, which is the *intended outcome* of a "belongs in Radarr" verdict. It also contradicts the placement framework above and the `feedback_movie_specials_solve_in_radarr_first` rule, which says to solve movie content in Radarr first.
+Adding a Radarr entry for an unmonitored special is only a mistake when nobody established that
+Radarr is where the content belongs. The 2026-08-20 batch-add failed on exactly that — no placement
+assessment, action driven mechanically by "long runtime + no Radarr match" (see
+`SONARR_STRUCTURAL_AUDIT.md`).
 
-**How to actually use the flag:**
-- **Don't grab it in Sonarr.** (The one thing it reliably tells you.)
-- **Never treat it as a blocker on creating a Radarr entry or a separate series entry.** That's the placement decision doing its job.
-- **To learn whether the content is wanted at all, find out *why* it's unmonitored** — is there a Radarr entry or standalone series covering it (placement done)? Was the file watched and cleaned up (Signal 0)? Or was it assessed as genuinely unwanted? Three different causes, same flag — see STEP 0.
+## What the structural audit is FOR
 
-**Re-framing the 2026-08-20 batch-add session** (Overlord, Made in Abyss, Bleach, Black Butler, Battlestar Galactica, Kizumonogatari — see `SONARR_STRUCTURAL_AUDIT.md`'s "2026-08-20 batch violations"). The real failure there was **grabbing without doing the placement assessment at all** — not "routing around an unmonitored flag". Several of those Radarr adds were the correct destination; what was missing was the deliberate decision, the research behind it, and the record of it. Adding a Radarr entry for an unmonitored Sonarr special is only a mistake when nobody established that Radarr is where the content belongs.
-
-## What the structural audit is actually FOR (clarified 2026-09-18)
-
-**It is a placement decision, not a gap hunt.** This was misread during the 2026-09-18 session —
-the audit was treated as "find missing content and acquire it", which is backwards and is how
-content gets acquired into the wrong lane (or twice).
-
-Sonarr and Radarr are both acquisition tools, but TVDB dumps a great deal into **Season 0 /
-specials**: theatrical films, sequel series, OVAs, recaps, live-action adaptations, promo shorts.
-So for every Season 0 item the real question is:
+**It is a placement decision, not a gap hunt.** Sonarr and Radarr are both acquisition tools, but
+TVDB dumps a great deal into **Season 0 / specials**: theatrical films, sequel series, OVAs, recaps,
+live-action adaptations, promo shorts. So for every Season 0 item the real question is:
 
 > **Where should this content live — a Radarr movie, its own Sonarr series, or genuinely a special
 > under this parent series?**
@@ -145,24 +104,15 @@ Exactly **one** system should own each piece of content. Everything else follows
 3. **Wrong lane monitored** → Sonarr tries to acquire a *film* as a TV special. Title parsing
    rarely matches, so it either never resolves or grabs something wrong.
 
-**Worked example — Attack on Titan (found 2026-09-18, unresolved).** All three states at once:
-- Two films exist on disk and in Jellyfin —
-  `/data/movies/Attack on Titan Crimson Bow and Arrow (2014) [tmdbid-379088]/` and
-  `.../The Roar of Awakening (2018) [tmdbid-492999]/`
-- **Radarr tracks neither** → failure mode 2, orphaned.
-- Sonarr lists them as S0E14 / S0E21, `hasFile:false` — so they look like gaps forever even though
-  the files are right there.
-- S0E50 `Attack on Titan: THE LAST ATTACK` is `monitored:true` → failure mode 3: Sonarr is set to
-  chase a 2024 compilation *film* as a TV special.
+Attack on Titan currently exhibits all three (open, 2026-09-18): two films on disk that Radarr
+doesn't track (orphaned), listed in Sonarr S0 as permanent phantom gaps, plus `THE LAST ATTACK`
+monitored as a TV special. Owner does not want these films — placement unresolved, not a gap.
 
-The placement verdict for AOT's films is "Radarr movie" (they have TMDB ids already, visible in the
-folder names). Until that's actioned, they stay orphaned. Note Crimson Bow and Arrow and Roar of
-Awakening are **recap compilations** of S1 and S2 respectively, so the placement verdict and the
-"do we even want it" verdict are separate questions — decide placement first, then whether to keep.
+Placement and "do we want it" are separate questions — decide placement first, then whether to keep.
 
 ## Original three structural flaws
 
-**How this relates to the section above:** the placement table answers *"where should this live?"*; this list is the catalogue of *specific patterns* that signal the answer. Flaw 1 → "Radarr movie". Flaw 2 → "separate Sonarr series". Flaw 3 → usually "stays a special", but only after deciding whether we actually prefer that cut. Same decision, different level of detail.
+These are the specific patterns that signal a placement verdict: flaw 1 → Radarr movie, flaw 2 → separate Sonarr series, flaw 3 → usually stays a special.
 
 Three related design flaws found in the Sonarr library, all stemming from the same root cause: TVDB/scene metadata sometimes represents a single piece of real-world content in more than one place in Sonarr's data model.
 
@@ -170,11 +120,9 @@ Three related design flaws found in the Sonarr library, all stemming from the sa
 2. **Whole series/seasons that duplicate another series** — the same content tracked twice under two different Sonarr series entries (or a season within one series duplicating an entire separate series), **in either direction**: a standalone series can be really a season of a parent series, OR (confirmed 2026-08-31, `.hack//Liminality`) a parent series' Season 0 special can duplicate a whole separate standalone series entry that exists at the same time. Before working any Season 0 item, check Sonarr's series list for a standalone entry matching that special's title/franchise stem, not just after the fact. See `SONARR_STRUCTURAL_AUDIT.md`'s "Duplicate series" section.
 3. **Specials that are recap/alternate-cut versions of content already owned in a numbered season** — different title, same underlying story. **These are a "which version do we want to watch?" decision, NOT automatically junk.** See `SONARR_STRUCTURAL_AUDIT.md`'s "Recap/alternate-cut specials" section.
 
-   **Corrected 2026-09-18** — this entry previously read "so not real gaps even though `hasFile:false`", i.e. recap ⇒ discard. That is wrong, and following it produces bad calls in both directions:
-   - Sometimes the compilation IS the preferred way to watch. **Gundam's original-series movie trilogy (I / II / III) is exactly this** — `gundam_uc.json` deliberately uses the three films *instead of* the 43-episode 1979 TV series, because that is the community-preferred viewing route. A blanket "recaps aren't real gaps" rule would have thrown away the version we actually want.
-   - Sometimes it genuinely is redundant — Made in Abyss's *Journey's Dawn* and *Wandering Twilight* are straight recaps of S1 eps 1-8 and 9-13, and were deleted 2026-09-18 as content that should never have been acquired. Note its third film, *Dawn of the Deep Soul*, is a **sequel with new content** and was kept — "it's one of the movies" is not the test.
-
-   So: identify that something is a recap/alternate cut, then **assess whether we prefer it over the series content**. Record the decision and the reason. Never auto-drop on the recap label alone.
+   Identify that something is a recap/alternate cut, then **assess whether we prefer it over the series content**, and record the decision. Never auto-drop on the recap label alone — it cuts both ways:
+   - Sometimes the compilation is the *preferred* route: `gundam_uc.json` deliberately uses Gundam's original movie trilogy **instead of** the 43-episode 1979 TV series.
+   - Sometimes it is genuinely redundant: Made in Abyss's *Journey's Dawn* and *Wandering Twilight* are straight recaps of S1 and were deleted. Its third film, *Dawn of the Deep Soul*, is a sequel and was kept — "it's one of the movies" is not the test.
 
 Older shows in particular often ship their movie/OVA content bundled inside the same download pack as the TV episodes (see the VOTOMS and Macross Dynamite 7 precedents) — when hunting for a missing Radarr movie from an older franchise, check whether a TV batch pack for the parent series already contains it before searching separately.
 
@@ -191,21 +139,17 @@ Numbered seasons (1+) are usually where the real, worth-chasing gaps are. Season
 
 **Critical: "Season 0 = specials" is not the same as "Season 0 = movies."** Every monitored+missing Season 0 item needs to go through this workflow, not just the ones ≥60min. Runtime is neither a classifier nor a filter (see 2c below, which retires that inference) — a 4-minute purchaser-bonus OVA short is just as real a gap as a 90-minute film, and gets missed entirely if you only ever query `runtime>=60`. (Confirmed miss 2026-08-20: Gundam 0083's "The Mayfly of Space 1/2" bonus shorts, 4min/12min, were skipped this way across an entire audit pass.)
 
-**2. `monitored` — already covered by STEP 0, Signal 1.** Kept here as a pointer so the numbering below still reads: an unmonitored Season 0 special means **"don't grab it in Sonarr"**, nothing more — it is the recorded output of a placement decision, not a verdict that the content is unwanted, and not a blocker on a Radarr entry (see the corrected Standing rule above). Separately, "no Radarr entry exists" is not on its own a justification to add one — make the placement decision, with research, first. If you have not run STEP 0 yet, stop and run it — it is the gate, not this step.
+**2. `monitored` — see STEP 0, Signal 1.** Also note "no Radarr entry exists" is not on its own a justification to add one; make the placement decision, with research, first.
 
 **2a. A doc row marked ✅/resolved/deprioritized is a claim, not proof — re-pull live `hasFile`/`monitored` before trusting or acting on it.** Confirmed failure (2026-08-31, `.hack` Season 0): a prior session's "✅ Full Season 0 assessed" row claimed 4 items were "imported this session" and several others were "deprioritized" — live Sonarr showed every one of those specific items still `hasFile:false`/`monitored:true`. The doc is a cache of this process's output, not the process itself; a cache can go stale silently (a session records the intended outcome without the API call actually landing, or without ever verifying it did). Whenever a doc claim is about to be relied on — cited to the user, used to skip a step, or treated as settled — re-check the live episode/movie state for those specific items first, don't propagate the claim forward unverified.
 
 **2b. Never classify Season 0 content as bonus/non-story from runtime or title pattern alone — check Radarr/TMDB AND actually research what it is, every time.** Runtime (step 2c below) is a triage *signal* for which pattern you're probably looking at, not a substitute for verification. Confirmed failure (2026-08-31): almost wrote off `.hack`'s "Online Jack" (nine 2-4min Season 0 specials) as a bonus Blu-ray extra purely from its short runtime, before checking anything — it turned out to be real narrative content (an in-universe news-show tied directly into the .hack//G.U. game story). Conversely, don't skip the Radarr check either: several other short/long .hack specials that looked like open gaps already had real files sitting in Radarr under a different title (structural flaw #1) — the doc's own step 3 below covers this, but it's easy to skip when an item "feels" like bonus content and step 4's web-research check gets skipped along with it.
 
-**2c. Runtime is NOT a way to judge what a piece of content is** (rewritten 2026-09-18 — owner's call: "length isn't a good enough judgement to determine what an episode is". Also renumbered: this and 2b were *both* labelled "2b", and 2b's "step 2b below" pointer was self-referential.)
+**2c. Runtime is NOT a way to judge what a piece of content is.** Owner's call: "length isn't a good enough judgement to determine what an episode is." The old `≥60min → probably a movie` / `<60min → probably not core story` inference is **retired** — `.hack`'s "Online Jack" (nine 2-4min specials) is genuine narrative content, and Gundam 0083's 4min/12min shorts were skipped across an entire audit pass by a `runtime>=60` filter.
 
-The old version of this step said `≥60min → probably a movie` and `<60min → probably NOT core story content`. **That inference is retired.** It was wrong often enough to cause real misses, and the doc's own incident log proves it twice over:
-- `.hack`'s "Online Jack" — nine specials of 2-4 minutes each — is genuine narrative content (an in-universe news show tied into the .hack//G.U. game story), and was nearly written off on runtime alone.
-- Gundam 0083's "The Mayfly of Space 1/2" bonus shorts (4min/12min) were skipped across an *entire* audit pass because the query filtered on `runtime>=60`.
+Collect runtime as context, but it never decides what something is and must never narrow the set you examine. Classification comes from 2b. Every monitored+missing Season 0 item goes through that, regardless of length.
 
-Runtime is fine to **collect** (step 1 pulls it) as context, and a very long item is a reasonable prompt to check Radarr/TMDB *first* rather than last. But it never decides what something is, and it must never narrow the set of items you examine. Classification comes from step 2b: check Radarr/TMDB, then research what the content actually is. Every monitored+missing Season 0 item goes through that, regardless of length.
-
-**3. For EVERY Season 0 item, check Radarr/TMDB directly — don't trust fuzzy title matching alone.** (Was "for movie-length specials" — corrected 2026-09-18 along with 2c, since gating this check on runtime is the same retired inference. `.hack` had short *and* long specials already sitting in Radarr under different titles, so length told you nothing about whether to look.)
+**3. For EVERY Season 0 item, check Radarr/TMDB directly — don't trust fuzzy title matching alone.** Length is not a filter here either: `.hack` had both short and long specials already owned in Radarr under different titles.
 ```bash
 grep -i "<keyword>" radarr_all.txt   # cached full Radarr list, see SONARR_STRUCTURAL_AUDIT.md "How to regenerate this data"
 curl -sL -G "http://radarr.home/api/v3/movie/lookup" --data-urlencode "term=<exact special title>" --data-urlencode "apikey=$RADARR_KEY" | jq '.[] | {title, year, tmdbId}'
@@ -230,9 +174,4 @@ If TMDB lookup returns a match — even under a *different* title than the Sonar
 
 **6c. Check `series.id`/`tvdbId` in a Manual Import scan result before trusting an empty rejections array, before overriding an auto-match.** An auto-match to a combined/multi-season series entry can be correct even when it looks surprising — verify what the target series actually represents before assuming a mismatch and overriding it (a 2026-08-24 misdiagnosis on this repo overrode a *correct* auto-match, treating normal multi-season combination as a bug; see `SONARR_STRUCTURAL_AUDIT.md`'s `.hack//Roots` entry for the full retraction).
 
-**7. (moved to STEP 0 — see the top of this file.)** The maintainerr check used to live here, at
-the bottom, *after* the grab step. That ordering is exactly what caused the Made in Abyss and
-Attack on Titan recap-movie over-grabs, so it is now a hard gate at the start rather than a
-footnote at the end. Its old heuristic (looking in `/mnt/Data/media/.recycle`) was additionally
-pointing at a legacy path nothing writes to any more, so it always failed open toward grabbing.
-Use Signals 1 and 2 in STEP 0 instead.
+**7. Moved to STEP 0** at the top of this file — the maintainerr check has to run before the grab step, not after it.
