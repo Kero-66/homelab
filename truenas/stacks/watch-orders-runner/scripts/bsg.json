@@ -1,0 +1,14 @@
+{
+  "_comment": "Battlestar Galactica (2004 reimagined series), story order, 2026-09-18 session. Deliberately encodes the FULL correct order including seasons not currently owned - build_playlist.py skips entries that do not resolve and splices them in automatically on a later sweep, so writing the complete order now means Razor and The Plan land at their correct slots the moment Seasons 2-4 are acquired, with no JSON edit needed. Today only Blood & Chrome, Season 1, Razor and The Plan resolve. Placement sourced 2026-09-18 (screenrant/collider/slashfilm watch-order guides, cross-checked): RAZOR is bridged by S2E17 'The Captain's Hand' and its events precede the two-part S2 finale 'Lay Down Your Burdens', despite having aired between Seasons 3 and 4 - so it goes after S2E17, not at its air position. THE PLAN is the deliberate exception to chronological placement: it retells Seasons 1-2 from the Cylon perspective, but Cavil spoils the Final Five reveal and his closing monologue ties into S4's 'No Exit', so it is watched as an EPILOGUE after S4E15 rather than early. BLOOD & CHROME is a prequel (set ~10 years before) and goes first; it is widely treated as an optional extra rather than essential, but costs nothing to place correctly. NOT owned and therefore absent: Caprica (chronologically first of all), the Miniseries, and Seasons 2-4. Season 1 currently starts at E3 because E1-E2 were watched and cleaned up by maintainerr - expected, not a gap.",
+  "story_order": [
+    { "movie": "Battlestar Galactica: Blood & Chrome" },
+    { "series": "Battlestar Galactica", "season": 1 },
+    { "series": "Battlestar Galactica", "season": 2, "episodes": [1, 17] },
+    { "movie": "Battlestar Galactica: Razor" },
+    { "series": "Battlestar Galactica", "season": 2, "episodes": [18, 20] },
+    { "series": "Battlestar Galactica", "season": 3 },
+    { "series": "Battlestar Galactica", "season": 4, "episodes": [1, 15] },
+    { "movie": "Battlestar Galactica: The Plan" },
+    { "series": "Battlestar Galactica", "season": 4, "episodes": [16, 22] }
+  ]
+}

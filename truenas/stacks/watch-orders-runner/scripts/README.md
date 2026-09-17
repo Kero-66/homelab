@@ -80,7 +80,8 @@ externally just to get SmartLists' auto-refresh.
 | Franchise | Method | Source | Verified |
 |---|---|---|---|
 | Macross | Manual (`macross.json`) | **Switched off SmartLists 2026-09-18** along with every other SmartList (see note below). The JSON already existed and was simply not wired into `entrypoint.sh` while the SmartList owned it. Publishes **two** playlists (`release_order` + `chronological_order`, 18 entries each) — deliberate, since community consensus splits on where Macross Zero belongs | re-enabled 2026-09-18, not yet rebuilt |
-| Monogatari | SmartLists | native rule, sort by ReleaseDate — release order is the community-*preferred* order here, not a stand-in for continuity (chronological "removes a lot of the fun") | 107 items, 2026-09-11 |
+| Monogatari | Manual (`monogatari.json`) | **Release order**, which is the *recommended* order here, not a fallback — the series depends on non-linear reveals and unreliable narration that land in broadcast order (chronological "removes a lot of the fun"). Arc mapping taken from Sonarr FILE NAMES, not Jellyfin titles: Jellyfin renders wrong titles over this series' S0 and S5 files, which caused a 2026-09-18 pass to wrongly claim S5 duplicated S6 and S0E3/E4 duplicated S1E14/E15 — **neither is true** (S5 = Owarimonogatari S2, S6 = Off & Monster Season). Every entry addresses episodes by numeric range for exactly that reason. Kizumonogatari sits at its 2016 slot as three Radarr films | 106 items, all entries resolved 2026-09-18 |
+| Battlestar Galactica | Manual (`bsg.json`) | Story order, **encoding the full correct sequence including unowned seasons** so Razor and The Plan land correctly the moment S2-S4 arrive, no edit needed. Razor goes after S2E17 (bridged by "The Captain's Hand", before the S2 finale) despite airing between S3 and S4; The Plan is a deliberate exception placed as an epilogue after S4E15, since Cavil spoils the Final Five reveal. Blood & Chrome first as prequel. Caprica/Miniseries/S2-S4 not owned | 14 of 9 entries resolve today, rest splice in |
 | Gurren Lagann | SmartLists | native rule, sort by ReleaseDate — the 2 movies are recap compilations of the same TV series, no separate continuity slot exists for them | 33 items, 2026-09-11 |
 | Gundam Universal Century | Manual (`gundam_uc.json`) | Superseded the SmartLists IMDb-list version (`ls560971030`) 2026-09-15: that list was missing Doan's Island/G-Saviour (mid-sequence, same limitation as Trigun/Votoms/etc.) and used the raw 43-episode 1979 TV series instead of the community-preferred movie trilogy. **Partially built, mid-acquisition** — several titles still missing content (IGLOO x2, G-Saviour, Gundam ZZ, `Mobile Suit Gundam Narrative`) get skipped (not blocking) every sweep, see `ai/todo.md`; the rest of the sequence is live and splices in the missing entries automatically once each lands. | partial, growing daily as content downloads — see container logs for exactly what's still missing |
 | Star Wars: The Clone Wars | SmartLists | IMDb list `ls544963772` (chronological, incl. film) | 39/39 episodes, 2026-09-11 |
@@ -140,18 +141,30 @@ reporting anything as missing:
 
 Do **not** "fix" a partial season by re-downloading it unless you actually intend to rewatch.
 
-### Genuine structural issue found 2026-09-18: Monogatari S5 duplicates S6
+### RETRACTED: "Monogatari S5 duplicates S6" — this was wrong
 
-Unlike the above, this one is real. Season 5 holds two *batched multi-episode* files
-(S5E1 = S6E1-E4 concatenated, S5E5 = S6E5-E7), while Season 6 carries all 14 episodes properly
-split. Same content, worse form, present twice — the same failure class as the Made in Abyss and
-Attack on Titan recap-movie grabs (an earlier automated pass over-reaching and pulling content
-that wasn't needed). S5 should be removed. A Monogatari playlist built while both exist would
-either duplicate those arcs or pick the batched files.
+An earlier version of this section claimed Monogatari's Season 5 duplicated Season 6, and that
+S0E3/E4 duplicated S1E14/E15. **Both claims were false.** They came from reading *Jellyfin's*
+displayed episode titles. Checking Sonarr's actual `episodefile` records (series 42) shows:
 
-Monogatari's order itself needs no further research: **release order is the recommended order**
-(community consensus — chronological "removes a lot of the fun"), as already noted in the Status
-table.
+- **S5** = `S05E01-E04 Mayoi Hell + Hitagi Rendezvous` and `S05E05-E07 Ougi Dark`, absolute
+  episodes 062-068 — i.e. **Owarimonogatari Season 2**.
+- **S6** = OROKAMONOGATARI / NADEMONOGATARI / WAZAMONOGATARI / SHINOBUMONOGATARI, absolute
+  episodes 069-082 — the 2024 **Off & Monster Season**. Entirely different content.
+- **S0E3/E4** = `Tsubasa Family Part 1/2` (Nekomonogatari Black), not "Tsubasa Cat (4)/(5)".
+  S1E14/E15 are the real `Tsubasa Cat Part 4/5`. Different arcs, different files.
+
+**Lesson — never classify library structure from Jellyfin titles.** This series (and `.hack`, per
+`hack.json`'s own comment about the Intermezzo/Unison mismatch) has a cross-app TVDB-snapshot
+divergence where Jellyfin renders wrong titles over correct files. Episode *numbers* stay correct;
+only the titles drift. So:
+
+- For any structural question ("is this a duplicate / what arc is this"), read **Sonarr's
+  `episodefile` `relativePath`** — the filenames carry both the arc name and the absolute episode
+  number, and they are what actually exists on disk.
+- When writing a playlist JSON for an affected series, address episodes by **numeric range**
+  rather than `name_contains`, which makes the file immune to the mismatch. `monogatari.json`
+  does this deliberately.
 
 ### How playlists interact with maintainerr (documented 2026-09-18)
 
