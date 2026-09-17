@@ -1,7 +1,32 @@
 # Franchise Watch-Order Playlists
 
-Built 2026-09-12. Two methods, pick based on whether a franchise needs a movie/OVA to slot
-*mid-season* (not just before/after a whole series):
+## SmartLists retired 2026-09-18 — manual JSONs are now the only method
+
+All SmartLists were disabled. The reasoning (owner's call): our researched, version-controlled
+orders are better than external lists, which encode someone else's judgement and can silently
+drift — exactly what the Gundam UC IMDb list did (missing entries, wrong version of the content,
+discovered only because we happened to check). The runner then maintains each playlist as missing
+content is acquired and as watched content is removed.
+
+The SmartList *definitions* still exist in the Jellyfin plugin but no longer own any playlist.
+Everything below that says "SmartLists" is retained as history, and the capability matrix at the
+bottom is kept because it is still the best record of what external providers can and cannot do.
+
+**Which series get a playlist?** Not every show needs one. A playlist is worth building when
+either:
+1. the franchise spans **multiple seasons and/or movies** (Gundam, .hack, Tekkaman Blade,
+   Monogatari, Macross, Broken Blade), or
+2. it has **a particular watch order** that differs from the obvious one — Clone Wars
+   chronological (≠ air order), or Steins;Gate, where a second series slots into the middle of
+   the first.
+
+A single-season standalone show with no side content (GetBackers, Claymore, Severance) does not
+need one — naive play order already is the correct order.
+
+---
+
+Built 2026-09-12. Originally two methods, picked based on whether a franchise needs a movie/OVA to
+slot *mid-season* (not just before/after a whole series):
 
 - **SmartLists** (`smartlist.py`) — auto-refreshing, driven by an IMDb/Trakt/MDBList/TMDB external
   list or native field-sort rules. Use when it works; check first.
@@ -54,7 +79,7 @@ externally just to get SmartLists' auto-refresh.
 
 | Franchise | Method | Source | Verified |
 |---|---|---|---|
-| Macross | SmartLists | IMDb list `ls560970728` ("Continuity Order") | 163 items, 2026-09-11 |
+| Macross | Manual (`macross.json`) | **Switched off SmartLists 2026-09-18** along with every other SmartList (see note below). The JSON already existed and was simply not wired into `entrypoint.sh` while the SmartList owned it. Publishes **two** playlists (`release_order` + `chronological_order`, 18 entries each) — deliberate, since community consensus splits on where Macross Zero belongs | re-enabled 2026-09-18, not yet rebuilt |
 | Monogatari | SmartLists | native rule, sort by ReleaseDate — release order is the community-*preferred* order here, not a stand-in for continuity (chronological "removes a lot of the fun") | 107 items, 2026-09-11 |
 | Gurren Lagann | SmartLists | native rule, sort by ReleaseDate — the 2 movies are recap compilations of the same TV series, no separate continuity slot exists for them | 33 items, 2026-09-11 |
 | Gundam Universal Century | Manual (`gundam_uc.json`) | Superseded the SmartLists IMDb-list version (`ls560971030`) 2026-09-15: that list was missing Doan's Island/G-Saviour (mid-sequence, same limitation as Trigun/Votoms/etc.) and used the raw 43-episode 1979 TV series instead of the community-preferred movie trilogy. **Partially built, mid-acquisition** — several titles still missing content (IGLOO x2, G-Saviour, Gundam ZZ, `Mobile Suit Gundam Narrative`) get skipped (not blocking) every sweep, see `ai/todo.md`; the rest of the sequence is live and splices in the missing entries automatically once each lands. | partial, growing daily as content downloads — see container logs for exactly what's still missing |
@@ -67,6 +92,7 @@ externally just to get SmartLists' auto-refresh.
 | Black Butler | SmartLists | native rule (`SeriesName contains "Black Butler" AND NotContains "II"`), sort by ReleaseDate — same "only S1 owned, might continue" situation as BSG, but here release order genuinely matches the correct sequence (Book of Circus/Book of Murder/movie all released in the right order), so no ordering tradeoff. "Black Butler II" excluded by name as a guard against the non-canon S2 spinoff ever polluting the list if added later | 25 items, 2026-09-12 |
 | Blue Gender | No playlist | "The Warrior" confirmed to be a pure recap compilation with an alternate ending (not new content) — same category as the excluded Gundam 0083 recap; left as an optional standalone alternate, not part of any combined list |
 | Robotech | Manual (`robotech.json`) | 3 seasons → `The Shadow Chronicles` as a coda. Technically overlaps the tail of Season 3 rather than following it cleanly, but a scene-level interleave isn't practical — using the common watch-guide simplification | 86 items, 100% content owned, 2026-09-12 |
+| Broken Blade | Manual (`broken_blade.json`) | 6-film series (2010-11). Chronological order IS release order — the films are sequential numbered chapters of one story, no curatorial judgement involved. Order + English titles confirmed against en.wikipedia.org/wiki/Broken_Blade against their Japanese titles. Excludes the 2014 12-episode TV mini-series (a re-edit of these same films, not owned; keep standalone if ever acquired, per the Blue Gender/0083 recap convention) | 6 items, 100% owned, all resolved 2026-09-18 |
 | Tekkaman Blade | Manual (`tekkaman.json`) | `Prelude to a Long Battle` (pre-series clip-show) → Season 1 → `Twin Blood`/`Burning Clock` (side-story extras, no confirmed exact episode slot so placed here rather than guessed) → `Missing Link` (confirmed bridge to TBII) → `Virgin Memory` (billed as TBII's own "Episode 00") → Tekkaman Blade II | 60 items, 100% content owned, 2026-09-12 |
 
 ## Automation (`watch-orders-runner`, added 2026-09-15)
@@ -95,6 +121,45 @@ What this buys, and what it doesn't:
   missing entries splice in automatically as each one lands. Originally shipped as an all-or-nothing
   design (one missing title blocked the whole file) — changed 2026-09-15 after this defeated the
   actual point of automating reruns for an in-progress franchise.
+
+### How playlists interact with maintainerr (documented 2026-09-18)
+
+This was undocumented and caused real confusion — a playlist "disappearing" looks like a runner
+bug but usually isn't.
+
+maintainerr deletes watched media unless the item is explicitly **excluded** in maintainerr. When
+it removes content, the effect on playlists is:
+
+- **Some entries removed** → Jellyfin drops the dead item references, and the next sweep rebuilds
+  the playlist from what's left. The playlist shrinks. Normal, no action needed.
+- **All entries removed** → `build_playlist.py` resolves nothing, logs
+  `skipped entirely: <name> (nothing resolved yet)`, and creates no playlist. The playlist
+  **vanishes from Jellyfin entirely**. This is what happened to Robotech (watched → cleaned up),
+  which is why its playlist was absent despite `robotech.json` still being listed and the sweep
+  reporting success the day before.
+- **Content re-acquired later** → the next sweep rebuilds it automatically. Nothing to re-enable.
+
+So a franchise JSON is deliberately kept in `entrypoint.sh` even when its content is gone: it
+costs one harmless log line per sweep and self-heals. Don't delete a JSON just because its
+playlist disappeared — check whether the content still exists first.
+
+**Corollary for in-progress franchises:** a playlist that keeps shrinking is maintainerr doing its
+job, not the runner misbehaving. If a franchise should survive cleanup, exclude it in maintainerr —
+that is the only place that decision can be made; nothing in this repo can override it.
+
+### Missing episodes are excluded (fixed 2026-09-18)
+
+Jellyfin returns an entry for every episode Sonarr knows about, including ones with **no file
+yet** — those come back with `LocationType: "Virtual"` and are unplayable. `season_episodes()`
+filters them out, and logs which ones it omitted.
+
+Before this fix they were added to playlists as dead entries: `.hack`'s playlist contained S1E1-E8
+as Virtual items, so the watch order opened with 8 unplayable episodes. Note `MediaSources` is
+still length 1 on a Virtual episode, so checking that instead does **not** work — `LocationType`
+is the field that distinguishes them.
+
+This also means a playlist only ever contains genuinely playable items, so its length is a real
+measure of what you own, not what Sonarr is tracking.
 
 **Considered and rejected: a real Jellyfin plugin, TrueNAS host crontab, or Linearr** (a
 third-party "show sequencer" tool, evaluated 2026-09-15) — see `.claude/memory/` /

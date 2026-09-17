@@ -206,14 +206,24 @@ groups:
               to: 0
             datasourceUid: PBFA97CFB590B2093
             model:
-              # == 0 is required, not just a `< 1` threshold below: cAdvisor's fork used here
-              # (grafana/alloy's embedded build) returns -1 for "no HEALTHCHECK defined" - a
-              # distinct value from 0 ("unhealthy") and 1 ("healthy"), not documented upstream but
-              # confirmed live 2026-09-12 (every container without a compose healthcheck sits at
-              # -1 permanently). A bare `< 1` threshold treated -1 the same as failing and fired
-              # non-stop for every such container (alloy, loki, smartctl-exporter, valheim, etc)
-              # - see ai/OBSERVABILITY.md.
-              expr: container_health_state{name!=""} == 0
+              # Switched off cAdvisor's container_health_state 2026-09-18. That metric encodes
+              # -1/0/1 correctly, but cAdvisor samples a container's Docker health ONCE at
+              # discovery and never refreshes it (documented in ai/OBSERVABILITY.md 2026-09-10),
+              # so every container recreated by a deploy sticks at its discovery-time value until
+              # grafana-alloy-alloy itself restarts. Measured over 7d: 21-22 unrelated containers
+              # read "unhealthy" simultaneously from 2026-09-10 to 2026-09-13 and then all cleared
+              # at once - phantom values, not real failures. Alerting on it means multi-day false
+              # positives after every deploy.
+              #
+              # Dockhand queries Docker's live health state instead. Verified 2026-09-18 that it
+              # genuinely emits all three label values (healthy/starting/unhealthy seen within 7d),
+              # and its healthy count tracks reality (21-33 over the same window).
+              #
+              # Tradeoff: this is an environment-wide aggregate with no per-container label, so it
+              # tells you THAT something is unhealthy, not WHICH - check Dockhand's UI, or
+              # GET /api/containers?env=1, to identify it. Per-container health is not currently
+              # exported by anything we scrape.
+              expr: dockhand_containers_health{health="unhealthy"}
               intervalMs: 1000
               maxDataPoints: 43200
               refId: A
@@ -237,16 +247,18 @@ groups:
               expression: B
               conditions:
                 - evaluator:
-                    type: lt
-                    params: [1]
+                    type: gt
+                    params: [0]
               refId: C
+        # No unhealthy containers means Dockhand emits no series with health="unhealthy"
+        # at all (not a zero), so NoData is the normal healthy case here.
         noDataState: OK
         execErrState: Error
-        for: 3m
+        for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "{{ $labels.name }}'s Docker healthcheck is failing (or the container has been stuck starting for 3+ minutes) - real per-container signal from cAdvisor's container_health_state, not just cAdvisor's own is-the-process-running check"
+          summary: "{{ $value }} container(s) failing their Docker healthcheck - this is an environment-wide count, check Dockhand's UI or GET /api/containers?env=1 to see which"
 
   - orgId: 1
     name: Host Health

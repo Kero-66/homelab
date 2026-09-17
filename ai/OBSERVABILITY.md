@@ -51,20 +51,35 @@ the cosmetic "Loki Error badge" entry further down). Consequence: any failure th
 that a metrics-only check reported as all-clear. Closing it means either configuring Loki's
 ruler or adding Grafana-managed rules backed by the Loki datasource.
 
-### An alert that exists but cannot fire (false confidence)
+### An alert that fires on phantom data (fixed 2026-09-18)
 
-`Container healthcheck failing` (uid `container-unhealthy`) queries
-`container_health_state{name!=""} == 0`. Verified 2026-09-18: **all 37 series read 1**,
-including the 5 containers Dockhand reports as having *no healthcheck at all*. So nothing
-can ever drive it to 0 under current conditions. This repo's own notes already said so —
-the Dockhand Metrics entry below calls `container_health_state` "not useful for alerting",
-and the 2026-09-10 entry documents that it caches at discovery and never refreshes — yet
-the rule's summary text asserts the opposite ("real per-container signal"). An alert that
-looks like coverage but cannot detect the condition is worse than a missing one.
+**Correction to an earlier draft of this entry**, which claimed the rule "cannot fire"
+because "all 37 series read 1". That was wrong — it came from checking only that nothing
+read `0` *at that moment* and over-reading a stale note. The real value distribution is
+exactly as designed: **5 containers at `-1`** (no healthcheck), **32 at `1`** (healthy),
+matching Dockhand's own view (5 none / 32 healthy) precisely. The metric encodes the three
+states correctly.
 
-Meanwhile `dockhand_containers_health` and `dockhand_container_restarts_total` *are* scraped
-(job `prometheus.scrape.dockhand`) and are accurate, and **no alert rule consumes them**.
-That is the obvious replacement signal for container health.
+The actual defect is the opposite of "never fires" — it fires on **phantom values**.
+cAdvisor samples a container's Docker health once at discovery and never refreshes it (the
+2026-09-10 entry below), so containers recreated by a deploy stick at their discovery-time
+value until `grafana-alloy-alloy` itself restarts. Measured over 7d: `count(container_health_state == 0)`
+sat at **21-22 containers simultaneously from 2026-09-10 to 2026-09-13, then dropped to 1
+all at once**. Unrelated containers do not fail and recover in lockstep — those were stale
+cached zeros. Per-container totals show the same fingerprint: twelve unrelated containers
+each with exactly 1341 "unhealthy" minutes, three more with exactly 1197.
+
+So `Container healthcheck failing` was a multi-day false-positive generator after every
+deploy. Fixed by repointing it at `dockhand_containers_health{health="unhealthy"}`, which
+reads Docker's live health state. Verified before switching that Dockhand genuinely emits
+all three label values (`healthy`, `starting`, `unhealthy` all present within 7d) and that
+its healthy count tracks reality (ranged 21-33 over the same window) — i.e. it is a real
+signal, not another metric that can only ever report one value.
+
+Tradeoff accepted: the Dockhand metric is an environment-wide aggregate with **no
+per-container label**, so the alert says *how many* are unhealthy, not *which*. Identify the
+container via Dockhand's UI or `GET /api/containers?env=1`. Nothing we currently scrape
+exports per-container health that is both live and correct.
 
 ### Known collection boundary: stdout only
 

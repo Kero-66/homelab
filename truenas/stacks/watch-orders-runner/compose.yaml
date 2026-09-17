@@ -2,27 +2,26 @@
 # Watch-Orders Runner - TrueNAS Scale (Dockhand-managed)
 # =============================================================================
 # Periodically reruns the manual franchise-watch-order playlists
-# (media/scripts/watch_orders/*.json, built by build_playlist.py) so new
+# (./scripts/*.json, built by build_playlist.py) so new
 # episodes/seasons already covered by an existing entry splice in automatically,
 # without a human remembering to rerun the script. Genuinely new titles (never
 # referenced by any entry) still need a human to add a line to the JSON first --
-# see media/scripts/watch_orders/README.md.
+# see ./scripts/README.md.
 #
 # Deliberately minimal: python:alpine + a plain sleep loop, no cron daemon/app
 # (build_playlist.py is stdlib-only, no pip install needed either).
 #
-# Scripts come from /mnt/Fast/docker/watch-orders-runner/scripts, staged via
-# scp -- NOT a relative git-synced mount. Tried that first (same trick as
-# infisical-agent's own templates) and it silently failed: Dockhand's git sync
-# for a stack only checks out that stack's OWN truenas/stacks/<name>/ folder,
-# not the whole repo, so a relative path reaching outside it (up to
-# media/scripts/watch_orders) resolved to a host path that had never been
-# populated -- Docker created it as an empty directory rather than erroring,
-# so the container ran fine but had nothing to execute. Confirmed live
-# 2026-09-15. media/scripts/watch_orders/*.json editors: scp the changed
-# file(s) to /mnt/Fast/docker/watch-orders-runner/scripts/ afterward, same as
-# every other Dockhand app's non-compose config in this repo (Caddyfile,
-# homepage config, etc) -- see truenas/DEPLOYMENT_GUIDE.md.
+# Scripts live in ./scripts (this stack's own directory) and are git-synced by
+# Dockhand like every other file here -- edit, commit, sync, done. No scp step.
+#
+# They used to live in media/scripts/watch_orders and be scp'd to
+# /mnt/Fast/docker/watch-orders-runner/scripts, because a relative mount
+# reaching outside this stack's folder silently failed: Dockhand's git sync
+# only checks out a stack's OWN truenas/stacks/<name>/ folder, so the path
+# resolved to a host dir that had never been populated -- Docker created it as
+# an empty directory rather than erroring, so the container ran fine with
+# nothing to execute (confirmed live 2026-09-15). Moving the scripts into this
+# directory removes that whole class of problem (2026-09-18).
 #
 # Playlist removal is already automatic for free (Jellyfin drops a dead item
 # reference from a playlist when the item is deleted) -- this container only
@@ -53,11 +52,15 @@ services:
     env_file:
       - /mnt/Fast/docker/watch-orders-runner/.env
     volumes:
-      # media/scripts/watch_orders/*.py and *.json, staged via scp -- see the
-      # note above. NOT git-synced; update on every edit to the source files.
-      - /mnt/Fast/docker/watch-orders-runner/scripts:/scripts:ro
-      # This stack's own entrypoint IS git-synced fine (relative path within
-      # this stack's own directory, same trick infisical-agent uses).
+      # Git-synced (2026-09-18). Previously these lived in media/scripts/watch_orders
+      # and had to be scp'd to /mnt/Fast/docker/watch-orders-runner/scripts on every
+      # edit, because Dockhand's git sync only checks out a stack's OWN
+      # truenas/stacks/<name>/ folder -- a relative path reaching up and across to
+      # media/scripts/ resolved to a never-populated host dir, which Docker silently
+      # created as an empty directory rather than erroring. Moving the scripts INTO
+      # this stack's directory makes a plain relative mount work, so edits now ship
+      # with a normal commit + sync like every other file in this repo.
+      - ./scripts:/scripts:ro
       - ./entrypoint.sh:/scripts-runner/entrypoint.sh:ro
     networks:
       - jellyfin_default

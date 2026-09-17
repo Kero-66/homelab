@@ -1,0 +1,11 @@
+{
+  "_comment": "Broken Blade (Break Blade) film series, 2026-09-18 session. Six ~50-minute films released 2010-2011 (Production I.G / Xebec) that together adapt the opening arc of the manga. Chronological order IS release order here -- the films are sequential chapters of one continuous story, numbered 1-6 by the studio, so there is no curatorial judgement to make. Order and English titles confirmed against en.wikipedia.org/wiki/Broken_Blade, which lists each film with its Japanese title: 1 Kakusei no Toki (覚醒ノ刻) 2010-05-29, 2 Ketsubetsu no Michi (訣別ノ路) 2010-06-26, 3 Kyoujin no Ato (凶刃ノ痕) 2010-09-25, 4 Sanka no Chi (惨禍ノ地) 2010-10-30, 5 Shisen no Hate (死線ノ涯) 2011-01-22, 6 Doukoku no Toride (慟哭ノ砦) 2011-03-26. The English titles above match our library's movie names exactly, and all six resolved as LocationType=FileSystem (real files, not Sonarr placeholders) when checked. NOT included: the 2014 'Broken Blade' 12-episode TV mini-series, which is a re-edit of these same films rather than new content -- we do not own it, and if it is ever acquired it should stay a separate standalone entry rather than being spliced in here (same reasoning as the excluded Gundam 0083 and Blue Gender recap compilations).",
+  "chronological_order": [
+    { "movie": "Broken Blade: The Time of Awakening" },
+    { "movie": "Broken Blade: The Path of Separation" },
+    { "movie": "Broken Blade: Scars from an Assassin's Blade" },
+    { "movie": "Broken Blade: The Land of Calamity" },
+    { "movie": "Broken Blade: The Gap Between Life and Death" },
+    { "movie": "Broken Blade: Fortress of Lamentation" }
+  ]
+}

@@ -29,7 +29,7 @@ Entry shapes:
 Use this (manual curation) instead of SmartLists external-list rules when no reliable
 curated external list exists, or when a movie/OVA needs to slot mid-season -- something
 no simple field sort or external-list-order sort can express. See
-media/scripts/watch_orders/smartlist.py for the external-list-driven path, which is
+truenas/stacks/watch-orders-runner/scripts/smartlist.py for the external-list-driven path, which is
 preferred when it works.
 """
 import json
@@ -84,11 +84,28 @@ _episode_cache = {}
 
 
 def season_episodes(name, season):
+    """Episodes of one season that actually have a media file on disk.
+
+    Jellyfin returns an entry for every episode Sonarr knows about, including ones
+    with no file yet - those come back as LocationType "Virtual" and are unplayable.
+    Without this filter they land in the playlist as dead entries: .hack had S1E1-E8
+    as Virtual, so the built playlist began with 8 unplayable items (found 2026-09-18).
+    Note MediaSources is still length 1 on a Virtual episode, so checking that instead
+    does not work - LocationType is the field that distinguishes them.
+    """
     key = (name, season)
     if key not in _episode_cache:
         sid = series_id(name)
-        d = call(f"/Shows/{sid}/Episodes?Fields=IndexNumber,ParentIndexNumber")
-        items = [e for e in d["Items"] if e.get("ParentIndexNumber") == season]
+        d = call(f"/Shows/{sid}/Episodes?Fields=IndexNumber,ParentIndexNumber,LocationType")
+        in_season = [e for e in d["Items"] if e.get("ParentIndexNumber") == season]
+        items = [e for e in in_season if e.get("LocationType") != "Virtual"]
+        dropped = len(in_season) - len(items)
+        if dropped:
+            missing = ", ".join(
+                f"E{e.get('IndexNumber')}" for e in in_season
+                if e.get("LocationType") == "Virtual"
+            )
+            print(f"  - {name!r} season {season}: omitting {dropped} episode(s) with no file ({missing})")
         items.sort(key=lambda e: e.get("IndexNumber") or 0)
         _episode_cache[key] = items
     return _episode_cache[key]

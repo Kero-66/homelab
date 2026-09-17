@@ -434,7 +434,7 @@ curl -sL "http://radarr.home/api/v3/movie?apikey=$RADARR_KEY" | jq -r '.[] | "\(
 
 ## Gundam UC audit — 2026-09-12
 
-Triggered by a fresh watch-order playlist project (`media/scripts/watch_orders/gundam_uc.json`, not yet run) that surfaced a much bigger structural gap than expected: several core mainline UC titles were never actually in the library at all, despite Jellyseerr showing stale `status: UNKNOWN` mediaInfo for them (a Jellyseerr-DB-vs-live-Sonarr mismatch, the same "doc/cache is not proof" trap as step 2a of the acquisition process, just at the Jellyseerr layer instead of a markdown doc).
+Triggered by a fresh watch-order playlist project (`truenas/stacks/watch-orders-runner/scripts/gundam_uc.json`, not yet run) that surfaced a much bigger structural gap than expected: several core mainline UC titles were never actually in the library at all, despite Jellyseerr showing stale `status: UNKNOWN` mediaInfo for them (a Jellyseerr-DB-vs-live-Sonarr mismatch, the same "doc/cache is not proof" trap as step 2a of the acquisition process, just at the Jellyseerr layer instead of a markdown doc).
 
 **Confirmed genuinely absent from Sonarr (114-series list, checked by exhaustive title grep, zero matches under any naming variant) — now requested via Jellyseerr, Anime (1080p) profile, `retain` tag:**
 - Mobile Suit Gundam (1979 TV series) — tmdbId 21731
