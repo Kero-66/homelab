@@ -1736,6 +1736,32 @@ curl -s -u "admin:$GRAFANA_PASS" -G "http://grafana.home/api/datasources/proxy/u
 (`GRAFANA_ADMIN_PASSWORD` in Infisical `/observability`; Loki datasource UID `P8E80F9AEF21F6940`,
 confirmed live — re-check via `GET /api/datasources` if this ever changes.)
 
+**Checking for issues — use a wide window, and don't stop at "current state" APIs.** Confirmed
+2026-09-17: a Dockhand git-stack deploy (image pull registry rate-limit, blank env vars) only
+showed up by searching Loki over a multi-day range — a 6h window missed it because the deploy ran
+hours earlier. `GET /api/git/stacks` only reports the *current* `syncStatus`/`syncError` (a
+snapshot); it does not show past failures that have since resolved. For deploy-job history
+(compose pull/up output, env-var warnings, git sync results per stack), query Dockhand's own
+container log stream in Loki — its `docker compose` subprocess output is written straight to
+Dockhand's stdout, same stream as its app-lifecycle logs:
+```bash
+curl -s -u "admin:$GRAFANA_PASS" -G "http://grafana.home/api/datasources/proxy/uid/P8E80F9AEF21F6940/loki/api/v1/query_range" \
+  --data-urlencode 'query={container_name="ix-dockhand-dockhand-1"} |= `Stack:<stack-name>`' \
+  --data-urlencode "start=$(( $(date +%s) - 259200 ))000000000" \
+  --data-urlencode "end=$(date +%s)000000000" | jq -r '.data.result[].values[][1]'
+```
+For container crash/OOM/restart history (not visible in container stdout logs at all — these are
+Docker daemon events, not app output), query the Prometheus counters directly rather than only
+checking currently-*active* alerts (`/api/alertmanager/.../v2/alerts` is also a snapshot — an
+alert that fired and cleared between checks won't show there):
+```bash
+curl -s -u "admin:$GRAFANA_PASS" -G "http://grafana.home/api/datasources/proxy/uid/PBFA97CFB590B2093/api/v1/query" \
+  --data-urlencode 'query=increase(container_oom_events_total{name!=""}[24h]) > 0'
+```
+Dockhand's own Docker-event history (`die`/`kill`/`oom`/`start` per container, richer than what
+cAdvisor exposes as metrics) is also available via `GET /api/activity?limit=500` (session-cookie
+auth — see "Dockhand API" section) if Prometheus/Loki don't have what you need.
+
 ---
 
 ## Anti-Patterns (Never Do These)

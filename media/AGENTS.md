@@ -41,6 +41,7 @@ Reference compose files and setup automation for the homelab media stack (Jellyf
   - Bazarr: `/episodes?seriesid[]=X`
 - Scripts in `scripts/` are idempotent where noted — safe to re-run
 - Anime indexers via Prowlarr built-in: Nyaa, AniDex, AnimeTosho, Anirena
+- Autobrr also watches TreasureMaps (private tracker, proxied through Prowlarr at `prowlarr:9696/19/api` like the others — labeled "SceneNZB" in autobrr's own indexer config, not actually SceneNZB) and pushes matches straight to Sonarr
 
 ## Anti-patterns
 - DO NOT `mv`/`cp` media files between downloads and library by hand, or use `importMode: "move"` — breaks hardlinks and the torrent's seed data
