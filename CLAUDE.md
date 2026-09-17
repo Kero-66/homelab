@@ -54,8 +54,20 @@
 
 ### Dockhand-managed apps (docker compose)
 - Compose files live at `/mnt/.ix-apps/app_mounts/dockhand/data/stacks/<name>/compose.yaml`
-- **Update compose**: `scp` to `/mnt/Fast/docker/<name>/compose.yaml` → copy to Dockhand path → `sudo docker compose -f /mnt/Fast/docker/<name>/compose.yaml up -d --force-recreate`
-- Dockhand API `forceRecreate` option does NOT reliably recreate containers — use docker compose directly
+- **Update compose (current process, 2026-09-18)**: commit to git → let the git sync deploy it.
+  The old `scp` + `docker compose up -d --force-recreate` dance is **no longer required**: the
+  underlying Dockhand bug ("always redeploy" git stacks not force-recreating, so config-file
+  changes silently never took effect) was fixed upstream in **v1.0.46 (#1523)**, and we are
+  running **v1.0.48** (confirmed live via `dockhand_build_info`).
+- **Caveat — the fix only covers stacks with `forceRedeploy: true`** ("always redeploy"). On a
+  stack with `forceRedeploy: false`, a sync only redeploys when it detects changes, and a change
+  to a *mounted file* that isn't `compose.yaml` may not recreate the container — so the container
+  keeps running with the old content. Check the flag with
+  `GET /api/git/stacks` before assuming a file-only edit will land. Bind-mounted files re-read at
+  runtime (e.g. a script a loop re-invokes each pass) are the exception: those pick up changes
+  without any recreate.
+- Manual `docker compose up -d --force-recreate` remains available as a fallback, but should no
+  longer be the documented default.
 - **Restart only** (no compose change): `sudo docker compose -f /mnt/Fast/docker/<name>/compose.yaml restart`
 - To identify: check if the stack appears in Dockhand UI at `http://192.168.20.22:30328`
 
