@@ -25,7 +25,9 @@ grabbing. Replaced with the authoritative checks below.
 
 **These signals answer two DIFFERENT questions. Don't conflate them** (this exact mistake was made
 and caught on 2026-09-18):
-- *"Should I chase this?"* → `monitored` answers it. `monitored:false` = not wanted. Stop.
+- *"Should I chase this **in Sonarr**?"* → `monitored` answers it, and only that. `monitored:false`
+  = don't grab it here. It does **not** mean the content is unwanted, and it is **never** a reason
+  not to add a Radarr entry — see the Standing rule below.
 - *"Was this watched?"* → **only jellystat answers it.** `monitored:false` does **not** mean
   watched; it lumps together watched-and-cleaned, deliberately-skipped recaps, and content owned
   in Radarr instead.
@@ -56,10 +58,11 @@ account is **kero66**; `/Users[0]` on this server is `Addz`, so never assume ind
 curl -sL "http://sonarr.home/api/v3/episode?seriesId=<ID>&apikey=$SONARR_KEY" \
   | jq -r '.[] | "S\(.seasonNumber)E\(.episodeNumber) hasFile=\(.hasFile) monitored=\(.monitored) id=\(.id)"'
 ```
-- `hasFile:false, monitored:false` → **Do not chase. Stop.** Something already decided this isn't
-  wanted. (It does *not* tell you *why* — see the three causes above. If you need to know whether
-  it was watched, use Signal 0.) This is the "unmonitored means not wanted" rule below,
-  generalised from Season 0 to *every* season.
+- `hasFile:false, monitored:false` → **Do not grab it in Sonarr.** A decision was already taken
+  that Sonarr's specials lane isn't where this lives. It does *not* tell you *why* (see the three
+  causes above), does *not* mean the content is unwanted, and does *not* block adding it to Radarr
+  or as its own series if that is the correct placement. If you need to know whether it was
+  watched, use Signal 0. See the corrected Standing rule below.
 - `hasFile:false, monitored:true` → continue to Signal 2.
 
 **Signal 1b — has it even aired?** Check `airDate`/`hasAired` before treating a monitored gap as
@@ -94,11 +97,25 @@ is the classic shape of this.
 naturally shrink to "what's left to watch". A shrinking playlist is the system working — see
 `truenas/stacks/watch-orders-runner/scripts/README.md`.
 
-## Standing rule (confirmed 2026-08-24): unmonitored means not wanted, full stop
+## Standing rule (CORRECTED 2026-09-18): unmonitored is the RESULT of a placement decision, not a verdict on the content
 
-If a Sonarr Season 0 special is `monitored:false`, that is a **hard "not wanted" signal for the underlying content in any app** — not just "not wanted as a Sonarr special, but still fine to chase via Radarr instead." Before adding a Radarr entry or grabbing anything for content that has a Sonarr counterpart, **check that counterpart's `monitored` status first** and treat `false` as a stop, not something to route around.
+**`monitored:false` on a Sonarr Season 0 special means "do not grab this *in Sonarr*". That is all it means.** It is the *record of a decision already taken*, not evidence the underlying content is unwanted.
 
-**Why this matters — the 2026-08-20 batch-add violation.** The entire 2026-08-20 batch-add session (Overlord, Made in Abyss, Bleach, Black Butler, Battlestar Galactica, Kizumonogatari) added Radarr entries and grabbed movies *without* checking Sonarr's monitored status first (see step 2 below — this was a known process gap at the time). A post-hoc check found most of those Sonarr specials were already `monitored:false`. See `SONARR_STRUCTURAL_AUDIT.md`'s "2026-08-20 batch violations" section for how each case was re-litigated.
+The normal lifecycle is:
+1. The placement decision gets made (see "What the structural audit is actually FOR") — does this belong in Radarr, as its own Sonarr series, or genuinely as a special?
+2. If the answer is Radarr or a separate series, **the Sonarr special is unmonitored** — because Sonarr's specials lane is not where it lives.
+3. From then on, `monitored:false` simply stops Sonarr grabbing it. Nothing more is implied.
+
+So **very often a special is unmonitored precisely BECAUSE Radarr owns it.** Kizumonogatari is exactly this: three unmonitored Sonarr S0 entries, three fully-owned Radarr films. Correct in every respect.
+
+**What this section used to say, and why it was wrong.** The earlier version read: *"that is a hard 'not wanted' signal for the underlying content in any app… before adding a Radarr entry, check that counterpart's monitored status first and treat false as a stop, not something to route around."* That is backwards, and following it breaks the audit: it would forbid adding the Radarr entry, which is the *intended outcome* of a "belongs in Radarr" verdict. It also contradicts the placement framework above and the `feedback_movie_specials_solve_in_radarr_first` rule, which says to solve movie content in Radarr first.
+
+**How to actually use the flag:**
+- **Don't grab it in Sonarr.** (The one thing it reliably tells you.)
+- **Never treat it as a blocker on creating a Radarr entry or a separate series entry.** That's the placement decision doing its job.
+- **To learn whether the content is wanted at all, find out *why* it's unmonitored** — is there a Radarr entry or standalone series covering it (placement done)? Was the file watched and cleaned up (Signal 0)? Or was it assessed as genuinely unwanted? Three different causes, same flag — see STEP 0.
+
+**Re-framing the 2026-08-20 batch-add session** (Overlord, Made in Abyss, Bleach, Black Butler, Battlestar Galactica, Kizumonogatari — see `SONARR_STRUCTURAL_AUDIT.md`'s "2026-08-20 batch violations"). The real failure there was **grabbing without doing the placement assessment at all** — not "routing around an unmonitored flag". Several of those Radarr adds were the correct destination; what was missing was the deliberate decision, the research behind it, and the record of it. Adding a Radarr entry for an unmonitored Sonarr special is only a mistake when nobody established that Radarr is where the content belongs.
 
 ## What the structural audit is actually FOR (clarified 2026-09-18)
 
@@ -174,7 +191,7 @@ Numbered seasons (1+) are usually where the real, worth-chasing gaps are. Season
 
 **Critical: "Season 0 = specials" is not the same as "Season 0 = movies."** Every monitored+missing Season 0 item needs to go through this workflow, not just the ones ≥60min. Runtime is neither a classifier nor a filter (see 2c below, which retires that inference) — a 4-minute purchaser-bonus OVA short is just as real a gap as a 90-minute film, and gets missed entirely if you only ever query `runtime>=60`. (Confirmed miss 2026-08-20: Gundam 0083's "The Mayfly of Space 1/2" bonus shorts, 4min/12min, were skipped this way across an entire audit pass.)
 
-**2. `monitored` — already covered by STEP 0, Signal 1.** Kept here as a pointer so the numbering below still reads: an unmonitored Season 0 special means someone already decided it's not wanted, and "no Radarr entry" is not on its own a justification to add one. If you have not run STEP 0 yet, stop and run it — it is the gate, not this step.
+**2. `monitored` — already covered by STEP 0, Signal 1.** Kept here as a pointer so the numbering below still reads: an unmonitored Season 0 special means **"don't grab it in Sonarr"**, nothing more — it is the recorded output of a placement decision, not a verdict that the content is unwanted, and not a blocker on a Radarr entry (see the corrected Standing rule above). Separately, "no Radarr entry exists" is not on its own a justification to add one — make the placement decision, with research, first. If you have not run STEP 0 yet, stop and run it — it is the gate, not this step.
 
 **2a. A doc row marked ✅/resolved/deprioritized is a claim, not proof — re-pull live `hasFile`/`monitored` before trusting or acting on it.** Confirmed failure (2026-08-31, `.hack` Season 0): a prior session's "✅ Full Season 0 assessed" row claimed 4 items were "imported this session" and several others were "deprioritized" — live Sonarr showed every one of those specific items still `hasFile:false`/`monitored:true`. The doc is a cache of this process's output, not the process itself; a cache can go stale silently (a session records the intended outcome without the API call actually landing, or without ever verifying it did). Whenever a doc claim is about to be relied on — cited to the user, used to skip a step, or treated as settled — re-check the live episode/movie state for those specific items first, don't propagate the claim forward unverified.
 
