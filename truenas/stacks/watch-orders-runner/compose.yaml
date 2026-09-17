@@ -49,6 +49,12 @@ services:
       # Docker service name, not jellyfin.home -- this container has no
       # guaranteed .home DNS resolution (see build_playlist.py's BASE comment).
       - JELLYFIN_BASE_URL=http://jellyfin:8096
+      # Own the playlists as kero66 (the account actually used for watching).
+      # Without this, build_playlist.py's user_id() falls back to /Users[0],
+      # which is "Addz" on this server -- playlists still end up visible to
+      # everyone, but they were being created under the wrong account.
+      # Not a secret (a Jellyfin user GUID), so kept here rather than in .env.
+      - JELLYFIN_OWNER_USERID=1ecfce63139f4501a4d498e372e1ee3d
     env_file:
       - /mnt/Fast/docker/watch-orders-runner/.env
     volumes:

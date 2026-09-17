@@ -1771,6 +1771,7 @@ auth — see "Dockhand API" section) if Prometheus/Loki don't have what you need
 | `http://192.168.20.22/api/...` | 308 redirect drops `Authorization` header | Use `https://` always |
 | `PUT /api/v2.0/user/72` | Returns 404 | Use `PUT /api/v2.0/user/id/72` |
 | Pipe API response directly to `jq` without checking | Endpoint may return HTML (Angular SPA) not JSON | Check `Content-Type` or `head -c 200` first |
+| `curl -X DELETE http://radarr.home/api/v3/...` (no `-L`, no base path) | Radarr is served under a **`/radarr` base path** and returns **307** to `/radarr/api/v3/...`. `curl` does not follow a redirect without `-L`, so the write silently never happens — and it returns `307`, not an error, so it reads like success. GETs elsewhere in this repo only work because they use `curl -sL`. Confirmed 2026-09-18: two `DELETE`s "succeeded" with 307 while both movies stayed in the library | Use the full base path `http://radarr.home/radarr/api/v3/...` with `-H "X-Api-Key: $RADARR_KEY"`. **Always re-query after a write to confirm it applied** — a 3xx on a write means it did not |
 | `ssh user@host "cmd1 && cmd2 | jq"` | SSH piped commands fail on TrueNAS | Run commands as separate SSH calls |
 | Store key in `/tmp/predictable_name` | Readable by other processes, not cleaned up | Use `mktemp -d`, `chmod 600`, cleanup with `rm -rf` |
 | **Use `/tmp` for working files** | Not version-controlled, easy to forget cleanup | Stage in repo `scratch/` dir, SCP to TrueNAS |
