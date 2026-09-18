@@ -366,3 +366,35 @@ maintainerr, suggestarr, tailscale). Left untouched: version-pinned stacks (auto
 grafana-alloy, recyclarr — pinned deliberately after past upgrade issues) and stacks with
 `autoUpdate: false` (gamarr, shokoanime). (SigNoz, also `autoUpdate: false`, was torn down
 2026-09-12 — see `ai/todo.md` #114.)
+
+## Log level detection — Serilog / ANSI formats (2026-09-18)
+
+Loki's built-in level discovery only recognises the full level word (`[Info]`, `[INFO]`,
+`"level":"debug"`). Containers using Serilog's three-letter codes (`[INF]`/`[WRN]`/`[DBG]` —
+sportarr, cleanuparr, jellyfin) or ANSI-coloured levels (jellyseerr) all landed on
+`detected_level="unknown"`, which made Grafana's level filtering and colouring useless for them.
+
+Fix: two `stage.match` blocks in `truenas/stacks/grafana-alloy/config.alloy` that regex the level
+token and write it as **structured metadata** (`detected_level`), never a label — a label would
+multiply stream count by container × level. Each block is guarded by a **line filter** in the
+selector, not just a container matcher: a non-matching line entering the block would get an empty
+`detected_level` stamped on it, which suppresses Loki's own detection for the formats it already
+handles correctly (sonarr, radarr, prowlarr, fileflows, autobrr, caddy, infisical).
+
+Verified after deploy: sportarr `info`/`warn`, jellyfin `debug`, jellyseerr `debug`; autobrr,
+caddy, fileflows, infisical, prowlarr unchanged.
+
+Still `unknown` on purpose — no level token in the format at all: infisical-redis (`*`/`#`/`-`),
+commafeed-db + jellystat-db (postgres), tailscale, valheim, and jellyfin's stack-trace
+continuation lines (`   at Foo.Bar(...)`), which are separate log lines and would need multiline
+joining to inherit the level of the line above.
+
+**Two traps hit while landing this**, both worth remembering:
+1. The match stage's `|~` pattern **must be a double-quoted LogQL string**. A LogQL backtick raw
+   string is valid LogQL but this parser rejects it (`unexpected IDENTIFIER, expecting STRING`),
+   and Alloy then refuses its initial config load entirely — the container crash-looped and log
+   ingestion stopped until it was corrected. Write it as an Alloy raw string containing a
+   double-quoted LogQL string.
+2. `config.alloy` is a **single-file bind mount**, so a Dockhand git sync updates the file on disk
+   without the container seeing it (old inode), and `POST /-/reload` returns 200 against the stale
+   content. See CLAUDE.md's Dockhand "Caveat 2" — force-recreate and verify behaviour, not status.

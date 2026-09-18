@@ -66,6 +66,15 @@
   `GET /api/git/stacks` before assuming a file-only edit will land. Bind-mounted files re-read at
   runtime (e.g. a script a loop re-invokes each pass) are the exception: those pick up changes
   without any recreate.
+- **Caveat 2 — single-file bind mounts need a force-recreate even with `forceRedeploy: true`**
+  (found live 2026-09-18 on `grafana-alloy`, which mounts `./config.alloy:/etc/alloy/config.alloy`).
+  A sync reported `success` and updated the file on disk, but the container kept the OLD inode:
+  git checkout replaces a file by rename, and a *file* bind mount follows the inode captured at
+  container creation. Worse, Alloy's `POST /-/reload` returned **HTTP 200** while re-reading that
+  stale inode, so the reload looked successful and the change still hadn't landed. Only
+  `sudo docker compose -f compose.yaml up -d --force-recreate <service>` from the git-clone path
+  fixed it. A *directory* bind mount doesn't have this problem. So: file-mounted config change →
+  always force-recreate, and verify the behaviour changed, never just the HTTP status.
 - Manual `docker compose up -d --force-recreate` remains available as a fallback, but should no
   longer be the documented default.
 - **Restart only** (no compose change): `sudo docker compose -f /mnt/Fast/docker/<name>/compose.yaml restart`
