@@ -187,6 +187,70 @@ loki.process "docker_logs" {
     source     = "container_name"
     expression = "^grafana-alloy-(alloy|grafana|loki)$"
   }
+
+  // ---- Log level detection (added 2026-09-18) --------------------------------
+  // Loki's built-in level discovery only recognises the FULL level word ("Info",
+  // "[INFO]", `"level":"debug"`). That covers sonarr/radarr/prowlarr ([Info]),
+  // fileflows ([INFO]), autobrr (JSON), caddy and infisical - those already get
+  // correct levels and MUST NOT be touched. It does NOT recognise Serilog's
+  // three-letter codes ([INF]/[WRN]/[DBG]) or ANSI-coloured levels, which is why
+  // sportarr (338/h), cleanuparr and most of jellyfin's volume all landed on
+  // detected_level="unknown".
+  //
+  // Both blocks below are guarded by a LINE FILTER in the stage.match selector,
+  // not just a container selector: a non-matching line must never enter the block,
+  // because stage.template would then stamp an EMPTY detected_level and that
+  // suppresses Loki's own detection for that line. detected_level is written as
+  // STRUCTURED METADATA, never a label - a label would multiply stream count by
+  // container x level.
+  //
+  // Not covered on purpose (no level token in the format at all): infisical-redis
+  // (`*`/`#`/`-` level chars), commafeed-db + jellystat-db (postgres), tailscale,
+  // valheim, and jellyfin's stack-trace continuation lines (`   at Foo.Bar(...)`),
+  // which are separate log lines and would need multiline joining.
+
+  // Serilog-style three-letter codes. Covers `[2026-09-18 21:25:14 +10:00] [INF]`
+  // (sportarr), `[21:25:22] [DBG]` (jellyfin) and `[2026-09-18 21:00:10.573 INF]`
+  // (cleanuparr) - i.e. the code either alone in brackets or at the end of a
+  // bracketed timestamp.
+  stage.match {
+    selector = "{instance=\"truenas\"} |~ `\\[(?:[^\\]]* )?(TRC|VRB|DBG|INF|WRN|ERR|FTL)\\]`"
+
+    stage.regex {
+      expression = "\\[(?:[^\\]]* )?(?P<lvl>TRC|VRB|DBG|INF|WRN|ERR|FTL)\\]"
+    }
+
+    stage.template {
+      source   = "lvl"
+      template = "{{ if eq .lvl \"TRC\" }}trace{{ else if eq .lvl \"VRB\" }}trace{{ else if eq .lvl \"DBG\" }}debug{{ else if eq .lvl \"INF\" }}info{{ else if eq .lvl \"WRN\" }}warn{{ else if eq .lvl \"ERR\" }}error{{ else }}fatal{{ end }}"
+    }
+
+    stage.structured_metadata {
+      values = { detected_level = "lvl" }
+    }
+  }
+
+  // ANSI-coloured levels: jellyseerr writes `[<ESC>[32minfo<ESC>[39m][Jellyfin Sync]:`.
+  // The escape sequence sits between the `[` and the word, so the word-boundary
+  // match Loki uses never fires. Matched around the escape rather than stripping
+  // it - stripping ANSI from the line body is a separate decision.
+  stage.match {
+    selector = "{instance=\"truenas\"} |~ `\\[(?:\\x1b\\[[0-9;]*m)?(debug|info|warn|warning|error|fatal)(?:\\x1b\\[[0-9;]*m)?\\]`"
+
+    stage.regex {
+      expression = "\\[(?:\\x1b\\[[0-9;]*m)?(?P<lvl>debug|info|warn|warning|error|fatal)(?:\\x1b\\[[0-9;]*m)?\\]"
+    }
+
+    // Grafana's level colouring keys off exactly `warn`, not `warning`.
+    stage.template {
+      source   = "lvl"
+      template = "{{ if eq .lvl \"warning\" }}warn{{ else }}{{ .lvl }}{{ end }}"
+    }
+
+    stage.structured_metadata {
+      values = { detected_level = "lvl" }
+    }
+  }
 }
 
 loki.write "local" {
