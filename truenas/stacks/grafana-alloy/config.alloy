@@ -214,7 +214,12 @@ loki.process "docker_logs" {
   // (cleanuparr) - i.e. the code either alone in brackets or at the end of a
   // bracketed timestamp.
   stage.match {
-    selector = "{instance=\"truenas\"} |~ `\\[(?:[^\\]]* )?(TRC|VRB|DBG|INF|WRN|ERR|FTL)\\]`"
+    // The line filter's pattern MUST be a double-quoted LogQL string. A LogQL
+    // backtick raw string is valid LogQL but the match stage's parser rejects it
+    // ("unexpected IDENTIFIER, expecting STRING") and Alloy then refuses to start
+    // at all - confirmed live 2026-09-18, it took the whole logging pipeline down.
+    // Hence an Alloy raw string (backticks) on the outside, double quotes inside.
+    selector = `{instance="truenas"} |~ "\\[(?:[^\\]]* )?(TRC|VRB|DBG|INF|WRN|ERR|FTL)\\]"`
 
     stage.regex {
       expression = "\\[(?:[^\\]]* )?(?P<lvl>TRC|VRB|DBG|INF|WRN|ERR|FTL)\\]"
@@ -235,7 +240,7 @@ loki.process "docker_logs" {
   // match Loki uses never fires. Matched around the escape rather than stripping
   // it - stripping ANSI from the line body is a separate decision.
   stage.match {
-    selector = "{instance=\"truenas\"} |~ `\\[(?:\\x1b\\[[0-9;]*m)?(debug|info|warn|warning|error|fatal)(?:\\x1b\\[[0-9;]*m)?\\]`"
+    selector = `{instance="truenas"} |~ "\\[(?:\\x1b\\[[0-9;]*m)?(debug|info|warn|warning|error|fatal)(?:\\x1b\\[[0-9;]*m)?\\]"`
 
     stage.regex {
       expression = "\\[(?:\\x1b\\[[0-9;]*m)?(?P<lvl>debug|info|warn|warning|error|fatal)(?:\\x1b\\[[0-9;]*m)?\\]"
